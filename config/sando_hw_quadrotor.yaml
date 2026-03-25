@@ -1,0 +1,245 @@
+# --------------------------------------------------------------------------
+# Copyright 2024, Kota Kondo, Aerospace Controls Laboratory
+# Massachusetts Institute of Technology
+# All Rights Reserved
+# Authors: Kota Kondo, et al.
+# See LICENSE file for the license information
+# --------------------------------------------------------------------------
+
+# =============================================================================
+# SANDO Hardware Configuration (Quadrotor) — Quick Tuning Guide
+# =============================================================================
+# This config is derived from sando.yaml (simulation) with values tuned for
+# real-world flight on a quadrotor with Jetson NX onboard compute.
+#
+# Key differences from simulation config:
+#   - Dynamic limits (v_max, a_max, j_max) are much lower for flight safety
+#   - drone_bbox is larger to reflect actual vehicle size (0.9m vs 0.2m)
+#   - z_max is capped at 1.5m (indoor ceiling / safety net height)
+#   - sfc_size is halved to reduce Gurobi solve time on NX
+#   - num_P reduced from 3 to 2 to cut per-replan computation
+#   - Map bounds (x/y) are tightened to the physical flight arena
+#   - inflate_unknown_boundary disabled (sensor-mapped space is trusted)
+#
+# Parameters shared with sando.yaml are not re-documented here.
+# See sando.yaml for full descriptions.
+# =============================================================================
+
+# This is the HARDWARE configuration file for the sando package (quadrotor)
+# Based on sando.yaml with hardware-appropriate values
+sando_node:
+
+    ros__parameters:
+
+        # Sim environment
+        sim_env: "hardware"                             # ["gazebo", "fake_sim", "rviz_only", "hardware"]
+        use_global_pc: false                            # [-] No global pointcloud on hardware (unknown environment)
+
+        # Vehicle type
+        vehicle_type: "uav"                                     # ["uav", "ground_robot", "qudruped_robot"]
+
+        # Hardware-related parameters
+        provide_goal_in_global_frame: true                      # [-] Provide goal in the global frame (hardware goals are in global/world frame)
+        state_already_in_global_frame: true                    # [-] State from /state topic is already in global frame (transformed upstream via TF)
+        use_hardware: true                                      # [-] Use hardware
+
+        # Flight mode should be terminal_goal
+        flight_mode: "terminal_goal"                            # ["terminal_goal"]
+
+        # Visual (for real-world implementation, visual should be 0 for production, 2 for debugging)
+        visual_level: 2                                         # [-] visual level (0: no visual, 1: minimal visual, 2: full visual)
+
+        # Benchmark parameters
+        environment_assumption: "dynamic"            # ["static", "dynamic", "dynamic_worst_case"] Environment assumption for convex decomposition
+        use_only_curr_pos_for_dynamic_obst: false   # [-] Use only current position (no future trajectory prediction) for fair comparison
+
+        # Gloabl planner parameters
+        global_planner: "astar_heat"                                # ["sjps", "sastar", "astar_heat"]
+        factor_hgp: 1.0                                         # do not change - [m] actual_resolution = factor_hgp * (resolution of the map)
+        inflation_hgp: 0.45                                     # [m] The obstacles are inflated (to run HGP) by this amount
+        x_min: -6.0                                             # [m] Tightened to physical flight arena (sim: -200)
+        x_max: 20.0                                             # [m] Tightened to physical flight arena (sim: 200)
+        y_min: -5.0                                             # [m] Tightened to physical flight arena (sim: -200)
+        y_max: 5.0                                              # [m] Tightened to physical flight arena (sim: 200)
+        z_min: 0.3                                              # [m] points below this are considered ground
+        z_max: 1.5                                              # [m] Indoor ceiling / safety-net height constraint (sim: 6.0)
+        hgp_timeout_duration_ms: 1000                           # [ms] Timeout duration for the HGP
+        max_num_expansion: 100000                                # [-] Maximum number of node expansions allowed
+        use_free_start: true                                    # [-] Use free start for the HGP
+        free_start_factor: 2.0                                  # [-] Factor for the free start
+        use_free_goal: false                                    # [-] Use free goal for the HGP
+        free_goal_factor: 2.0                                   # [-] Factor for the free goal
+        global_planner_heuristic_weight: 2.0         # [-] Weight for the heuristic in the global planner
+        heat_weight: 10.0                           # [-] Weight for the heat in the global planner
+        max_dist_vertexes: 1.0                      # [m] Maximum distance between two consecutive vertexes
+        w_unknown: 0.0                              # [-] Weight for the unknown cells in the global planner
+        w_align: 0.0                               # [-] Weight for the alignment with the initial velocity in the global planner
+        decay_len_cells: 100.0                     # [-] Decay length for the alignment with the initial velocity in the global planner
+        w_side: 0.0                                # [-] Weight for the side tie-break in the global planner
+
+        # Heat map parameters (soft cost layer)
+        use_heat_map: true                          # [-] Enable heat map
+
+        # Dynamic obstacle heat (time-varying soft costs)
+        # dynamic_heat_enabled: true                  # [-] Enable dynamic heat computation
+        # dynamic_as_occupied_current: true           # [-] Mark current position as hard occupied
+        # dynamic_as_occupied_future: false           # [-] Mark future positions as hard occupied
+        # heat_alpha0: 0.2                            # [-] Reachability blob weight
+        # heat_alpha1: 1.0                            # [-] Trajectory tube weight
+        # heat_p: 2                                   # [-] Reachability falloff power
+        # heat_q: 2                                   # [-] Tube falloff power
+        # heat_tau_ratio: 0.5                         # [-] Time decay ratio
+        # heat_gamma: 0.0                             # [m/s] Tube radius growth rate
+        # heat_Hmax: 2.0                             # [-] Maximum heat value cap
+        # dyn_base_inflation_m: 0.1                   # [m] Base inflation for dynamic obstacles
+        # dyn_heat_tube_radius_m: 0.5                 # [m] Radius of heat corridor
+        # heat_num_samples: 15                        # [-] Number of samples for heat computation
+
+        # single obst on the west side.
+        dynamic_heat_enabled: true                  # [-] Enable dynamic heat computation
+        dynamic_as_occupied_current: true           # [-] Mark current position as hard occupied
+        dynamic_as_occupied_future: false           # [-] Mark future positions as hard occupied
+        heat_alpha0: 1.0                            # [-] Higher than sim (0.2) — stronger proximity penalty for safety
+        heat_alpha1: 1.0                            # [-] Trajectory tube weight
+        heat_p: 1                                   # [-] Linear falloff (sim: 2) — wider safety margin around obstacles
+        heat_q: 2                                   # [-] Tube falloff power
+        heat_tau_ratio: 0.5                         # [-] Time decay ratio
+        heat_gamma: 0.0                             # [m/s] Tube radius growth rate
+        heat_Hmax: 20.0                               # [-] Much higher than sim (2.0) — stronger repulsion for real-world safety
+        dyn_base_inflation_m: 0.2                   # [m] Larger than sim (0.1) — extra buffer for real obstacle size uncertainty
+        dyn_heat_tube_radius_m: 3.0                 # [m] Wider than sim (0.5) — accounts for noisy real-world tracking
+        heat_num_samples: 15                        # [-] Number of samples for heat computation
+
+        # Static obstacle heat (boundary halo)
+        static_heat_enabled: true                   # [-] Enable static heat computation
+        static_heat_alpha: 1.0                      # [-] Peak heat at obstacle boundary
+        static_heat_p: 2                            # [-] Falloff power
+        static_heat_Hmax: 5.0                      # [-] Maximum static heat value
+        static_heat_rmax_m: 2.0                     # [m] Larger than sim (1.0) — wider keep-out halo for real walls
+        static_heat_default_radius_m: 1.0           # [m] Larger than sim (0.5) — extra static obstacle margin
+        static_heat_boundary_only: true             # [-] Use only boundary voxels
+        static_heat_apply_on_unknown: false         # [-] Apply heat on unknown cells
+        static_heat_exclude_dynamic: true           # [-] Exclude dynamic obstacles
+
+        # Soft-cost obstacles (traversable at high cost)
+        use_soft_cost_obstacles: true              # [-] Enable soft-cost mode
+        obstacle_soft_cost: 5.0                   # [-] Cost per occupied cell step
+
+        # Post global path smoothing parameters
+        los_cells: 0                                 # [cells] number of cells for the line-of-sight inflation for the post global path smoothing
+        min_len: 1.0                               # [m] minimum length for the post global path smoothing
+        min_turn: 0.0                           # [deg] minimum turn angle for the post global path smoothing
+
+        # Decomposition module parameters
+        sfc_size: [1.5, 1.5, 1.5]         # [m] Halved from sim (3.0) to reduce Gurobi solve time on Jetson NX
+        min_dist_from_agent_to_traj: 10.0        # [m] Minimum distance from the agent to the trajectory
+        use_shrinked_box: false                 # [-] Use shrinked box for the convex decomposition
+        shrinked_box_size: 0.0                  # [m] Size of the shrinked box
+
+        # Optimization parameters
+        horizon: 15.0                               # [m] Horizon
+        dc: 0.01                                    # [s] Duration for the interpolation=Value of the timer pubGoal
+        dynamic_constraint_type: "Linf"               # [-] Constraint type: "Linf" (per-axis |v|≤vmax), "L2" (||v||₂≤vmax), "L1" (||v||₁≤vmax)
+        v_max: 2.0                                  # [m/s]  Conservative for flight safety (sim: 5.0)
+        a_max: 5.0                                  # [m/s2] Conservative for flight safety (sim: 20.0)
+        j_max: 7.5                                 # [m/s3] Conservative for flight safety (sim: 100.0)
+        drone_bbox: [0.9, 0.9, 0.5]              # [m] Actual drone footprint including props (sim: 0.2 point-mass)
+        goal_radius: 0.35                           # [m] Tighter than sim (0.5) for precise landing
+        goal_seen_radius: 2.0                       # [m] Radius of the goal that the drone can see and stop replanning. Note that if this number is too small, the trajectory planning becomes extremely difficult.
+
+        # SANDO specific parameters
+        num_P: 2                                    # [-] Fewer polytopes than sim (3) to reduce solve time on NX
+        num_N: 5                                    # [-] Number of trajectory pieces
+        use_dynamic_factor: true                  # [-] Use dynamic factor for the trajectory time allocation
+        dynamic_factor_k_radius: 0.4              # [-] the factors are [prev_successful_factor - k_radius, prev_successful_factor - k_radius + factor_constant_step_size, ..., prev_successful_factor, ... prev_successful_factor + k_radius]
+        dynamic_factor_initial_mean: 1.8               # [-] Slightly higher than sim (1.5) for more conservative time allocation
+        factor_initial: 1.2                       # [-] Higher than sim (1.0) to give Gurobi more slack on NX
+        factor_final: 2.5                         # [-] Final factor for the trajectory time allocation
+        factor_constant_step_size: 0.1          # [-] Step size for the constant factor increase
+        obst_max_vel: 0.25                         # [m/s] Lower than sim (0.5) — real obstacles (people) move slower
+        obst_position_error: 0.0                  # [m] Bounded position estimation error for dynamic obstacles
+        inflate_unknown_boundary: false           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
+        max_gurobi_comp_time_sec: 1.0            # [s] Maximum Gurobi computation time per replanning
+        jerk_smooth_weight: 1.0e+1                # [-] Weight for the jerk smoothness
+
+        # Dynamic obstacle parameters
+        traj_lifetime: 3.0                          # [s] Shorter than sim (7.0) — stale predictions are riskier on real hardware
+
+        # Dynamic k_value parameters
+        num_replanning_before_adapt: 10             # [-] Number of replanning before adapting the k_value
+        default_k_value: 50                         # [-] Default k_value at the end of the trajectory
+        alpha_k_value_filtering: 0.9               # [-] Alpha for the k_value adaptation
+        k_value_factor: 5.0                         # [-] Factor for the k_value adaptation
+
+        # Yaw-related parameters
+        alpha_filter_dyaw: 0.8                  # [-] Yaw angle smoothing \in [0,1]. Higher--> smoother (each step covers (1-alpha) of remaining error). 0.8 = 20% per step
+        w_max: 1.0                              # [rd/s] Maximum yaw rate (~57 deg/s)
+        w_max_yawing: 0.5                        # [rad/s] Maximum yaw rate during YAWING state
+        yaw_spinning_threshold: 10              # [-] Lower than sim (10000) — allow spinning recovery on real hardware
+        yaw_spinning_dyaw: 1.0                  # [rd/s] Spinning dyaw
+
+        # Simulation env parameters
+        force_goal_z: false                    # [-] Disabled on HW (sim: true) — use the actual commanded goal z
+        default_goal_z: 1.5                     # [m] Lower than sim (2.0) to stay under ceiling
+
+        # Hover avoidance parameters
+        ignore_other_trajs: false              # [-] Ignore shared trajectories from /trajs (useful for adversarial chaser agent)
+        hover_avoidance_enabled: false           # [-] Enable hover obstacle repulsion
+        hover_avoidance_2d: true               # [-] Keep current altitude during avoidance (no vertical push)
+        hover_avoidance_d_trigger: 3.0          # [m] Tighter trigger than sim (4.0) due to smaller flight arena
+        hover_avoidance_h: 2.0                  # [m] Smaller than sim (3.0) to stay within arena bounds
+        hover_avoidance_min_repulsion_norm: 0.01 # [-] Minimum repulsion vector norm to trigger
+
+        # Debug flags
+        global_planner_verbose: false           # debug output
+        debug_verbose: false                    # [-] Verbose the debug information
+        verbose_computation_time: false         # [-] Verbose the computation time
+        local_traj_comp_verbose: false          # [-] Verbose the local trajectory computation time
+
+        # Map parameters
+        map_buffer: 1.0                         # [m] buffer for goal & A point
+        center_shift_factor: 0.5                # [-] Factor for the center shift
+        initial_wdx: 20.0                       # [m] Asymmetric map sized for corridor-shaped arena (sim: 15x15)
+        initial_wdy: 10.0                       # [m] Narrower than sim (15.0) to match physical space
+        initial_wdz: 4.0                       # [m] Height of the map
+        min_wdx: 20.0                           # [m] Minimum width of the map
+        min_wdy: 10.0                           # [m] Minimum depth of the map
+        min_wdz: 4.0                           # [m] Minimum height of the map
+        sando_map_res: 0.3              # [m] Resolution of the map
+
+        # Communication delay parameters
+        use_comm_delay_inflation: true  # [-] Use communication delay inflation
+        comm_delay_inflation_alpha: 0.2 # [-] Alpha for the communication delay inflation
+        comm_delay_inflation_max: 0.1   # [m] Maximum communication delay inflation
+        comm_delay_filter_alpha: 0.9    # [-] Alpha for the communication delay filter new_comm_delay = alpha * new_comm_delay + (1-alpha) * old_comm_delay
+
+        # Simultation related parameters
+        depth_camera_depth_max: 10.0    # [m] d435 depth in simulation
+        fov_visual_depth: 10.0          # [m] FOV visual depth
+        fov_visual_x_deg: 76.0          # [deg] FOV visual x degree
+        fov_visual_y_deg: 47.0          # [deg] FOV visual y degree
+
+        # Obstacle tracking/prediction parameters
+        use_adaptive_kf: true                       # [-] Use adaptive KF
+        adaptive_kf_alpha: 0.90                     # [-] Alpha for the adaptive KF (if you set it to 1.0, it becomes a standard KF)
+        adaptive_kf_dt: 0.1                         # [s] Time step for the adaptive KF
+        cluster_tolerance: 1.0                      # [m] Tolerance for the clustering
+        min_cluster_size: 20                        # [-] Minimum cluster pointcloud size
+        max_cluster_size: 70                       # [-] Maximum cluster pointcloud size
+        prediction_horizon: 1.0                     # [s] Prediction horizon
+        prediction_dt: 0.1                          # [s] Time step for the prediction
+        time_to_delete_old_obstacles: 5.0           # [s] Time to delete old obstacles
+        cluster_bbox_cutoff_size: 2.0               # [m] Size of the bounding box for the clustering
+        use_life_time_for_box_visualization: true  # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
+        box_visualization_duration: 1.0             # [s] Duration to visualize the bounding box
+        velocity_threshold: 0.8                     # [m/s] Velocity threshold to characterize as dynamic obstacles
+        acceleration_threshold: 2.0                 # [m/s2] Acceleration threshold to characterize as dynamic obstacles
+
+        # Path push visualization parameters (if we wanna visualize the path push - just flip all the flags)
+        use_state_update: true                  # [-] Use ego-agent's state update - if false, we fix the ego-agent's state (this is useful for path push visualization)
+        use_random_color_for_global_path: false # [-] Use random color for the global path - this is useful for path push visualization
+        use_path_push_for_visualization: false  # [-] If true, we just do global planning and return true in replan() function. This is useful for the paper visualization.
+
+        # Global planner benchmarking parameters
+        use_benchmark: false                    # [-] No benchmarking on hardware
+        file_path: ""                           # path to the file to save the data

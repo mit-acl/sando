@@ -1,0 +1,247 @@
+# --------------------------------------------------------------------------
+# Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+# Massachusetts Institute of Technology
+# All Rights Reserved
+# Authors: Kota Kondo, et al.
+# See LICENSE file for the license information
+# --------------------------------------------------------------------------
+
+# =============================================================================
+# SANDO Configuration
+# =============================================================================
+# Parameters are organized into three tiers:
+#
+#   [CONFIGURE]  — You should set these for your vehicle and environment
+#   [TUNE]       — Adjust these to trade off performance vs. computation
+#   [INTERNAL]   — Safe defaults; change only if you understand the algorithm
+#
+# Units are indicated in brackets: [m], [m/s], [s], [-] (unitless)
+# =============================================================================
+
+sando_node:
+
+    ros__parameters:
+
+        # =====================================================================
+        # [CONFIGURE] — Set these for your setup
+        # =====================================================================
+
+        # --- Environment & Vehicle ---
+        sim_env: "gazebo"                               # ["gazebo", "fake_sim", "rviz_only"]
+        vehicle_type: "uav"                             # ["uav", "ground_robot", "quadruped_robot"]
+        use_hardware: false                             # [-] Real hardware vs simulation
+        provide_goal_in_global_frame: false             # [-] Goal given in global frame (true for hardware with Vicon)
+        visual_level: 2                                 # [-] Visualization level (0: none, 1: minimal, 2: full)
+        skip_initial_yawing: false                      # [-] Skip YAWING state, go directly to TRAVELING (useful for interactive sim)
+
+        # --- Vehicle Dynamic Limits ---
+        v_max: 5.0                                      # [m/s]   Max velocity
+        a_max: 20.0                                     # [m/s^2] Max acceleration
+        j_max: 100.0                                    # [m/s^3] Max jerk
+        w_max: 1.0                                      # [rad/s] Max yaw rate (~4.0 for hardware)
+        drone_bbox: [0.2, 0.2, 0.2]                     # [m] Vehicle bounding box (include prop guards for hardware)
+
+        # --- Trajectory Optimization ---
+        num_P: 3                                        # [-] Number of polytopes (more = smoother but slower, num_P <= num_N)
+        num_N: 5                                        # [-] Number of trajectory segments
+
+        # --- Map Bounds ---
+        x_min: -200.0                                   # [m] Map x lower bound
+        x_max: 200.0                                    # [m] Map x upper bound
+        y_min: -200.0                                   # [m] Map y lower bound
+        y_max: 200.0                                    # [m] Map y upper bound
+        z_min: 0.5                                      # [m] Min altitude (points below are ground)
+        z_max: 6.0                                      # [m] Max altitude
+        sando_map_res: 0.3                              # [m] Voxel map resolution
+
+        # --- Goal ---
+        force_goal_z: true                              # [-] Force goal to a fixed height (RViz GUI goals have z=0)
+        default_goal_z: 2.0                             # [m] Default goal altitude when force_goal_z is true
+
+        # --- Dynamic Obstacles ---
+        obst_max_vel: 0.5                               # [m/s] Expected max velocity of dynamic obstacles
+
+        # =====================================================================
+        # [TUNE] — Adjust for performance / behavior trade-offs
+        # =====================================================================
+
+        # --- Global Planner ---
+        global_planner: "astar_heat"                    # ["sjps", "sastar", "astar_heat"]
+        inflation_hgp: 0.45                             # [m] Static obstacle inflation for global A* planning
+        hgp_timeout_duration_ms: 1000                   # [ms] Global planner timeout
+        environment_assumption: "dynamic"               # ["static", "dynamic", "dynamic_worst_case"] Decomposition mode
+
+        # --- Local Planning ---
+        horizon: 15.0                                   # [m] Planning horizon
+        goal_radius: 0.5                                # [m] Goal reached threshold
+        goal_seen_radius: 2.0                           # [m] Distance to stop replanning (too small makes planning very hard)
+        max_gurobi_comp_time_sec: 1.0                   # [s] Gurobi solver timeout per replanning cycle
+
+        # --- Dynamic Factor Adaptation ---
+        dynamic_factor_initial_mean: 1.5                # [-] Starting time-allocation factor (higher = more conservative)
+        factor_initial: 1.0                             # [-] Factor search lower bound
+        factor_final: 2.5                               # [-] Factor search upper bound
+        factor_constant_step_size: 0.1                  # [-] Factor search step size
+        dynamic_factor_k_radius: 0.4                    # [-] Factor search half-width around previous success
+
+        # --- Safety Corridors ---
+        sfc_size: [3.0, 3.0, 3.0]                 # [m] Local planning window (smaller = faster, larger = smoother)
+        dyn_base_inflation_m: 0.1                       # [m] Base inflation for dynamic obstacle bounding boxes in temporal SFC
+        inflate_unknown_boundary: true                  # [-] Inflate unknown voxel boundaries in SFC generation
+        traj_lifetime: 7.0                              # [s] Discard obstacle trajectories older than this
+
+        # --- Dynamic Obstacle Heat (soft costs) ---
+        heat_alpha0: 0.2                                # [-] Weight for reachability blob (penalizes proximity to obstacle)
+        heat_alpha1: 1.0                                # [-] Weight for trajectory tube (penalizes crossing predicted path)
+        heat_Hmax: 2.0                                  # [-] Maximum dynamic heat value
+        dyn_heat_tube_radius_m: 0.5                     # [m] Heat corridor radius
+
+        # --- Static Obstacle Heat (boundary halo) ---
+        static_heat_alpha: 1.0                          # [-] Peak heat at obstacle boundary
+        static_heat_Hmax: 5.0                           # [-] Maximum static heat value
+        static_heat_rmax_m: 1.0                         # [m] Maximum halo radius
+
+        # --- Hover Avoidance ---
+        hover_avoidance_enabled: false                  # [-] Enable hover obstacle repulsion
+        hover_avoidance_d_trigger: 4.0                  # [m] Distance threshold to trigger avoidance
+        hover_avoidance_h: 3.0                          # [m] Evasion distance
+
+        # --- Yaw ---
+        w_max_yawing: 0.5                               # [rad/s] Yaw rate during YAWING state (~29 deg/s)
+
+        # --- Obstacle Tracking ---
+        cluster_tolerance: 1.0                          # [m] Clustering distance for obstacle detection
+        prediction_horizon: 1.0                         # [s] How far ahead to predict obstacle motion
+        velocity_threshold: 0.8                         # [m/s] Speed threshold: below = static, above = dynamic
+
+        # --- Map Window ---
+        initial_wdx: 15.0                               # [m] Initial map window width
+        initial_wdy: 15.0                               # [m] Initial map window depth
+        initial_wdz: 4.0                                # [m] Initial map window height
+
+        # --- Sensor ---
+        depth_camera_depth_max: 10.0                    # [m] Max depth camera range (d435 in simulation)
+
+        # =====================================================================
+        # [INTERNAL] — Safe defaults, change only if you understand the algorithm
+        # =====================================================================
+
+        # --- Mode ---
+        flight_mode: "terminal_goal"                    # ["terminal_goal"] Only one mode exists
+        use_global_pc: true                             # [-] Use global pointcloud (known environment)
+
+        # --- Global Planner Internals ---
+        factor_hgp: 1.0                                 # [-] Do not change — resolution = factor_hgp * map_res
+        max_num_expansion: 100000                       # [-] Max A* node expansions
+        use_free_start: true                            # [-] Free the start voxel if occupied
+        free_start_factor: 2.0                          # [-] Radius factor for start freeing
+        use_free_goal: false                            # [-] Free the goal voxel if occupied
+        free_goal_factor: 2.0                           # [-] Radius factor for goal freeing
+        global_planner_heuristic_weight: 2.0             # [-] A* heuristic weight (higher = greedier)
+        heat_weight: 10.0                               # [-] Overall heat map weight in A* cost
+        max_dist_vertexes: 1.0                          # [m] Max distance between path vertices
+        w_unknown: 0.0                                  # [-] Cost weight for unknown cells
+        w_align: 0.0                                    # [-] Cost weight for alignment with initial velocity
+        decay_len_cells: 100.0                          # [-] Decay length for alignment cost
+        w_side: 0.0                                     # [-] Cost weight for lateral tie-breaking
+
+        # --- Heat Map Internals ---
+        use_heat_map: true                              # [-] Master toggle for heat map
+        dynamic_heat_enabled: true                      # [-] Enable dynamic obstacle heat
+        dynamic_as_occupied_current: true               # [-] Mark obstacle's current cell as hard-occupied
+        dynamic_as_occupied_future: false                # [-] Mark obstacle's future cells as hard-occupied
+        heat_p: 2                                       # [-] Reachability blob falloff power
+        heat_q: 2                                       # [-] Trajectory tube falloff power
+        heat_tau_ratio: 0.5                             # [-] Time decay ratio for heat
+        heat_gamma: 0.0                                 # [m/s] Tube radius growth rate over prediction time
+        heat_num_samples: 15                            # [-] Samples for heat computation
+        static_heat_enabled: true                       # [-] Enable static obstacle heat
+        static_heat_p: 2                                # [-] Static heat falloff power
+        static_heat_default_radius_m: 0.5               # [m] Default static heat radius
+        static_heat_boundary_only: true                 # [-] Apply heat only at boundary voxels
+        static_heat_apply_on_unknown: false             # [-] Apply static heat on unknown cells
+        static_heat_exclude_dynamic: true               # [-] Exclude dynamic obstacles from static heat
+
+        # --- Soft-Cost Obstacles ---
+        use_soft_cost_obstacles: true                   # [-] Enable soft-cost traversal mode
+        obstacle_soft_cost: 5.0                         # [-] Cost per occupied cell step
+
+        # --- Path Smoothing ---
+        los_cells: 0                                    # [cells] Line-of-sight inflation
+        min_len: 1.0                                    # [m] Min segment length
+        min_turn: 0.0                                   # [deg] Min turn angle
+
+        # --- Convex Decomposition Internals ---
+        min_dist_from_agent_to_traj: 10.0               # [m] Min distance from agent to trajectory
+        use_shrinked_box: false                         # [-] Use shrunk box for decomposition
+        shrinked_box_size: 0.0                          # [m] Shrunk box size
+
+        # --- Trajectory Optimization Internals ---
+        dc: 0.01                                        # [s] Interpolation timestep
+        dynamic_constraint_type: "Linf"                 # [-] Constraint norm: "Linf", "L2", "L1"
+        use_dynamic_factor: true                        # [-] Enable dynamic factor adaptation
+        obst_position_error: 0.0                        # [m] Bounded position estimation error
+        jerk_smooth_weight: 1.0e+1                      # [-] QP jerk smoothness weight
+
+        # --- K-Value Adaptation ---
+        num_replanning_before_adapt: 10                 # [-] Replanning cycles before adapting k-value
+        default_k_value: 50                             # [-] Default k-value at trajectory end
+        alpha_k_value_filtering: 0.9                    # [-] K-value filter coefficient
+        k_value_factor: 5.0                             # [-] K-value scaling factor
+
+        # --- Yaw Internals ---
+        alpha_filter_dyaw: 0.8                          # [-] Yaw rate filter (higher = more aggressive)
+        yaw_spinning_threshold: 10000                   # [-] Failures before switching to spinning mode
+        yaw_spinning_dyaw: 1.0                          # [rad/s] Spinning yaw rate
+
+        # --- Hover Avoidance Internals ---
+        ignore_other_trajs: false                       # [-] Ignore shared trajectories from /trajs
+        hover_avoidance_2d: true                        # [-] 2D avoidance only (keep altitude)
+        hover_avoidance_min_repulsion_norm: 0.01        # [-] Min repulsion vector norm to trigger
+
+        # --- Map Internals ---
+        map_buffer: 1.0                                 # [m] Buffer for goal & A point
+        center_shift_factor: 0.5                        # [-] Map center shift factor
+        min_wdx: 15.0                                   # [m] Min map window width
+        min_wdy: 15.0                                   # [m] Min map window depth
+        min_wdz: 4.0                                    # [m] Min map window height
+
+        # --- Communication Delay ---
+        use_comm_delay_inflation: true                  # [-] Enable communication delay inflation
+        comm_delay_inflation_alpha: 0.2                 # [-] Communication delay inflation alpha
+        comm_delay_inflation_max: 0.1                   # [m] Max communication delay inflation
+        comm_delay_filter_alpha: 0.9                    # [-] Communication delay filter coefficient
+
+        # --- Sensor Internals ---
+        fov_visual_depth: 10.0                          # [m] FOV visual depth
+        fov_visual_x_deg: 76.0                          # [deg] FOV horizontal angle
+        fov_visual_y_deg: 47.0                          # [deg] FOV vertical angle
+
+        # --- Obstacle Tracking Internals ---
+        use_adaptive_kf: true                           # [-] Use adaptive Kalman filter
+        adaptive_kf_alpha: 0.90                         # [-] Adaptive KF alpha (1.0 = standard KF)
+        adaptive_kf_dt: 0.1                             # [s] KF time step
+        min_cluster_size: 20                            # [-] Min cluster pointcloud size
+        max_cluster_size: 70                            # [-] Max cluster pointcloud size
+        prediction_dt: 0.1                              # [s] Prediction time step
+        time_to_delete_old_obstacles: 5.0               # [s] Remove obstacles not seen for this long
+        cluster_bbox_cutoff_size: 2.0                   # [m] Max cluster bounding box size
+        acceleration_threshold: 2.0                     # [m/s^2] Acceleration threshold for dynamic classification
+        use_life_time_for_box_visualization: true        # [-] Use lifetime for box visualization
+        box_visualization_duration: 1.0                 # [s] Box visualization duration
+        use_only_curr_pos_for_dynamic_obst: false       # [-] Use only current position (no prediction) for comparison
+
+        # --- Debug ---
+        global_planner_verbose: false                   # [-] Global planner debug output
+        debug_verbose: false                            # [-] General debug output
+        verbose_computation_time: false                 # [-] Print computation times
+        local_traj_comp_verbose: false                  # [-] Local trajectory computation debug
+
+        # --- Paper Visualization (development only) ---
+        use_state_update: true                          # [-] Use state update (false = freeze agent for viz)
+        use_random_color_for_global_path: false         # [-] Random color for global path
+        use_path_push_for_visualization: false           # [-] Only do global planning (paper viz mode)
+
+        # --- Benchmarking ---
+        use_benchmark: true                             # [-] Enable benchmarking data logging
+        file_path: ""                                   # Path to save benchmark CSV (must be set by user)

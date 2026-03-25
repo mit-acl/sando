@@ -1,0 +1,44 @@
+# Build artifacts
+build/
+install/
+log/
+*.o
+*.a
+*.so
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+
+# Data & results (generated at runtime)
+data/
+benchmark_data/
+
+# Large media (host externally)
+mp4/
+paper_imgs/
+videos/dynus2_animation/media/
+*.gif
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.code-workspace
+
+# Docker secrets
+docker/gurobi.lic
+
+# ROS bags & logs
+*.bag
+*.db3
+*.log
+
+# Temporary
+*.tmp
+core

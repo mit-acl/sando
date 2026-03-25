@@ -1,0 +1,20 @@
+session_name: generate_sfc
+windows:
+  - window_name: main
+    layout: tiled
+    shell_command_before:
+      - export ROS_DOMAIN_ID=20
+
+    panes:
+      # fixed obstacles publisher
+      - shell_command:
+        - python3 src/sando/scripts/fixed_obstacles_publisher.py
+
+      # rviz
+      - shell_command:
+        - rviz2 -d src/sando/rviz/sando.rviz
+
+      # run SFC generator
+      - shell_command:
+        - sleep 3
+        - ros2 run sando corridor_generator_node --ros-args -p max_dist_vertexes:=3.0 -p num_P:=3 -p global_planner:=astar_heat -p global_planner_heuristic_weight:=2.0

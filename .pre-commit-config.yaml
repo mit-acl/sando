@@ -1,0 +1,17 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+  - repo: https://github.com/cpp-linter/cpp-linter-hooks
+    rev: v1.1.11
+    hooks:
+      - id: clang-format
+        args: [--style=file]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.1
+    hooks:
+      - id: ruff-format
+      - id: ruff

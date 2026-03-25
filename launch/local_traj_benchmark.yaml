@@ -1,0 +1,17 @@
+session_name: local_traj_benchmark
+windows:
+  - window_name: main
+    layout: tiled
+    shell_command_before:
+      - export ROS_DOMAIN_ID=20
+    
+    panes:
+      # base station
+      # - shell_command:
+      - shell_command:
+        - ros2 launch sando simulator.launch.py
+
+      # run benchmark (sando, faster)
+      - shell_command:
+        - sleep 5
+        - ros2 launch sando local_traj_benchmark.launch.py

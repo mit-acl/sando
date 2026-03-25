@@ -1,0 +1,40 @@
+# .clang-format
+Language: Cpp
+BasedOnStyle: Google
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Include ordering: system → ROS → project
+IncludeBlocks: Regroup
+IncludeCategories:
+  # C system headers
+  - Regex: '^<(omp|stdio|stdlib|math|string|signal|unistd)\.h>'
+    Priority: 1
+  # C++ standard library
+  - Regex: '^<(algorithm|atomic|cassert|chrono|cmath|cstdint|deque|fstream|functional|future|iomanip|iostream|limits|map|memory|mutex|numeric|queue|random|set|sstream|string|thread|unordered_map|unordered_set|utility|vector)>'
+    Priority: 2
+  # Eigen
+  - Regex: '^<Eigen/'
+    Priority: 3
+  # PCL headers
+  - Regex: '^<pcl/'
+    Priority: 4
+  # Other third-party C-style includes (decomp_util, tf2, message_filters, etc.)
+  - Regex: '^<(decomp_util|tf2_eigen|tf2_ros|message_filters|pcl_conversions|gazebo|gazebo_ros|ignition)/'
+    Priority: 5
+  # ROS 2 message/service headers (angle brackets)
+  - Regex: '^<(std_msgs|geometry_msgs|sensor_msgs|nav_msgs|visualization_msgs|dynus_interfaces|decomp_rviz_plugins)/'
+    Priority: 6
+  # Project headers with angle brackets
+  - Regex: '^<(sando|hgp|sim)/'
+    Priority: 7
+  # Project headers with quotes
+  - Regex: '^"(sando|hgp|sim|timer)/'
+    Priority: 8
+  # ROS headers with quotes (rclcpp, ament, etc.)
+  - Regex: '^"(rclcpp|ament_index)'
+    Priority: 9
+  # Everything else
+  - Regex: '.*'
+    Priority: 10

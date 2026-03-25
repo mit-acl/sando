@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!--
+  Lightweight dynamic obstacle for Gazebo.
+  - Simple box visual + collision (no DAE mesh) for fast rendering and ray-tracing.
+  - Keeps move_model plugin for efficient pose updates (direct Gazebo API).
+  - No per-model ROS node / TF (dynamic_forest_node handles TF centrally).
+  - Gravity disabled.
+-->
+<robot name="obstacle" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="namespace" default="obstacle" />
+  <xacro:arg name="size" default="1.0" />
+  <xacro:arg name="traj_x" default="0" />
+  <xacro:arg name="traj_y" default="0" />
+  <xacro:arg name="traj_z" default="0" />
+
+  <link name="base_link">
+    <inertial>
+      <mass value="0.01" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="$(arg size) $(arg size) $(arg size)" />
+      </geometry>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="$(arg size) $(arg size) $(arg size)" />
+      </geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="base_link">
+    <gravity>0</gravity>
+    <visual>
+      <material>
+        <ambient>0.5 0.5 0.5 0.8</ambient>
+        <diffuse>0.5 0.5 0.5 0.8</diffuse>
+      </material>
+    </visual>
+  </gazebo>
+
+  <!-- move_model plugin: moves obstacle via direct Gazebo API (SetWorldPose).
+       publish_tf is false — dynamic_forest_node handles TF centrally. -->
+  <gazebo>
+    <plugin name="move_model" filename="libmove_model.so">
+      <traj_x>$(arg traj_x)</traj_x>
+      <traj_y>$(arg traj_y)</traj_y>
+      <traj_z>$(arg traj_z)</traj_z>
+    </plugin>
+  </gazebo>
+
+</robot>

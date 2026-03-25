@@ -1,0 +1,899 @@
+/* ----------------------------------------------------------------------------
+ * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Massachusetts Institute of Technology
+ * All Rights Reserved
+ * Authors: Kota Kondo, et al.
+ * See LICENSE file for the license information
+ * -------------------------------------------------------------------------- */
+
+#include <hgp/utils.hpp>
+
+void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::MarkerArray* m_array,
+                                 std_msgs::msg::ColorRGBA color, int type,
+                                 std::vector<double> radii) {
+  if (traj.size() == 0) return;
+  geometry_msgs::msg::Point p_last = eigen2point(traj[0]);
+
+  bool first_element = true;
+  int i = 50000;  // large enough to prevent conflict with other markers
+  int j = 0;
+
+  for (const auto& it : traj) {
+    i++;
+    if (first_element and type == visualization_msgs::msg::Marker::ARROW)  // skip the first element
+    {
+      first_element = false;
+      continue;
+    }
+
+    visualization_msgs::msg::Marker m;
+    m.lifetime = rclcpp::Duration::from_seconds(1.0);
+    m.type = type;
+    m.action = visualization_msgs::msg::Marker::ADD;
+    m.id = i;
+    m.color = color;
+    m.header.frame_id = "map";
+    geometry_msgs::msg::Point p = eigen2point(it);
+    if (type == visualization_msgs::msg::Marker::ARROW) {
+      m.scale.x = 0.1;
+      m.scale.y = 0.1;
+      m.points.push_back(p_last);
+      m.points.push_back(p);
+      p_last = p;
+    } else {
+      double scale = 0.1;       // Scale is the diameter of the sphere
+      if (radii.size() != 0) {  // If argument provided
+        scale = 2 * radii[j];
+      }
+      m.scale.x = scale;
+      m.scale.y = scale;
+      m.scale.z = scale;
+      m.pose.position = p;
+    }
+    (*m_array).markers.push_back(m);
+    j = j + 1;
+  }
+}
+
+void pathLineDotsToMarkerArray(const vec_Vecf<3>& traj,
+                               visualization_msgs::msg::MarkerArray* m_array,
+                               const std_msgs::msg::ColorRGBA& color, double line_width,
+                               double dot_diameter, int base_id, const std::string& frame_id,
+                               double lifetime_sec) {
+  if (!m_array || traj.empty()) return;
+
+  // ---------- LINE_STRIP ----------
+  visualization_msgs::msg::Marker line;
+  line.header.frame_id = frame_id;
+  line.header.stamp = rclcpp::Clock().now();
+  line.ns = "global_path_line";
+  line.id = base_id + 1;
+  line.type = visualization_msgs::msg::Marker::LINE_STRIP;
+  line.action = visualization_msgs::msg::Marker::ADD;
+  line.lifetime = rclcpp::Duration::from_seconds(lifetime_sec);
+
+  // RViz uses scale.x as the line width for LINE_STRIP.
+  line.scale.x = line_width;
+
+  line.color = color;
+  line.pose.orientation.w = 1.0;
+
+  line.points.reserve(traj.size());
+  for (const auto& it : traj) {
+    line.points.push_back(eigen2point(it));
+  }
+  m_array->markers.push_back(line);
+
+  // ---------- SPHERE_LIST (dots) ----------
+  visualization_msgs::msg::Marker dots;
+  dots.header.frame_id = frame_id;
+  dots.header.stamp = rclcpp::Clock().now();
+  dots.ns = "global_path_dots";
+  dots.id = base_id + 2;
+  dots.type = visualization_msgs::msg::Marker::SPHERE_LIST;
+  dots.action = visualization_msgs::msg::Marker::ADD;
+  dots.lifetime = rclcpp::Duration::from_seconds(lifetime_sec);
+
+  // For SPHERE_LIST, scale is the diameter of each sphere.
+  dots.scale.x = dot_diameter;
+  dots.scale.y = dot_diameter;
+  dots.scale.z = dot_diameter;
+
+  dots.color = color;
+  dots.pose.orientation.w = 1.0;
+
+  dots.points.reserve(traj.size());
+  for (const auto& it : traj) {
+    dots.points.push_back(eigen2point(it));
+  }
+  m_array->markers.push_back(dots);
+}
+
+std_msgs::msg::ColorRGBA getColorJet(double v, double vmin, double vmax) {
+  std_msgs::msg::ColorRGBA c;
+  c.a = 1.0;
+
+  // Clamp
+  if (v < vmin) v = vmin;
+  if (v > vmax) v = vmax;
+
+  const double dv = vmax - vmin;
+  if (dv <= 1e-9) {
+    // Degenerate range -> just return a dull red
+    c.r = 0.8;
+    c.g = 0.2;
+    c.b = 0.2;
+    return c;
+  }
+
+  // Normalize: t=0 -> slow (red), t=1 -> fast (green)
+  const double t = (v - vmin) / dv;
+
+  // Red -> Yellow -> Green (no blue)
+  // Equivalent to: r = 1-t, g = t, b = 0 (gives yellow in the middle)
+  c.r = 1.0 - t;
+  c.g = t;
+  c.b = 0.0;
+
+  // --- Make colors duller (optional but recommended) ---
+  // 1) Blend toward gray (desaturate)
+  const double gray = 0.9;  // 0..1
+  const double sat = 0.8;   // 1.0 original, smaller = duller
+  c.r = sat * c.r + (1.0 - sat) * gray;
+  c.g = sat * c.g + (1.0 - sat) * gray;
+  c.b = sat * c.b + (1.0 - sat) * gray;
+
+  // 2) Reduce brightness
+  const double bright = 0.95;  // 1.0 original, smaller = darker
+  c.r *= bright;
+  c.g *= bright;
+  c.b *= bright;
+
+  return c;
+}
+
+std_msgs::msg::ColorRGBA color(int id) {
+  std_msgs::msg::ColorRGBA red;
+  red.r = 1;
+  red.g = 0;
+  red.b = 0;
+  red.a = 1;
+  std_msgs::msg::ColorRGBA red_trans;
+  red_trans.r = 1;
+  red_trans.g = 0;
+  red_trans.b = 0;
+  red_trans.a = 0.7;
+  std_msgs::msg::ColorRGBA red_trans_trans;
+  red_trans_trans.r = 1;
+  red_trans_trans.g = 0;
+  red_trans_trans.b = 0;
+  red_trans_trans.a = 0.4;
+  std_msgs::msg::ColorRGBA blue;
+  blue.r = 0;
+  blue.g = 0;
+  blue.b = 1;
+  blue.a = 1;
+  std_msgs::msg::ColorRGBA blue_trans;
+  blue_trans.r = 0;
+  blue_trans.g = 0;
+  blue_trans.b = 1;
+  blue_trans.a = 0.7;
+  std_msgs::msg::ColorRGBA blue_trans_trans;
+  blue_trans_trans.r = 0;
+  blue_trans_trans.g = 0;
+  blue_trans_trans.b = 1;
+  blue_trans_trans.a = 0.4;
+  std_msgs::msg::ColorRGBA blue_light;
+  blue_light.r = 0.5;
+  blue_light.g = 0.7;
+  blue_light.b = 1;
+  blue_light.a = 1;
+  std_msgs::msg::ColorRGBA green;
+  green.r = 0;
+  green.g = 1;
+  green.b = 0;
+  green.a = 1;
+  std_msgs::msg::ColorRGBA yellow;
+  yellow.r = 1;
+  yellow.g = 1;
+  yellow.b = 0;
+  yellow.a = 1;
+  std_msgs::msg::ColorRGBA orange;  // orange
+  orange.r = 1;
+  orange.g = 0.5;
+  orange.b = 0;
+  orange.a = 1;
+  std_msgs::msg::ColorRGBA orange_trans;  // orange transparent
+  orange_trans.r = 1;
+  orange_trans.g = 0.5;
+  orange_trans.b = 0;
+  orange_trans.a = 0.3;
+  std_msgs::msg::ColorRGBA green_trans_trans;  // green transparent
+  green_trans_trans.r = 0;
+  green_trans_trans.g = 1;
+  green_trans_trans.b = 0;
+  green_trans_trans.a = 0.2;
+
+  switch (id) {
+    case RED:
+      return red;
+      break;
+    case RED_TRANS:
+      return red_trans;
+      break;
+    case RED_TRANS_TRANS:
+      return red_trans_trans;
+      break;
+    case BLUE:
+      return blue;
+      break;
+    case BLUE_TRANS:
+      return blue_trans;
+      break;
+    case BLUE_TRANS_TRANS:
+      return blue_trans_trans;
+      break;
+    case BLUE_LIGHT:
+      return blue_light;
+      break;
+    case GREEN:
+      return green;
+      break;
+    case YELLOW:
+      return yellow;
+      break;
+    case ORANGE:
+      return orange;
+      break;
+    case ORANGE_TRANS:
+      return orange_trans;
+      break;
+    case GREEN_TRANS_TRANS:
+      return green_trans_trans;
+      break;
+    default:
+      PCL_ERROR("COLOR NOT DEFINED");
+  }
+}
+
+// ## From Wikipedia - http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+void quaternion2Euler(tf2::Quaternion q, double& roll, double& pitch, double& yaw) {
+  tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+}
+
+void quaternion2Euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw) {
+  tf2::Quaternion tf_q(q.x(), q.y(), q.z(), q.w());
+  quaternion2Euler(tf_q, roll, pitch, yaw);
+}
+
+void quaternion2Euler(geometry_msgs::msg::Quaternion q, double& roll, double& pitch, double& yaw) {
+  tf2::Quaternion tf_q(q.x, q.y, q.z, q.w);
+  quaternion2Euler(tf_q, roll, pitch, yaw);
+}
+
+void saturate(double& var, double min, double max) {
+  if (var < min) {
+    var = min;
+  } else if (var > max) {
+    var = max;
+  }
+}
+
+double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
+  double tmp = a.dot(b) / (a.norm() * b.norm());
+  saturate(tmp, -1, 1);
+  return acos(tmp);
+}
+
+// returns the points around B sampled in the sphere with radius r and center center.
+std::vector<Eigen::Vector3d> samplePointsSphere(Eigen::Vector3d& B, double r,
+                                                Eigen::Vector3d& center) {
+  std::vector<Eigen::Vector3d> tmp;
+
+  Eigen::Vector3d dir = B - center;
+  double x = dir[0], y = dir[1], z = dir[2];
+
+  double theta0 = acos(z / (sqrt(x * x + y * y + z * z)));
+  double phi0 = atan2(y, x);
+
+  Eigen::AngleAxis<double> rot_z(phi0, Eigen::Vector3d::UnitZ());
+  Eigen::AngleAxis<double> rot_y(theta0, Eigen::Vector3d::UnitY());
+
+  for (double theta = 0; theta <= 3.14 / 2; theta = theta + 3.14 / 5) {
+    for (double phi = 0; phi <= 2 * 3.14; phi = phi + 3.14 / 5) {
+      Eigen::Vector3d p1, p2;
+      p1[0] = r * sin(theta) * cos(phi);
+      p1[1] = r * sin(theta) * sin(phi);
+      p1[2] = r * cos(theta);
+      Eigen::Vector3d trans = center;
+      p2 = rot_z * rot_y * p1 + trans;
+
+      if (p2[2] > 0)  // If below the ground, discard
+      {
+        tmp.push_back(p2);
+      }
+      if (theta == 0) {  // to avoid including multiple times the pointB
+        break;
+      }
+    }
+  }
+
+  return tmp;
+}
+
+// returns the points around B sampled in the sphere with radius r and center center, and sampled
+// intelligently with the given path last_index_inside_sphere is the the index of the last point
+// that is inside the sphere (should be provided as a parameter to this function) B is the first
+// intersection of JPS with the sphere
+std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(Eigen::Vector3d& B, double r,
+                                                       Eigen::Vector3d& center_sent,
+                                                       vec_Vecf<3>& path_sent,
+                                                       int last_index_inside_sphere) {
+  printf("In samplePointsSphereWithJPS\n");
+
+  vec_Vecf<3> path;
+
+  for (int i = 0; i < path_sent.size(); i++) {
+    path.push_back(path_sent[i]);  // Local copy of path_sent
+  }
+
+  Eigen::Vector3d center(center_sent[0], center_sent[1], center_sent[2]);
+
+  path[last_index_inside_sphere + 1] =
+      B;  // path will always have last_index_inside_sphere + 2 elements at least
+  std::vector<Eigen::Vector3d> samples;  // Points sampled in the sphere
+  Eigen::Vector3d dir;
+  double x, y, z;
+
+  for (int i = last_index_inside_sphere + 1; i >= 1; i--) {
+    Eigen::Vector3d point_i = (path[i] - center);  // point i expressed with origin=origin sphere
+    Eigen::Vector3d point_im1 = (path[i - 1] - center);  // point i minus 1
+
+    std::cout << "i=" << i << "point_i=" << path[i].transpose() << std::endl;
+    std::cout << "i=" << i << "point_im1=" << path[i - 1].transpose() << std::endl;
+
+    Eigen::Vector3d a = point_i;
+    Eigen::Vector3d b = point_im1;
+
+    double angle_max;
+    if (a.norm() != 0 && b.norm() != 0) {
+      double tmp = a.dot(b) / (a.norm() * b.norm());
+      saturate(tmp, -1, 1);
+      angle_max = acos(tmp);
+      printf("tmp=%f\n", tmp);
+      printf("angle_max=%f\n", angle_max);
+      if (angle_max < 0.02) {
+        samples.push_back(B);
+        continue;
+      }
+    } else {
+      samples.push_back(B);
+      continue;  // it's weird, but solves the problem when the vectors a and b are the same ones...
+    }
+
+    Eigen::Vector3d perp =
+        (point_i.cross(point_im1)).normalized();  // perpendicular vector to point_i and point_ip1;
+    printf("Perpendicular vector=\n");
+    std::cout << perp << std::endl;
+
+    for (double angle = 0; angle < angle_max; angle = angle + 0.34) {
+      Eigen::AngleAxis<double> rot(angle, perp);
+      dir = rot * point_i;
+      double x = dir[0], y = dir[1], z = dir[2];
+
+      double theta = acos(z / (sqrt(x * x + y * y + z * z)));
+      double phi = atan2(y, x);
+
+      Eigen::Vector3d sample;
+      sample[0] = r * sin(theta) * cos(phi);
+      sample[1] = r * sin(theta) * sin(phi);
+      sample[2] = r * cos(theta);
+      samples.push_back(sample + center);
+    }
+  }
+
+  if (last_index_inside_sphere >= 1) {
+    // add the last sample (intersection of pa)
+    Eigen::Vector3d last = path[1] - center;
+    double x = last[0], y = last[1], z = last[2];
+    double theta = acos(z / (sqrt(x * x + y * y + z * z)));
+    double phi = atan2(y, x);
+
+    Eigen::Vector3d sample;
+    sample[0] = r * sin(theta) * cos(phi);
+    sample[1] = r * sin(theta) * sin(phi);
+    sample[2] = r * cos(theta);
+
+    samples.push_back(sample + center);
+  }
+
+  std::vector<Eigen::Vector3d> uniform_samples = samplePointsSphere(B, r, center);
+
+  samples.insert(samples.end(), uniform_samples.begin(),
+                 uniform_samples.end());  // concatenate samples and uniform samples
+
+  printf("**y despues samples vale:\n");
+  for (int i = 0; i < samples.size(); i++) {
+    std::cout << samples[i].transpose() << std::endl;
+  }
+
+  return samples;
+}
+
+void angle_wrap(double& diff) {
+  diff = fmod(diff + M_PI, 2 * M_PI);
+  if (diff < 0) diff += 2 * M_PI;
+  diff -= M_PI;
+}
+
+vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud) {
+  vec_Vec3f pts;
+  pts.resize(ptr_cloud->points.size());
+  for (unsigned int i = 0; i < ptr_cloud->points.size(); i++) {
+    pts[i](0) = ptr_cloud->points[i].x;
+    pts[i](1) = ptr_cloud->points[i].y;
+    pts[i](2) = ptr_cloud->points[i].z;
+  }
+
+  return pts;
+}
+
+vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud1,
+                        const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud2) {
+  vec_Vec3f pts;
+  pts.reserve(ptr_cloud1->points.size() + ptr_cloud2->points.size());
+  for (unsigned int i = 0; i < ptr_cloud1->points.size(); i++) {
+    pts[i](0) = ptr_cloud1->points[i].x;
+    pts[i](1) = ptr_cloud1->points[i].y;
+    pts[i](2) = ptr_cloud1->points[i].z;
+  }
+
+  for (unsigned int i = ptr_cloud1->points.size(); i < ptr_cloud2->points.size(); i++) {
+    pts[i](0) = ptr_cloud2->points[i].x;
+    pts[i](1) = ptr_cloud2->points[i].y;
+    pts[i](2) = ptr_cloud2->points[i].z;
+  }
+
+  return pts;
+}
+
+geometry_msgs::msg::Point pointOrigin() {
+  geometry_msgs::msg::Point tmp;
+  tmp.x = 0;
+  tmp.y = 0;
+  tmp.z = 0;
+  return tmp;
+}
+
+Eigen::Vector3d vec2eigen(geometry_msgs::msg::Vector3 vector) {
+  Eigen::Vector3d tmp;
+  tmp << vector.x, vector.y, vector.z;
+  return tmp;
+}
+
+geometry_msgs::msg::Vector3 eigen2rosvector(Eigen::Vector3d vector) {
+  geometry_msgs::msg::Vector3 tmp;
+  tmp.x = vector(0, 0);
+  tmp.y = vector(1, 0);
+  tmp.z = vector(2, 0);
+  return tmp;
+}
+
+geometry_msgs::msg::Point eigen2point(Eigen::Vector3d vector) {
+  geometry_msgs::msg::Point tmp;
+  tmp.x = vector[0];
+  tmp.y = vector[1];
+  tmp.z = vector[2];
+  return tmp;
+}
+
+geometry_msgs::msg::Vector3 vectorNull() {
+  geometry_msgs::msg::Vector3 tmp;
+  tmp.x = 0;
+  tmp.y = 0;
+  tmp.z = 0;
+  return tmp;
+}
+
+geometry_msgs::msg::Vector3 vectorUniform(double a) {
+  geometry_msgs::msg::Vector3 tmp;
+  tmp.x = a;
+  tmp.y = a;
+  tmp.z = a;
+  return tmp;
+}
+
+template <typename T>
+using vec_E = std::vector<T, Eigen::aligned_allocator<T>>;
+
+template <int N>
+using Vecf = Eigen::Matrix<decimal_t, N, 1>;  // Be CAREFUL, because this is with doubles!
+
+template <int N>
+using vec_Vecf = vec_E<Vecf<N>>;
+
+// returns 1 if there is an intersection between the segment P1-P2 and the plane given by coeff=[A B
+// C D] (Ax+By+Cz+D==0)  returns 0 if there is no intersection. The intersection point is saved in
+// "intersection"
+bool getIntersectionWithPlane(const Eigen::Vector3d& P1, const Eigen::Vector3d& P2,
+                              const Eigen::Vector4d& coeff, Eigen::Vector3d& intersection) {
+  double A = coeff[0];
+  double B = coeff[1];
+  double C = coeff[2];
+  double D = coeff[3];
+  // http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
+  double x1 = P1[0];
+  double a = (P2[0] - P1[0]);
+  double y1 = P1[1];
+  double b = (P2[1] - P1[1]);
+  double z1 = P1[2];
+  double c = (P2[2] - P1[2]);
+  double t = -(A * x1 + B * y1 + C * z1 + D) / (A * a + B * b + C * c);
+  (intersection)[0] = x1 + a * t;
+  (intersection)[1] = y1 + b * t;
+  (intersection)[2] = z1 + c * t;
+  bool result =
+      (t < 0 || t > 1)
+          ? false
+          : true;  // False if the intersection is with the line P1-P2, not with the segment P1-P2
+  return result;
+}
+
+double normJPS(vec_Vecf<3>& path, int index_start) {
+  double distance = 0;
+  for (int i = index_start; i < path.size() - 1; i++) {
+    distance = distance + (path[i + 1] - path[i]).norm();
+  }
+  return distance;
+}
+
+// Crop the end of a JPS path by a given distance
+void reduceJPSbyDistance(vec_Vecf<3>& path, double d) {
+  double dist_so_far = 0;
+  for (int ii = path.size() - 1; ii > 0; ii--) {
+    Eigen::Vector3d v = path[ii] - path[ii - 1];
+    double dist_bet_segments = v.norm();
+    dist_so_far = dist_so_far + dist_bet_segments;
+    if (dist_so_far > d) {
+      double dist_wanted = dist_so_far - d;
+      path.erase(path.begin() + ii, path.end());
+      path.push_back(path[path.size() - 1] + v.normalized() * dist_wanted);
+      break;
+    }
+  }
+}
+
+// given 2 points (A inside and B outside the sphere) it computes the intersection of the lines
+// between that 2 points and the sphere
+Eigen::Vector3d getIntersectionWithSphere(Eigen::Vector3d& A, Eigen::Vector3d& B, double r,
+                                          Eigen::Vector3d& center) {
+  // http://www.ambrsoft.com/TrigoCalc/Sphere/SpherLineIntersection_.htm
+  float x1 = A[0];
+  float y1 = A[1];
+  float z1 = A[2];
+
+  float x2 = B[0];
+  float y2 = B[1];
+  float z2 = B[2];
+
+  float x3 = center[0];
+  float y3 = center[1];
+  float z3 = center[2];
+
+  float a = pow((x2 - x1), 2) + pow((y2 - y1), 2) + pow((z2 - z1), 2);
+  float b = 2 * ((x2 - x1) * (x1 - x3) + (y2 - y1) * (y1 - y3) + (z2 - z1) * (z1 - z3));
+  float c = x3 * x3 + y3 * y3 + z3 * z3 + x1 * x1 + y1 * y1 + z1 * z1 -
+            2 * (x3 * x1 + y3 * y1 + z3 * z1) - r * r;
+
+  float discrim = b * b - 4 * a * c;
+  if (discrim <= 0) {
+    printf(
+        "The line is tangent or doesn't intersect, returning the intersection with the center and "
+        "the first "
+        "point\n");
+
+    float x1 = center[0];
+    float y1 = center[1];
+    float z1 = center[2];
+
+    float x2 = A[0];
+    float y2 = A[1];
+    float z2 = A[2];
+
+    float x3 = center[0];
+    float y3 = center[1];
+    float z3 = center[2];
+
+    float a = pow((x2 - x1), 2) + pow((y2 - y1), 2) + pow((z2 - z1), 2);
+    float b = 2 * ((x2 - x1) * (x1 - x3) + (y2 - y1) * (y1 - y3) + (z2 - z1) * (z1 - z3));
+    float c = x3 * x3 + y3 * y3 + z3 * z3 + x1 * x1 + y1 * y1 + z1 * z1 -
+              2 * (x3 * x1 + y3 * y1 + z3 * z1) - r * r;
+
+    float t = (-b + sqrt(b * b - 4 * a * c)) / (2 * a);
+    float x_int = x1 + (x2 - x1) * t;
+    float y_int = y1 + (y2 - y1) * t;
+    float z_int = z1 + (z2 - z1) * t;
+    Eigen::Vector3d intersection(x_int, y_int, z_int);
+
+    return intersection;
+  } else {
+    float t = (-b + sqrt(b * b - 4 * a * c)) / (2 * a);
+    float x_int = x1 + (x2 - x1) * t;
+    float y_int = y1 + (y2 - y1) * t;
+    float z_int = z1 + (z2 - z1) * t;
+    Eigen::Vector3d intersection(x_int, y_int, z_int);
+    return intersection;
+  }
+}
+
+// Given a path (starting inside the sphere and finishing outside of it) expressed by a vector of
+// 3D-vectors (points), it returns its first intersection with a sphere of radius=r and
+// center=center the center is added as the first point of the path to ensure that the first element
+// of the path is inside the sphere (to avoid issues with the first point of JPS2)
+Eigen::Vector3d getFirstIntersectionWithSphere(vec_Vecf<3>& path, double r, Eigen::Vector3d& center,
+                                               int* last_index_inside_sphere,
+                                               bool* noPointsOutsideSphere) {
+  if (noPointsOutsideSphere != NULL) {  // this argument has been provided
+    *noPointsOutsideSphere = false;
+  }
+  int index = -1;
+  for (int i = 0; i < path.size(); i++) {
+    double dist = (path[i] - center).norm();
+    if (dist > r) {
+      index = i;  // This is the first point outside the sphere
+      break;
+    }
+  }
+
+  Eigen::Vector3d A;
+  Eigen::Vector3d B;
+
+  Eigen::Vector3d intersection;
+  switch (index) {
+    case -1:  // no points are outside the sphere --> return last element
+      A = center;
+      B = path[path.size() - 1];
+      if (last_index_inside_sphere != NULL) {
+        *last_index_inside_sphere = path.size() - 1;
+      }
+      if (noPointsOutsideSphere != NULL) {  // this argument has been provided
+        *noPointsOutsideSphere = true;
+      }
+      intersection = getIntersectionWithSphere(A, B, r, center);
+
+      if (last_index_inside_sphere != NULL) {
+        *last_index_inside_sphere = path.size() - 1;
+      }
+      break;
+    case 0:  // First element is outside the sphere
+      printf(
+          "First element is still oustide the sphere, there is sth wrong, returning the first "
+          "element\n");
+      intersection = path[0];
+      if (last_index_inside_sphere != NULL) {
+        *last_index_inside_sphere = 1;
+      }
+      break;
+    default:
+      A = path[index - 1];
+      B = path[index];
+      intersection = getIntersectionWithSphere(A, B, r, center);
+      if (last_index_inside_sphere != NULL) {
+        *last_index_inside_sphere = index - 1;
+      }
+  }
+
+  return intersection;
+}
+
+// Given a path (starting inside the sphere and finishing outside of it) expressed by a vector of
+// 3D-vectors (points), it returns its first intersection with a sphere of radius=r and
+// center=center
+Eigen::Vector3d getLastIntersectionWithSphere(vec_Vecf<3> path, double r, Eigen::Vector3d center) {
+  int index = -1;
+  for (int i = path.size() - 1; i >= 0; i--) {
+    double dist = (path[i] - center).norm();
+    if (dist < r) {
+      index = i;  // This is the first point inside the sphere
+      break;
+    }
+  }
+
+  if (index == path.size() - 1) {
+    return path[path.size() - 1];
+  }
+  // Note that it's guaranteed that index>=1, since the path[0] is always inside the sphere.
+  Eigen::Vector3d A = path[index];
+  Eigen::Vector3d B = path[index + 1];
+
+  Eigen::Vector3d intersection = getIntersectionWithSphere(A, B, r, center);
+  return intersection;
+}
+
+double getDistancePath(vec_Vecf<3>& path) {
+  double distance = 0;
+  for (int i = 0; i < path.size() - 1; i++) {
+    distance = distance + (path[i + 1] - path[i]).norm();
+  }
+  return distance;
+}
+
+// Same as the previous one, but also returns dist = the distance form the last intersection to the
+// goal (following the path)
+Eigen::Vector3d getLastIntersectionWithSphere(vec_Vecf<3> path, double r, Eigen::Vector3d center,
+                                              double* Jdist) {
+  int index = -1;
+  for (int i = path.size() - 1; i >= 0; i--) {
+    double dist = (path[i] - center).norm();
+    if (dist < r) {
+      index = i;  // This is the first point inside the sphere
+      break;
+    }
+  }
+
+  if (index == path.size() - 1) {
+    printf("ERROR, the goal is inside the sphere Sb, returning the last point\n");
+    *Jdist = 0;
+    return path[path.size() - 1];
+  }
+
+  // Note that it's guaranteed that index>=1, since the path[0] is always inside the sphere.
+  Eigen::Vector3d A = path[index];      // point inside the sphere
+  Eigen::Vector3d B = path[index + 1];  // point outside the sphere
+
+  Eigen::Vector3d intersection = getIntersectionWithSphere(A, B, r, center);
+
+  *Jdist = (B - intersection).norm();
+  for (int i = index + 1; i < path.size() - 1; i++) {
+    *Jdist = *Jdist + (path[i + 1] - path[i]).norm();
+  }
+
+  return intersection;
+}
+
+// returns the point placed between two concentric spheres with radii ra, rb, and center=center
+// If the path goes out from the 1st sphere, and then enters again, these points are also
+// considered! I.e: it returns all the points between the first point that goes out from the sphere
+// and the last point that is inside Sb
+vec_Vecf<3> getPointsBw2Spheres(vec_Vecf<3> path, double ra, double rb, Eigen::Vector3d center) {
+  bool out_first_sphere = false;
+
+  int index_1st_point_outside_Sa;
+  int index_last_point_inside_Sb;
+
+  for (int i = 0; i < path.size(); i++) {
+    float dist = (path[i] - center).norm();
+    if (dist > ra) {
+      index_1st_point_outside_Sa = i;
+      break;
+    }
+  }
+
+  for (int i = path.size() - 1; i >= 0; i--) {
+    float dist = (path[i] - center).norm();
+    if (dist < rb) {
+      index_last_point_inside_Sb = i;
+      break;
+    }
+  }
+
+  vec_Vecf<3> tmp;
+  for (int i = index_1st_point_outside_Sa; i <= index_last_point_inside_Sb; i++) {
+    tmp.push_back(path[i]);
+  }
+  return tmp;
+}
+
+visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(const std::vector<RobotState>& data,
+                                                                    int type, double max_value,
+                                                                    const rclcpp::Time& stamp) {
+  visualization_msgs::msg::MarkerArray marker_array;
+  if (data.empty()) return marker_array;
+
+  visualization_msgs::msg::Marker m;
+  m.header.frame_id = "map";
+  m.header.stamp = stamp;
+  m.ns = "state_vec";
+  m.id = type;  // single marker per type
+  m.action = visualization_msgs::msg::Marker::ADD;
+  m.type = visualization_msgs::msg::Marker::LINE_LIST;  // lighter than ARROW
+  m.pose.orientation.w = 1.0;
+
+  // Line width
+  m.scale.x = 0.15;  // adjust thickness
+
+  // Reserve to avoid reallocations
+  const size_t total_sample_number = 100;
+  const size_t step = std::max(1, static_cast<int>(data.size() / total_sample_number));
+  const size_t segs = (data.size() > step) ? (data.size() / step) : 0;
+  m.points.reserve(2 * segs);
+  m.colors.reserve(2 * segs);
+
+  geometry_msgs::msg::Point p_last;
+  p_last.x = data[0].pos(0);
+  p_last.y = data[0].pos(1);
+  p_last.z = data[0].pos(2);
+
+  for (size_t i = 0; i < data.size(); i += step) {
+    geometry_msgs::msg::Point p;
+    p.x = data[i].pos(0);
+    p.y = data[i].pos(1);
+    p.z = data[i].pos(2);
+
+    // velocity-based color (apply same color to both endpoints of the segment)
+    const double vel = data[i].vel.norm();
+    const std_msgs::msg::ColorRGBA c = getColorJet(vel, 0, max_value);
+
+    m.points.push_back(p_last);
+    m.colors.push_back(c);
+
+    m.points.push_back(p);
+    m.colors.push_back(c);
+
+    p_last = p;
+  }
+
+  marker_array.markers.push_back(m);
+  return marker_array;
+}
+
+visualization_msgs::msg::MarkerArray stateVector2ColoredLineStripMarkerArray(
+    const std::vector<RobotState>& data, int id, const std::string& ns, double max_value,
+    const rclcpp::Time& stamp, double line_width, size_t max_points_vis) {
+  visualization_msgs::msg::MarkerArray marker_array;
+  if (data.size() < 2) return marker_array;
+
+  visualization_msgs::msg::Marker m;
+  m.header.frame_id = "map";
+  m.header.stamp = stamp;
+  m.ns = ns;
+  m.id = id;  // single persistent marker
+  m.action = visualization_msgs::msg::Marker::ADD;
+  m.type = visualization_msgs::msg::Marker::LINE_STRIP;
+  m.pose.orientation.w = 1.0;
+
+  // Line width
+  m.scale.x = line_width;
+
+  // Downsample to a fixed point budget (smooth + fast)
+  const size_t N = data.size();
+  const size_t step = std::max<size_t>(1, N / std::max<size_t>(2, max_points_vis));
+  const size_t visN = (N + step - 1) / step;
+
+  m.points.reserve(visN);
+  m.colors.reserve(visN);
+
+  for (size_t i = 0; i < N; i += step) {
+    geometry_msgs::msg::Point p;
+    p.x = data[i].pos(0);
+    p.y = data[i].pos(1);
+    p.z = data[i].pos(2);
+    m.points.push_back(p);
+
+    const double v = data[i].vel.norm();
+    m.colors.push_back(getColorJet(v, 0.0, max_value));
+  }
+
+  // Ensure we include the very last point
+  if ((N - 1) % step != 0) {
+    geometry_msgs::msg::Point p;
+    p.x = data.back().pos(0);
+    p.y = data.back().pos(1);
+    p.z = data.back().pos(2);
+    m.points.push_back(p);
+
+    const double v = data.back().vel.norm();
+    m.colors.push_back(getColorJet(v, 0.0, max_value));
+  }
+
+  marker_array.markers.push_back(m);
+  return marker_array;
+}
+
+void deleteVertexes(vec_Vecf<3>& JPS_path, int max_value) {
+  if (JPS_path.size() > max_value + 1)  // If I have more than (max_value + 1) vertexes
+  {
+    JPS_path.erase(JPS_path.begin() + max_value + 1,
+                   JPS_path.end());  // Force JPS to have less than max_value elements
+  }
+}
