@@ -6,14 +6,14 @@
 # Usage:
 #   bash src/sando/scripts/run_all_dynamic_benchmarks.sh
 #
-# Run from: ~/code/dynus_ws
+# Run from: ~/code/sando_ws
 
 set -e  # Exit on first failure
 
 NUM_TRIALS=${1:-10}  # Default 10, override with first argument
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="$HOME/code/dynus_ws/benchmark_logs/${TIMESTAMP}"
+LOG_DIR="$HOME/code/sando_ws/benchmark_logs/${TIMESTAMP}"
 mkdir -p "$LOG_DIR"
 
 echo "============================================================"
@@ -26,11 +26,11 @@ echo ""
 # ── 1. SANDO ──────────────────────────────────────────────────
 echo "============================================================"
 echo "  [1/4] SANDO - Dynamic Benchmark"
-echo "  Directory: ~/code/dynus_ws"
+echo "  Directory: ~/code/sando_ws"
 echo "  Started: $(date)"
 echo "============================================================"
 
-cd "$HOME/code/dynus_ws"
+cd "$HOME/code/sando_ws"
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select sando \
   && . install/setup.bash \
   && python3 src/sando/scripts/run_benchmark.py \

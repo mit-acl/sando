@@ -55,15 +55,15 @@ sudo apt install -y libpcl-dev
 sudo apt install -y build-essential
 
 # SANDO and dependencies
-mkdir -p /home/${USER}/code/dynus_ws/src
-cd /home/${USER}/code/dynus_ws/src
+mkdir -p /home/${USER}/code/sando_ws/src
+cd /home/${USER}/code/sando_ws/src
 git clone https://github.com/mit-acl/dynus.git
 git clone https://github.com/kotakondo/dynus_interfaces.git
 git clone https://github.com/kotakondo/realsense_gazebo_plugin.git
 git clone https://github.com/kotakondo/livox_laser_simulation_ros2.git
 git clone https://gitlab.com/mit-acl/lab/acl-mapping.git
 git clone https://github.com/kotakondo/gazebo_ros_pkgs.git
-cd /home/${USER}/code/dynus_ws/src/acl-mapping
+cd /home/${USER}/code/sando_ws/src/acl-mapping
 git switch ros2
 
 mkdir -p /home/${USER}/code/decomp_ws/src
@@ -92,7 +92,7 @@ cd /home/${USER}/code/livox_ws/src/livox_ros_driver2
 source /opt/ros/humble/setup.sh && ./build.sh humble
 
 #SANDO
-cd /home/${USER}/code/dynus_ws
+cd /home/${USER}/code/sando_ws
 source /opt/ros/humble/setup.sh 
 source /home/${USER}/code/decomp_ws/install/setup.sh 
 export CMAKE_PREFIX_PATH=/home/${USER}/code/livox_ws/install/livox_ros_driver2:/home/${USER}/code/decomp_ws/install/decomp_util

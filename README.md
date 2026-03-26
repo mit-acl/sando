@@ -119,7 +119,7 @@ docker rmi $(docker images -q)     # remove all images
    ```
 2. Source and run:
    ```bash
-   cd ~/code/dynus_ws
+   cd ~/code/sando_ws
    source install/setup.bash
    python3 src/sando/scripts/run_sim.py -m interactive -s install/setup.bash
    ```
@@ -242,17 +242,6 @@ Both modes support `--dry-run` to inspect the generated tmuxp YAML without launc
 - **Dynamic heat maps** — soft-cost global planning that steers away from predicted obstacle trajectories
 
 </details>
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repo and create a feature branch
-2. Follow the existing code style (Google C++ style via `.clang-format`, `ruff` for Python)
-3. Ensure the build passes: `colcon build --packages-select sando`
-4. Submit a pull request with a clear description of changes
-
-For bug reports and feature requests, please open a [GitHub Issue](https://github.com/mit-acl/dynus/issues).
 
 ## License
 

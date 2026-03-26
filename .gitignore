@@ -25,6 +25,8 @@ videos/dynus2_animation/media/
 # IDE & editor
 .vscode/
 .idea/
+.claude/
+CLAUDE.md
 *.swp
 *.swo
 *~

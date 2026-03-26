@@ -85,7 +85,7 @@ def set_num_p_everywhere(num_p: int):
     script_dir = Path(__file__).parent
     src_yaml = script_dir.parent / "config" / "sando.yaml"
     # Find the install yaml relative to the workspace
-    ws_dir = script_dir.parent.parent.parent  # dynus_ws
+    ws_dir = script_dir.parent.parent.parent  # sando_ws
     install_yaml = (
         ws_dir / "install" / "sando" / "share" / "sando" / "config" / "sando.yaml"
     )

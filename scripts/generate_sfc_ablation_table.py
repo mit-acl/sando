@@ -23,34 +23,34 @@ CONFIGS = [
         "Worst-Case",
         2.5,
         os.path.expanduser(
-            "~/code/dynus_ws/src/sando/benchmark_data/dynamic_worst_case/vel_2.5/hard"
+            "~/code/sando_ws/src/sando/benchmark_data/dynamic_worst_case/vel_2.5/hard"
         ),
     ),
     (
         "SANDO2 (STSFC)",
         2.5,
         os.path.expanduser(
-            "~/code/dynus_ws/src/sando/benchmark_data/dynamic/vel_2.5/hard_20260307_133859"
+            "~/code/sando_ws/src/sando/benchmark_data/dynamic/vel_2.5/hard_20260307_133859"
         ),
     ),
     (
         "Worst-Case",
         5.0,
         os.path.expanduser(
-            "~/code/dynus_ws/src/sando/benchmark_data/dynamic_worst_case/vel_5/N_3/hard"
+            "~/code/sando_ws/src/sando/benchmark_data/dynamic_worst_case/vel_5/N_3/hard"
         ),
     ),
     (
         "SANDO2 (STSFC)",
         5.0,
         os.path.expanduser(
-            "~/code/dynus_ws/src/sando/benchmark_data/dynamic/vel_5/N_3/hard_20260306_170520"
+            "~/code/sando_ws/src/sando/benchmark_data/dynamic/vel_5/N_3/hard_20260306_170520"
         ),
     ),
 ]
 
 ANALYZE_BIN = os.path.expanduser(
-    "~/code/dynus_ws/install/sando/lib/sando/analyze_benchmark"
+    "~/code/sando_ws/install/sando/lib/sando/analyze_benchmark"
 )
 
 OUTPUT_TEX = os.path.expanduser("~/paper_writing/SANDO_v3/tables/sfc_ablation.tex")
@@ -63,7 +63,7 @@ def run_analysis(data_dir):
     Reading from that avoids double-rounding errors from parsing text output.
     """
     cmd = (
-        f"source {os.path.expanduser('~/code/dynus_ws/install/setup.bash')} && "
+        f"source {os.path.expanduser('~/code/sando_ws/install/setup.bash')} && "
         f"{ANALYZE_BIN} --data-dir {data_dir} --table-type dynamic"
     )
     result = subprocess.run(

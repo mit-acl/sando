@@ -58,14 +58,14 @@ COPY gurobi.lic /opt/gurobi1103/
 
 # Install SANDO and dependencies
 ##########################################
-RUN mkdir -p /home/kkondo/code/dynus_ws/src
-WORKDIR /home/kkondo/code/dynus_ws/src
+RUN mkdir -p /home/kkondo/code/sando_ws/src
+WORKDIR /home/kkondo/code/sando_ws/src
 # dummy arg to invalidate cache and build from here
 ARG DUMMY=unknown
-RUN DUMMY=${DUMMY} git clone https://github.com/mit-acl/dynus.git sando
-WORKDIR /home/kkondo/code/dynus_ws/src/sando
+RUN DUMMY=${DUMMY} git clone https://github.com/mit-acl/sando.git
+WORKDIR /home/kkondo/code/sando_ws/src/sando
 RUN git switch dev && git checkout d0fafa56d11aa0cc21c4f6710adb15603f442776
-WORKDIR /home/kkondo/code/dynus_ws/src
+WORKDIR /home/kkondo/code/sando_ws/src
 RUN git clone https://github.com/kotakondo/dynus_interfaces.git && \
     cd dynus_interfaces && git checkout 24113061479bbdc2661fcc413a9885aebae56076 && \
     printf '\nament_package()\n' >> CMakeLists.txt
@@ -78,7 +78,7 @@ RUN git clone https://github.com/kotakondo/gazebo_ros_pkgs.git && \
 RUN git clone https://github.com/kotakondo/uav_simulator.git && \
     cd uav_simulator && git checkout b196208d3cbf0269b8e80220f7cc1cc992b6c7f8
 RUN git clone https://gitlab.com/mit-acl/lab/acl-mapping.git
-WORKDIR /home/kkondo/code/dynus_ws/src/acl-mapping
+WORKDIR /home/kkondo/code/sando_ws/src/acl-mapping
 RUN git switch ros2 && git checkout d36a5338c2eecfdbbbcf17870994e9310f12b412
 RUN mkdir -p /home/kkondo/code/decomp_ws/src
 WORKDIR /home/kkondo/code/decomp_ws/src
@@ -113,7 +113,7 @@ RUN . /opt/ros/humble/setup.sh && ./build.sh humble
 SHELL ["/bin/bash", "-c"]
 
 ### Build all packages
-WORKDIR /home/kkondo/code/dynus_ws
+WORKDIR /home/kkondo/code/sando_ws
 RUN source /opt/ros/humble/setup.bash && \
     source /home/kkondo/code/decomp_ws/install/setup.bash && \
     export CMAKE_PREFIX_PATH=/home/kkondo/code/livox_ws/install/livox_ros_driver2:/home/kkondo/code/decomp_ws/install/decomp_util:${CMAKE_PREFIX_PATH} && \
@@ -136,7 +136,7 @@ RUN echo 'alias sb="source ~/.bashrc"' >> ~/.bashrc
 RUN echo 'alias eb="code ~/.bashrc"' >> ~/.bashrc
 RUN echo 'alias gs="git status"' >> ~/.bashrc
 RUN echo 'alias gp="git push"' >> ~/.bashrc
-RUN echo 'alias roscd="cd ~/code/dynus_ws"' >> ~/.bashrc
+RUN echo 'alias roscd="cd ~/code/sando_ws"' >> ~/.bashrc
 RUN echo 'alias cb="roscd && colcon build && sb"' >> ~/.bashrc
 RUN echo 'alias ss="roscd && source install/setup.bash"' >> ~/.bashrc
 RUN echo 'alias cbd="clear && roscd && colcon build && ss"' >> ~/.bashrc

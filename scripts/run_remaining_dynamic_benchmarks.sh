@@ -2,7 +2,7 @@
 # Wait for I-MPC to finish, then run FAPP and EGO-Swarm2
 
 IMPC_PID=1549519
-LOG_DIR="$HOME/code/dynus_ws/benchmark_logs/$(date +%Y%m%d_%H%M%S)_fapp_ego"
+LOG_DIR="$HOME/code/sando_ws/benchmark_logs/$(date +%Y%m%d_%H%M%S)_fapp_ego"
 mkdir -p "$LOG_DIR"
 
 echo "============================================================"
