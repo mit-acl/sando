@@ -6,19 +6,23 @@
 #   make run-interactive
 #   make run-interactive NUM_OBSTACLES=100
 
+SANDO_WS="${SANDO_WS:-/root/sando_ws}"
+
 source ~/.bashrc
-source /home/kkondo/code/sando_ws/install/setup.bash
-source /home/kkondo/code/decomp_ws/install/setup.bash
+source ${SANDO_WS}/install/setup.bash
 source /usr/share/gazebo/setup.sh
 
-cd /home/kkondo/code/sando_ws
+# Source livox driver if available
+[ -f ${SANDO_WS}/livox_ws/install/setup.bash ] && \
+    source ${SANDO_WS}/livox_ws/install/setup.bash
+
+cd ${SANDO_WS}
 
 MODE="${MODE:-demo}"
 SCENARIO="${SCENARIO:-static_easy}"
-SETUP_BASH="/home/kkondo/code/sando_ws/install/setup.bash"
+SETUP_BASH="${SANDO_WS}/install/setup.bash"
 
 if [ "$MODE" = "demo" ]; then
-    # Parse SCENARIO as <type>_<difficulty> (e.g. static_easy, dynamic_hard)
     case "$SCENARIO" in
         static_easy|static_medium|static_hard)
             TYPE="static"

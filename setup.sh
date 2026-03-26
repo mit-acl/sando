@@ -1,116 +1,184 @@
-#!/bin/bash 
+#!/bin/bash
+# --------------------------------------------------------------------------
+# SANDO Setup Script
+# Installs ROS 2 Humble, Gurobi, and all dependencies, then builds the workspace.
+#
+# Usage:
+#   git clone --recursive https://github.com/mit-acl/sando.git
+#   cd sando && ./setup.sh
+# --------------------------------------------------------------------------
+set -e
 
-# This will prompt the user for sudo password and the credentials will be cached for 15 minutes
-# All subsequent sudo commands won't prompt user for password as it is already cached
-sudo -v 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SANDO_WS="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)" || SANDO_WS="$HOME/code/sando_ws"
 
-# Go to home directory and create code directory 
-cd /home/${USER}
-mkdir code
+echo "=== SANDO Setup ==="
+echo "  Workspace: $SANDO_WS"
+echo "  Sando dir: $SCRIPT_DIR"
+echo ""
 
-# Basic software
-sudo rm -rf /var/lib/apt/lists/*
-sudo apt update
-sudo apt upgrade -y
-sudo apt-get update
-sudo apt-get upgrade -y
-sudo apt-get install -q -y --no-install-recommends git tmux vim wget tmuxp make openssh-server net-tools g++ xterm python3-pip 
-pip install pymavlink
-sudo apt install -y libomp-dev libpcl-dev libeigen3-dev
+# Prompt for sudo once (cached for 15 min)
+sudo -v
 
-# Install ROS2 Humble
-sudo apt update && sudo apt install locales
-sudo locale-gen en_US en_US.UTF-8
-sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-export LANG=en_US.UTF-8
-sudo apt install software-properties-common
-echo -e "\n" | sudo add-apt-repository universe
-sudo apt update && sudo apt install curl -y
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-sudo apt install -y ros-humble-desktop 
-sudo apt install -y ros-dev-tools 
-echo >> ~/.bashrc
-echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc 
+# ============================================================
+# 1. System packages
+# ============================================================
+echo "=== Installing system packages ==="
+sudo apt update && sudo apt upgrade -y
+sudo apt-get install -q -y --no-install-recommends \
+    git tmux vim wget tmuxp make gdb openssh-server net-tools \
+    g++ xterm python3-pip build-essential \
+    libomp-dev libpcl-dev libeigen3-dev nlohmann-json3-dev
+
+# ============================================================
+# 2. ROS 2 Humble
+# ============================================================
+if ! command -v ros2 &>/dev/null; then
+    echo "=== Installing ROS 2 Humble ==="
+    sudo apt install -y locales
+    sudo locale-gen en_US en_US.UTF-8
+    sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+    export LANG=en_US.UTF-8
+    sudo apt install -y software-properties-common
+    echo -e "\n" | sudo add-apt-repository universe
+    sudo apt update && sudo apt install -y curl
+    sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+        -o /usr/share/keyrings/ros-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+        http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
+        | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+    sudo apt update
+    sudo apt install -y ros-humble-desktop ros-dev-tools
+    grep -qxF 'source /opt/ros/humble/setup.bash' ~/.bashrc || \
+        echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
+else
+    echo "=== ROS 2 already installed, skipping ==="
+fi
+
 export ROS_DISTRO=humble
+source /opt/ros/humble/setup.bash
 
-# Ros dependencies 
-sudo apt-get install -y ros-${ROS_DISTRO}-gazebo-* 
-sudo apt-get install -y ros-${ROS_DISTRO}-pcl-conversions 
-sudo apt-get install -y ros-${ROS_DISTRO}-example-interfaces 
-sudo apt-get install -y ros-${ROS_DISTRO}-pcl-ros 
-sudo apt-get install -y ros-${ROS_DISTRO}-rviz2 
-sudo apt-get install -y ros-${ROS_DISTRO}-rqt-gui 
-sudo apt-get install -y ros-${ROS_DISTRO}-rqt-gui-py 
-sudo apt-get install -y ros-${ROS_DISTRO}-tf2-tools 
-sudo apt-get install -y ros-${ROS_DISTRO}-tf-transformations
-sudo apt-get install -y nlohmann-json3-dev
+# ROS 2 dependencies
+echo "=== Installing ROS 2 dependencies ==="
+sudo apt-get install -y \
+    ros-${ROS_DISTRO}-gazebo-ros-pkgs \
+    ros-${ROS_DISTRO}-pcl-conversions \
+    ros-${ROS_DISTRO}-pcl-ros \
+    ros-${ROS_DISTRO}-rviz2 \
+    ros-${ROS_DISTRO}-rviz-common \
+    ros-${ROS_DISTRO}-tf2-tools \
+    ros-${ROS_DISTRO}-tf-transformations \
+    ros-${ROS_DISTRO}-example-interfaces \
+    ros-${ROS_DISTRO}-rqt-gui \
+    ros-${ROS_DISTRO}-rqt-gui-py
 
-sudo apt install -y ros-${ROS_DISTRO}-turtlesim 
-sudo apt install -y ros-${ROS_DISTRO}-rqt* 
-sudo apt install -y ros-${ROS_DISTRO}-rviz2 
-sudo apt install -y ros-${ROS_DISTRO}-gazebo-ros-pkgs 
-sudo apt install -y ros-${ROS_DISTRO}-rviz-common 
-sudo apt install -y libpcl-dev 
-sudo apt install -y build-essential
+# ============================================================
+# 3. Gurobi (if not already installed)
+# ============================================================
+if [ ! -d "/opt/gurobi1103" ]; then
+    echo "=== Installing Gurobi 11.0.3 ==="
+    wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
+    sudo tar -xzf /tmp/gurobi11.0.3_linux64.tar.gz -C /opt
+    rm /tmp/gurobi11.0.3_linux64.tar.gz
+    cd /opt/gurobi1103/linux64/src/build
+    sudo make && sudo cp libgurobi_c++.a ../../lib/
+    echo ""
+    echo "  NOTE: Place your Gurobi license file at ~/gurobi.lic"
+    echo "  Free academic licenses: https://www.gurobi.com/academia/academic-program-and-licenses/"
+    echo ""
+fi
 
-# SANDO and dependencies
-mkdir -p /home/${USER}/code/sando_ws/src
-cd /home/${USER}/code/sando_ws/src
-git clone https://github.com/mit-acl/dynus.git
-git clone https://github.com/kotakondo/dynus_interfaces.git
-git clone https://github.com/kotakondo/realsense_gazebo_plugin.git
-git clone https://github.com/kotakondo/livox_laser_simulation_ros2.git
-git clone https://gitlab.com/mit-acl/lab/acl-mapping.git
-git clone https://github.com/kotakondo/gazebo_ros_pkgs.git
-cd /home/${USER}/code/sando_ws/src/acl-mapping
-git switch ros2
+export GUROBI_HOME="/opt/gurobi1103/linux64"
+export PATH="${PATH}:${GUROBI_HOME}/bin"
+export LD_LIBRARY_PATH="${GUROBI_HOME}/lib:${LD_LIBRARY_PATH}"
 
-mkdir -p /home/${USER}/code/decomp_ws/src
-cd /home/${USER}/code/decomp_ws/src
-git clone https://github.com/kotakondo/DecompROS2.git
-mkdir -p /home/${USER}/code/livox_ws/src
-cd /home/${USER}/code/livox_ws/src
-git clone https://github.com/kotakondo/livox_ros_driver2.git
-cd /home/${USER}/code
-git clone https://github.com/Livox-SDK/Livox-SDK2.git
+# ============================================================
+# 4. Initialize submodules (if not already done)
+# ============================================================
+echo "=== Initializing submodules ==="
+cd "$SCRIPT_DIR"
+git submodule update --init --recursive
 
-# Build workspace 
-#decomp 
-cd /home/${USER}/code/decomp_ws
-source /opt/ros/humble/setup.sh && colcon build --packages-select decomp_util
-source /home/${USER}/code/decomp_ws/install/setup.sh && source /opt/ros/humble/setup.sh && colcon build
+# ============================================================
+# 5. Create symlinks for colcon discovery
+# ============================================================
+echo "=== Setting up workspace symlinks ==="
+WS_SRC="$SANDO_WS/src"
+for d in "$SCRIPT_DIR"/deps/*/; do
+    name=$(basename "$d")
+    # Skip non-colcon deps (they have COLCON_IGNORE)
+    if [ -f "$d/COLCON_IGNORE" ]; then
+        continue
+    fi
+    if [ ! -e "$WS_SRC/$name" ]; then
+        ln -s "$d" "$WS_SRC/$name"
+        echo "  Linked: $name"
+    fi
+done
 
-#Livox-SDK2
-cd /home/${USER}/code/Livox-SDK2
-mkdir build 
-cd /home/${USER}/code/Livox-SDK2/build 
-cmake .. && make -j && sudo make install 
+# ============================================================
+# 6. Build Livox-SDK2 (cmake, not colcon)
+# ============================================================
+LIVOX_SDK="$SCRIPT_DIR/deps/Livox-SDK2"
+if [ -d "$LIVOX_SDK" ] && [ ! -f "/usr/local/lib/liblivox_lidar_sdk_static.a" ]; then
+    echo "=== Building Livox-SDK2 ==="
+    mkdir -p "$LIVOX_SDK/build"
+    cd "$LIVOX_SDK/build"
+    cmake .. && make -j$(nproc) && sudo make install
+fi
 
-#livox_ros_drver2
-cd /home/${USER}/code/livox_ws/src/livox_ros_driver2
-source /opt/ros/humble/setup.sh && ./build.sh humble
+# ============================================================
+# 7. Build livox_ros_driver2 (needs its own workspace due to custom build.sh)
+# ============================================================
+LIVOX_DRIVER="$SCRIPT_DIR/deps/livox_ros_driver2"
+LIVOX_WS="$SANDO_WS/livox_ws"
+if [ -d "$LIVOX_DRIVER" ] && [ ! -d "$LIVOX_WS/install/livox_ros_driver2" ]; then
+    echo "=== Building livox_ros_driver2 ==="
+    mkdir -p "$LIVOX_WS/src"
+    ln -sf "$LIVOX_DRIVER" "$LIVOX_WS/src/livox_ros_driver2"
+    cd "$LIVOX_WS/src/livox_ros_driver2"
+    source /opt/ros/humble/setup.bash
+    ./build.sh humble
+fi
 
-#SANDO
-cd /home/${USER}/code/sando_ws
-source /opt/ros/humble/setup.sh 
-source /home/${USER}/code/decomp_ws/install/setup.sh 
-export CMAKE_PREFIX_PATH=/home/${USER}/code/livox_ws/install/livox_ros_driver2:/home/${USER}/code/decomp_ws/install/decomp_util
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+# ============================================================
+# 8. Build the workspace
+# ============================================================
+echo "=== Building SANDO workspace ==="
+cd "$SANDO_WS"
+source /opt/ros/humble/setup.bash
+# Source livox driver if built
+[ -f "$LIVOX_WS/install/setup.bash" ] && source "$LIVOX_WS/install/setup.bash"
+colcon build \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release \
+                 -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
+                 -DCMAKE_C_COMPILER=/usr/bin/gcc \
+    --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
 
-# Add livox to library path 
-echo >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH="/home/${USER}/code/livox_ws/install/livox_ros_driver2/lib:${LD_LIBRARY_PATH}" ' >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH="/opt/ros/humble/lib:${LD_LIBRARY_PATH}" ' >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH="/home/${USER}/code/decomp_ws/install/decomp_ros_msgs/lib:${LD_LIBRARY_PATH}" ' >> ~/.bashrc
-source ~/.bashrc
+# ============================================================
+# 9. Configure shell environment
+# ============================================================
+echo "=== Configuring shell ==="
 
-echo >> ~/.bashrc
-echo '# ROS2 RTPS network' >> ~/.bashrc
-echo 'export ROS_DOMAIN_ID=20' >> ~/.bashrc
-echo >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH=/opt/ros/humble/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH' >> ~/.bashrc
-echo >> ~/.bashrc
-echo '# Source ros distro' >> ~/.bashrc
-echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
-source ~/.bashrc
+# Add Gurobi to bashrc (idempotent)
+grep -qxF 'export GUROBI_HOME="/opt/gurobi1103/linux64"' ~/.bashrc || cat >> ~/.bashrc << 'BASHEOF'
+
+# Gurobi
+export GUROBI_HOME="/opt/gurobi1103/linux64"
+export PATH="${PATH}:${GUROBI_HOME}/bin"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
+export GRB_LICENSE_FILE="$HOME/gurobi.lic"
+BASHEOF
+
+# Add ROS domain ID
+grep -qxF 'export ROS_DOMAIN_ID=20' ~/.bashrc || \
+    echo 'export ROS_DOMAIN_ID=20' >> ~/.bashrc
+
+echo ""
+echo "=== SANDO setup complete! ==="
+echo ""
+echo "  To use:"
+echo "    cd $SANDO_WS"
+echo "    source install/setup.bash"
+echo "    python3 src/sando/scripts/run_sim.py -m interactive -s install/setup.bash"
+echo ""

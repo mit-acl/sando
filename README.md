@@ -38,7 +38,7 @@ If you like this project, please consider starring the repo!
 ## Quick Start (Docker)
 
 ```bash
-git clone https://github.com/mit-acl/dynus.git sando && cd sando/docker
+git clone --recursive https://github.com/mit-acl/sando.git && cd sando/docker
 make build                         # ~15 min first time
 make run-interactive               # click goals in RViz!
 ```
@@ -113,9 +113,9 @@ docker rmi $(docker images -q)     # remove all images
 
 1. Clone and run setup:
    ```bash
-   mkdir -p ~/code/ws && cd ~/code/ws
-   git clone https://github.com/mit-acl/dynus.git sando && cd sando
-   ./setup.sh    # installs ROS 2 Humble, Gurobi, and all dependencies
+   mkdir -p ~/code/sando_ws/src && cd ~/code/sando_ws/src
+   git clone --recursive https://github.com/mit-acl/sando.git
+   cd sando && ./setup.sh
    ```
 2. Source and run:
    ```bash

@@ -23,7 +23,7 @@ build:
 	docker build -t sando .
 
 build-no-cache:
-	docker build --build-arg DUMMY=`date +%s` -t sando .
+	docker build --no-cache -t sando .
 
 # ---- Demo mode: pre-configured scenarios with automatic goal ----
 # Usage: make run-demo SCENARIO=static_easy
