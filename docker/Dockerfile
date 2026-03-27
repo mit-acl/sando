@@ -41,34 +41,35 @@ COPY gurobi.lic /opt/gurobi1103/
 
 # Clone SANDO with all submodules
 ENV SANDO_WS=/root/sando_ws
+ENV LIVOX_WS=/root/livox_ws
 RUN mkdir -p ${SANDO_WS}/src
 WORKDIR ${SANDO_WS}/src
 ARG DUMMY=unknown
 RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
 
-# Symlink deps for colcon package discovery
+# Symlink deps for colcon package discovery (skip COLCON_IGNORE deps)
 RUN for d in sando/deps/*/; do \
       name=$(basename "$d"); \
       [ -f "$d/COLCON_IGNORE" ] && continue; \
       [ ! -e "$name" ] && ln -s "$d" "$name"; \
     done
 
-# Build Livox-SDK2 (cmake install)
+# Build Livox-SDK2 (cmake install to /usr/local)
 WORKDIR ${SANDO_WS}/src/sando/deps/Livox-SDK2
 RUN mkdir -p build && cd build && cmake .. && make -j && make install
 
-# Build livox_ros_driver2 (custom build script, needs its own workspace)
-RUN mkdir -p ${SANDO_WS}/livox_ws/src && \
-    cp -r ${SANDO_WS}/src/sando/deps/livox_ros_driver2 ${SANDO_WS}/livox_ws/src/livox_ros_driver2
-WORKDIR ${SANDO_WS}/livox_ws/src/livox_ros_driver2
+# Build livox_ros_driver2 (custom build.sh — must be in its own workspace OUTSIDE sando_ws)
+RUN mkdir -p ${LIVOX_WS}/src && \
+    cp -r ${SANDO_WS}/src/sando/deps/livox_ros_driver2 ${LIVOX_WS}/src/livox_ros_driver2
+WORKDIR ${LIVOX_WS}/src/livox_ros_driver2
 RUN . /opt/ros/humble/setup.sh && ./build.sh humble
 
 # Build all colcon packages
 SHELL ["/bin/bash", "-c"]
 WORKDIR ${SANDO_WS}
 RUN source /opt/ros/humble/setup.bash && \
-    if [ -f ${SANDO_WS}/livox_ws/install/setup.bash ]; then \
-        source ${SANDO_WS}/livox_ws/install/setup.bash; \
+    if [ -f ${LIVOX_WS}/install/setup.bash ]; then \
+        source ${LIVOX_WS}/install/setup.bash; \
     fi && \
     colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
         --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
