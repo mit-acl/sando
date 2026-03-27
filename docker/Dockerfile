@@ -59,7 +59,7 @@ RUN mkdir -p build && cd build && cmake .. && make -j && make install
 
 # Build livox_ros_driver2 (custom build script, needs its own workspace)
 RUN mkdir -p ${SANDO_WS}/livox_ws/src && \
-    ln -sf ${SANDO_WS}/src/sando/deps/livox_ros_driver2 ${SANDO_WS}/livox_ws/src/livox_ros_driver2
+    cp -r ${SANDO_WS}/src/sando/deps/livox_ros_driver2 ${SANDO_WS}/livox_ws/src/livox_ros_driver2
 WORKDIR ${SANDO_WS}/livox_ws/src/livox_ros_driver2
 RUN . /opt/ros/humble/setup.sh && ./build.sh humble
 
@@ -67,7 +67,9 @@ RUN . /opt/ros/humble/setup.sh && ./build.sh humble
 SHELL ["/bin/bash", "-c"]
 WORKDIR ${SANDO_WS}
 RUN source /opt/ros/humble/setup.bash && \
-    source ${SANDO_WS}/livox_ws/install/setup.bash && \
+    if [ -f ${SANDO_WS}/livox_ws/install/setup.bash ]; then \
+        source ${SANDO_WS}/livox_ws/install/setup.bash; \
+    fi && \
     colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
         --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
 
