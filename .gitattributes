@@ -1,0 +1,3 @@
+# Tell GitHub Linguist to ignore notebooks and vendored deps in language stats
+*.ipynb linguist-documentation
+deps/** linguist-vendored
