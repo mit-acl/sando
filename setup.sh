@@ -106,10 +106,8 @@ echo "=== Setting up workspace symlinks ==="
 WS_SRC="$SANDO_WS/src"
 for d in "$SCRIPT_DIR"/deps/*/; do
     name=$(basename "$d")
-    # Skip non-colcon deps (they have COLCON_IGNORE)
-    if [ -f "$d/COLCON_IGNORE" ]; then
-        continue
-    fi
+    # Skip Livox deps (built separately, not standard colcon packages)
+    case "$name" in Livox-SDK2|livox_ros_driver2) continue;; esac
     if [ ! -e "$WS_SRC/$name" ]; then
         ln -s "$d" "$WS_SRC/$name"
         echo "  Linked: $name"

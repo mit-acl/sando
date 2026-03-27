@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
         ros-${ROS_DISTRO}-tf-transformations \
         ros-${ROS_DISTRO}-desktop \
         ros-dev-tools \
+        ros-${ROS_DISTRO}-gazebo-ros2-control \
         libpcl-dev build-essential nlohmann-json3-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -47,10 +48,10 @@ WORKDIR ${SANDO_WS}/src
 ARG DUMMY=unknown
 RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
 
-# Symlink deps for colcon package discovery (skip COLCON_IGNORE deps)
+# Symlink deps for colcon package discovery (skip Livox — built separately)
 RUN for d in sando/deps/*/; do \
       name=$(basename "$d"); \
-      [ -f "$d/COLCON_IGNORE" ] && continue; \
+      case "$name" in Livox-SDK2|livox_ros_driver2) continue;; esac; \
       [ ! -e "$name" ] && ln -s "$d" "$name"; \
     done
 
@@ -64,15 +65,17 @@ RUN mkdir -p ${LIVOX_WS}/src && \
 WORKDIR ${LIVOX_WS}/src/livox_ros_driver2
 RUN . /opt/ros/humble/setup.sh && ./build.sh humble
 
-# Build all colcon packages
+# Build all colcon packages (two passes: decomp_util first, then everything else)
 SHELL ["/bin/bash", "-c"]
 WORKDIR ${SANDO_WS}
 RUN source /opt/ros/humble/setup.bash && \
+    colcon build --packages-select decomp_util --cmake-args -DCMAKE_BUILD_TYPE=Release
+RUN source /opt/ros/humble/setup.bash && \
+    source ${SANDO_WS}/install/setup.bash && \
     if [ -f ${LIVOX_WS}/install/setup.bash ]; then \
         source ${LIVOX_WS}/install/setup.bash; \
     fi && \
-    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
-        --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # Gazebo audio fix
 RUN echo 'pcm.!default { type plug; slave.pcm "null" }' >> /usr/share/alsa/alsa.conf
