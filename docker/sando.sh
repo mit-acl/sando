@@ -7,15 +7,10 @@
 #   make run-interactive NUM_OBSTACLES=100
 
 SANDO_WS="${SANDO_WS:-/root/sando_ws}"
-LIVOX_WS="${LIVOX_WS:-/root/livox_ws}"
 
 source ~/.bashrc
 source ${SANDO_WS}/install/setup.bash
 source /usr/share/gazebo/setup.sh
-
-# Source livox driver if available
-[ -f ${LIVOX_WS}/install/setup.bash ] && \
-    source ${LIVOX_WS}/install/setup.bash
 
 cd ${SANDO_WS}
 

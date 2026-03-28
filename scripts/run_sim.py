@@ -551,14 +551,14 @@ def generate_gazebo_dynamic_yaml(
             # ACL mapper
             {
                 "shell_command": [
-                    "sleep 5",
+                    "sleep 10",
                     f"ros2 launch global_mapper_ros global_mapper_node.launch.py quad:=NX01 depth_pointcloud_topic:={depth_topic}",
                 ]
             },
             # Onboard agent NX01
             {
                 "shell_command": [
-                    "sleep 5",
+                    "sleep 10",
                     f"ros2 launch sando onboard_sando.launch.py namespace:=NX01 "
                     f"x:={start_x} y:={start_y} z:={start_z} yaw:={start_yaw} "
                     + ("use_benchmark:=true " if use_benchmark else "")
@@ -875,7 +875,7 @@ def generate_gazebo_yaml(
         panes.append(
             {
                 "shell_command": [
-                    "sleep 5",
+                    "sleep 10",
                     f"ros2 launch global_mapper_ros global_mapper_node.launch.py quad:=NX01 depth_pointcloud_topic:={depth_topic} param_file:={param_file}",
                 ]
             }
@@ -885,7 +885,7 @@ def generate_gazebo_yaml(
     panes.append(
         {
             "shell_command": [
-                "sleep 5",
+                "sleep 10",
                 f"ros2 launch sando onboard_sando.launch.py namespace:=NX01 x:={start_x} y:={start_y} z:={start_z} yaw:={start_yaw} "
                 + (
                     f"environment_assumption:={environment_assumption} "

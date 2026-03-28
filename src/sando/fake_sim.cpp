@@ -134,17 +134,15 @@ class FakeSim : public rclcpp::Node {
     // Timer to simulate TF broadcast
     timer_ = this->create_wall_timer(10ms, std::bind(&FakeSim::pubCallback, this), cb_group_me_1_);
 
-    // Gazebo service client
-    gazebo_client_ =
-        this->create_client<gazebo_msgs::srv::SetEntityState>("/plug/set_entity_state");
+    // Gazebo service client (only when needed — actual sending starts in pubCallback
+    // after the initial sleep, giving spawn_entity.py time to create the entity)
     if (send_state_to_gazebo_) {
+      gazebo_client_ =
+          this->create_client<gazebo_msgs::srv::SetEntityState>("/plug/set_entity_state");
       while (!gazebo_client_->wait_for_service(10s)) {
         RCLCPP_INFO(this->get_logger(), "Gazebo service not available, waiting again...");
       }
     }
-
-    // Delay before sending the initial state to Gazebo
-    if (send_state_to_gazebo_) std::thread(&FakeSim::sendGazeboState, this).detach();
 
     // Flag to publish drone marker
     publish_marker_drone_ = (visual_level > 0);

@@ -1,0 +1,13 @@
+.git
+**/.git
+**/build/
+install/
+log/
+__pycache__
+*.pyc
+.ruff_cache/
+mp4/
+paper_imgs/
+*.bag
+.claude/
+CLAUDE.md

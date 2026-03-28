@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
         ros-${ROS_DISTRO}-desktop \
         ros-dev-tools \
         ros-${ROS_DISTRO}-gazebo-ros2-control \
+        ros-${ROS_DISTRO}-xacro \
         libpcl-dev build-essential nlohmann-json3-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -38,17 +39,15 @@ RUN wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
 ENV GUROBI_HOME="/opt/gurobi1103/linux64"
 ENV PATH="${PATH}:${GUROBI_HOME}/bin"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
-COPY gurobi.lic /opt/gurobi1103/
+COPY docker/gurobi.lic /opt/gurobi1103/
 
-# Clone SANDO with all submodules
+# Copy SANDO from local machine (build context = repo root)
 ENV SANDO_WS=/root/sando_ws
 ENV LIVOX_WS=/root/livox_ws
-RUN mkdir -p ${SANDO_WS}/src
-WORKDIR ${SANDO_WS}/src
-ARG DUMMY=unknown
-RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
+COPY . ${SANDO_WS}/src/sando/
 
-# Symlink deps for colcon package discovery (skip Livox — built separately)
+# Symlink deps for colcon package discovery (skip Livox-SDK2 and livox_ros_driver2 — built separately)
+WORKDIR ${SANDO_WS}/src
 RUN for d in sando/deps/*/; do \
       name=$(basename "$d"); \
       case "$name" in Livox-SDK2|livox_ros_driver2) continue;; esac; \
@@ -59,23 +58,33 @@ RUN for d in sando/deps/*/; do \
 WORKDIR ${SANDO_WS}/src/sando/deps/Livox-SDK2
 RUN mkdir -p build && cd build && cmake .. && make -j && make install
 
-# Build livox_ros_driver2 (custom build.sh — must be in its own workspace OUTSIDE sando_ws)
-RUN mkdir -p ${LIVOX_WS}/src && \
-    cp -r ${SANDO_WS}/src/sando/deps/livox_ros_driver2 ${LIVOX_WS}/src/livox_ros_driver2
-WORKDIR ${LIVOX_WS}/src/livox_ros_driver2
-RUN . /opt/ros/humble/setup.sh && ./build.sh humble
-
-# Build all colcon packages (two passes: decomp_util first, then everything else)
+# Build livox_ros_driver2 (in its own workspace — requires build.sh for package file setup)
+RUN mkdir -p ${LIVOX_WS}/src
+WORKDIR ${LIVOX_WS}/src
+RUN cp -r ${SANDO_WS}/src/sando/deps/livox_ros_driver2 livox_ros_driver2 && \
+    cd livox_ros_driver2 && \
+    rm -f COLCON_IGNORE && \
+    cp -f package_ROS2.xml package.xml && \
+    cp -rf launch_ROS2/ launch/
 SHELL ["/bin/bash", "-c"]
+WORKDIR ${LIVOX_WS}
+RUN source /opt/ros/humble/setup.bash && \
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
+                              -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble
+
+# Build all colcon packages (three passes: decomp_util, main, ros2_livox_simulation)
 WORKDIR ${SANDO_WS}
 RUN source /opt/ros/humble/setup.bash && \
     colcon build --packages-select decomp_util --cmake-args -DCMAKE_BUILD_TYPE=Release
 RUN source /opt/ros/humble/setup.bash && \
     source ${SANDO_WS}/install/setup.bash && \
-    if [ -f ${LIVOX_WS}/install/setup.bash ]; then \
-        source ${LIVOX_WS}/install/setup.bash; \
-    fi && \
-    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --packages-ignore ros2_livox_simulation \
+                 --cmake-args -DCMAKE_BUILD_TYPE=Release
+RUN source /opt/ros/humble/setup.bash && \
+    source ${SANDO_WS}/install/setup.bash && \
+    source ${LIVOX_WS}/install/setup.bash && \
+    colcon build --packages-select ros2_livox_simulation \
+                 --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # Gazebo audio fix
 RUN echo 'pcm.!default { type plug; slave.pcm "null" }' >> /usr/share/alsa/alsa.conf
@@ -91,6 +100,6 @@ RUN echo "alias tks='tmux kill-server'" >> ~/.bashrc && \
     echo "alias cbps='cd ${SANDO_WS} && colcon build --packages-select'" >> ~/.bashrc
 
 # Entry point
-COPY sando.sh /
+COPY docker/sando.sh /
 RUN chmod +x /sando.sh
 ENTRYPOINT ["/sando.sh"]

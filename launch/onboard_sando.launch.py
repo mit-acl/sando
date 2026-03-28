@@ -283,9 +283,6 @@ def generate_launch_description():
                 z,
                 "-Y",
                 yaw,
-                "--ros-args",
-                "--log-level",
-                "error",
             ],
         )
 
