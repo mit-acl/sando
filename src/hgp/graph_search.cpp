@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "hgp/graph_search.hpp"
-
 #include <cmath>
 
 using namespace sando;
@@ -19,10 +18,19 @@ typedef timer::Timer MyTimer;
 static inline double clamp01(double x) { return x < -1.0 ? -1.0 : (x > 1.0 ? 1.0 : x); }
 static inline double hypot2d(double x, double y) { return std::sqrt(x * x + y * y); }
 
-GraphSearch::GraphSearch(const int8_t* cMap, const std::shared_ptr<sando::VoxelMapUtil>& map_util,
-                         int xDim, int yDim, int zDim, double eps, bool verbose,
-                         std::string global_planner, double w_unknown, double w_align,
-                         double decay_len_cells, double w_side)
+GraphSearch::GraphSearch(
+    const int8_t* cMap,
+    const std::shared_ptr<sando::VoxelMapUtil>& map_util,
+    int xDim,
+    int yDim,
+    int zDim,
+    double eps,
+    bool verbose,
+    std::string global_planner,
+    double w_unknown,
+    double w_align,
+    double decay_len_cells,
+    double w_side)
     : cMap_(cMap),
       map_util_(map_util),
       xDim_(xDim),
@@ -71,15 +79,28 @@ inline bool GraphSearch::isUnknown(int x, int y, int z) const {
 }
 
 inline double GraphSearch::getHeur(int x, int y, int z) const {
-  return eps_ * std::sqrt((x - xGoal_) * (x - xGoal_) + (y - yGoal_) * (y - yGoal_) +
-                          (z - zGoal_) * (z - zGoal_));
+  return eps_ * std::sqrt(
+                    (x - xGoal_) * (x - xGoal_) + (y - yGoal_) * (y - yGoal_) +
+                    (z - zGoal_) * (z - zGoal_));
 }
 
-bool GraphSearch::plan(int xStart, int yStart, int zStart, int xGoal, int yGoal, int zGoal,
-                       double initial_g, double& global_planning_time, double& hgp_static_jps_time,
-                       double& hgp_check_path_time, double& hgp_dynamic_astar_time,
-                       double& hgp_recover_path_time, double current_time, const Vec3f& start_vel,
-                       int max_expand, int timeout_duration_ms) {
+bool GraphSearch::plan(
+    int xStart,
+    int yStart,
+    int zStart,
+    int xGoal,
+    int yGoal,
+    int zGoal,
+    double initial_g,
+    double& global_planning_time,
+    double& hgp_static_jps_time,
+    double& hgp_check_path_time,
+    double& hgp_dynamic_astar_time,
+    double& hgp_recover_path_time,
+    double current_time,
+    const Vec3f& start_vel,
+    int max_expand,
+    int timeout_duration_ms) {
   pq_.clear();
   path_.clear();
   hm_.assign(xDim_ * yDim_ * zDim_, nullptr);
@@ -108,8 +129,8 @@ bool GraphSearch::plan(int xStart, int yStart, int zStart, int xGoal, int yGoal,
   MyTimer global_planning_timer(true);
 
   // Run the planner
-  bool result = select_planner(currNode_ptr, max_expand, start_id, goal_id,
-                               std::chrono::milliseconds(timeout_duration_ms));
+  bool result = select_planner(
+      currNode_ptr, max_expand, start_id, goal_id, std::chrono::milliseconds(timeout_duration_ms));
 
   // Print the time taken [ms]
   global_planning_time_ = global_planning_timer.getElapsedMicros() / 1000.0;
@@ -124,8 +145,12 @@ bool GraphSearch::plan(int xStart, int yStart, int zStart, int xGoal, int yGoal,
   return result;
 }
 
-bool GraphSearch::select_planner(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                                 std::chrono::milliseconds timeout_duration) {
+bool GraphSearch::select_planner(
+    StatePtr& currNode_ptr,
+    int max_expand,
+    int start_id,
+    int goal_id,
+    std::chrono::milliseconds timeout_duration) {
   // Make planner choice unambiguous:
   //  - sjps         : JPS successors (getJpsSucc)
   //  - astar        : A* grid successors (getSucc) with NO heat
@@ -147,8 +172,12 @@ bool GraphSearch::select_planner(StatePtr& currNode_ptr, int max_expand, int sta
   }
 }
 
-bool GraphSearch::static_jps_plan(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                                  std::chrono::milliseconds timeout_duration) {
+bool GraphSearch::static_jps_plan(
+    StatePtr& currNode_ptr,
+    int max_expand,
+    int start_id,
+    int goal_id,
+    std::chrono::milliseconds timeout_duration) {
   // Record the start time
   auto start_time = std::chrono::steady_clock::now();
 
@@ -332,7 +361,7 @@ std::vector<StatePtr> GraphSearch::removeCornerPts(const std::vector<StatePtr>& 
 }
 
 //// RIGHT NOW THE JPS GIVES BACK A VERY SPARSE PATH, SO TO CHECK COLLISION AGAINST DYNAMIC
-///OBSTACLES, WE NEED TO INTERPOLATE THE PATH
+/// OBSTACLES, WE NEED TO INTERPOLATE THE PATH
 void GraphSearch::updateGValues() {
   // first reverse the path
   std::reverse(path_.begin(), path_.end());
@@ -348,9 +377,9 @@ void GraphSearch::updateGValues() {
   for (int i = 0; i < path_float.size(); i++) {
     Veci<3> temp =
         map_util_->floatToInt(Vecf<3>(path_float[i](0), path_float[i](1), path_float[i](2)));
-    StatePtr temp_ptr = std::make_shared<State>(
-        State(coordToId(temp(0), temp(1), temp(2)), temp(0), temp(1), temp(2), 0, 0,
-              0));  // for now dx, dy, dz are 0 (TODO: this could be problematic?)
+    StatePtr temp_ptr = std::make_shared<State>(State(
+        coordToId(temp(0), temp(1), temp(2)), temp(0), temp(1), temp(2), 0, 0,
+        0));  // for now dx, dy, dz are 0 (TODO: this could be problematic?)
 
     // compute total path length and update g
     if (i > 0) {
@@ -372,8 +401,11 @@ void GraphSearch::updateGValues() {
 }
 
 /// Compute the node time
-double GraphSearch::computeNodeTime(const Eigen::Vector3d& pf, const Eigen::Vector3d& p0,
-                                    const Eigen::Vector3d& v0, StatePtr& currNode_ptr) {
+double GraphSearch::computeNodeTime(
+    const Eigen::Vector3d& pf,
+    const Eigen::Vector3d& p0,
+    const Eigen::Vector3d& v0,
+    StatePtr& currNode_ptr) {
   // Initialize final velocity vector (for each axis)
   Eigen::Vector3d vf = Eigen::Vector3d::Zero();
 
@@ -539,8 +571,11 @@ std::vector<StatePtr> GraphSearch::recoverPath(StatePtr node, int start_id) {
   return path;
 }
 
-void GraphSearch::getSucc(const StatePtr& curr, std::vector<int>& succ_ids,
-                          std::vector<double>& succ_costs, bool use_heat) {
+void GraphSearch::getSucc(
+    const StatePtr& curr,
+    std::vector<int>& succ_ids,
+    std::vector<double>& succ_costs,
+    bool use_heat) {
   succ_ids.clear();
   succ_costs.clear();
 
@@ -611,8 +646,8 @@ void GraphSearch::getSucc(const StatePtr& curr, std::vector<int>& succ_ids,
   }
 }
 
-void GraphSearch::getJpsSucc(const StatePtr& curr, std::vector<int>& succ_ids,
-                             std::vector<double>& succ_costs) {
+void GraphSearch::getJpsSucc(
+    const StatePtr& curr, std::vector<int>& succ_ids, std::vector<double>& succ_costs) {
   const int norm1 = std::abs(curr->dx) + std::abs(curr->dy) + std::abs(curr->dz);
   int num_neib = jn3d_->nsz[norm1][0];
   int num_fneib = jn3d_->nsz[norm1][1];
@@ -651,14 +686,14 @@ void GraphSearch::getJpsSucc(const StatePtr& curr, std::vector<int>& succ_ids,
     }
 
     succ_ids.push_back(new_id);
-    succ_costs.push_back(std::sqrt((new_x - curr->x) * (new_x - curr->x) +
-                                   (new_y - curr->y) * (new_y - curr->y) +
-                                   (new_z - curr->z) * (new_z - curr->z)));
+    succ_costs.push_back(std::sqrt(
+        (new_x - curr->x) * (new_x - curr->x) + (new_y - curr->y) * (new_y - curr->y) +
+        (new_z - curr->z) * (new_z - curr->z)));
   }
 }
 
-bool GraphSearch::jump(int x, int y, int z, int dx, int dy, int dz, int& new_x, int& new_y,
-                       int& new_z) {
+bool GraphSearch::jump(
+    int x, int y, int z, int dx, int dy, int dz, int& new_x, int& new_y, int& new_z) {
   new_x = x + dx;
   new_y = y + dy;
   new_z = z + dz;
@@ -673,8 +708,9 @@ bool GraphSearch::jump(int x, int y, int z, int dx, int dy, int dz, int& new_x, 
   int num_neib = jn3d_->nsz[norm1][0];
   for (int k = 0; k < num_neib - 1; ++k) {
     int new_new_x, new_new_y, new_new_z;
-    if (jump(new_x, new_y, new_z, jn3d_->ns[id][0][k], jn3d_->ns[id][1][k], jn3d_->ns[id][2][k],
-             new_new_x, new_new_y, new_new_z))
+    if (jump(
+            new_x, new_y, new_z, jn3d_->ns[id][0][k], jn3d_->ns[id][1][k], jn3d_->ns[id][2][k],
+            new_new_x, new_new_y, new_new_z))
       return true;
   }
 
@@ -879,8 +915,9 @@ JPS3DNeib::JPS3DNeib() {
         for (int dev = 0; dev < nsz[norm1][0]; ++dev)
           Neib(dx, dy, dz, norm1, dev, ns[id][0][dev], ns[id][1][dev], ns[id][2][dev]);
         for (int dev = 0; dev < nsz[norm1][1]; ++dev) {
-          FNeib(dx, dy, dz, norm1, dev, f1[id][0][dev], f1[id][1][dev], f1[id][2][dev],
-                f2[id][0][dev], f2[id][1][dev], f2[id][2][dev]);
+          FNeib(
+              dx, dy, dz, norm1, dev, f1[id][0][dev], f1[id][1][dev], f1[id][2][dev],
+              f2[id][0][dev], f2[id][1][dev], f2[id][2][dev]);
         }
         id++;
       }
@@ -1101,8 +1138,18 @@ void JPS3DNeib::Neib(int dx, int dy, int dz, int norm1, int dev, int& tx, int& t
   }
 }
 
-void JPS3DNeib::FNeib(int dx, int dy, int dz, int norm1, int dev, int& fx, int& fy, int& fz,
-                      int& nx, int& ny, int& nz) {
+void JPS3DNeib::FNeib(
+    int dx,
+    int dy,
+    int dz,
+    int norm1,
+    int dev,
+    int& fx,
+    int& fy,
+    int& fz,
+    int& nx,
+    int& ny,
+    int& nz) {
   switch (norm1) {
     case 1:
       switch (dev) {

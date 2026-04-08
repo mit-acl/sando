@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -13,17 +13,17 @@
 
 #pragma once
 
-#include <boost/heap/d_ary_heap.hpp>  // boost::heap::d_ary_heap
-#include <hgp/data_type.hpp>
-#include <hgp/map_util.hpp>  // sando::MapUtil
-#include <limits>            // std::numeric_limits
-#include <memory>            // std::shared_ptr
-#include <mutex>             // std::mutex
-#include <sando/sando_type.hpp>
-#include <sando/utils.hpp>
-#include <timer.hpp>
+#include <limits>         // std::numeric_limits
+#include <memory>         // std::shared_ptr
+#include <mutex>          // std::mutex
 #include <unordered_map>  // std::unordered_map
 #include <vector>         // std::vector
+#include <hgp/data_type.hpp>
+#include <hgp/map_util.hpp>  // sando::MapUtil
+#include <sando/sando_type.hpp>
+#include <sando/utils.hpp>
+#include <boost/heap/d_ary_heap.hpp>  // boost::heap::d_ary_heap
+#include <timer.hpp>
 
 // TODO: ROS dependency (not ideal)
 #include <rclcpp/rclcpp.hpp>
@@ -45,9 +45,11 @@ struct CompareState {
 struct State;  // forward declaration
 /// State pointer
 using StatePtr = std::shared_ptr<State>;
-using priorityQueue =
-    boost::heap::d_ary_heap<StatePtr, boost::heap::mutable_<true>, boost::heap::arity<2>,
-                            boost::heap::compare<CompareState<StatePtr>>>;
+using priorityQueue = boost::heap::d_ary_heap<
+    StatePtr,
+    boost::heap::mutable_<true>,
+    boost::heap::arity<2>,
+    boost::heap::compare<CompareState<StatePtr>>>;
 
 /// Node of the graph in graph search
 struct State {
@@ -111,7 +113,9 @@ struct JPS2DNeib {
   //                          2 neighbors to add if forced
   static constexpr int nsz[3][2] = {{8, 0}, {1, 2}, {3, 2}};
 
+  /** @brief Print the neighbor lookup tables to stdout. */
   void print();
+  /** @brief Precompute 2D JPS neighbor and forced-neighbor lookup tables. */
   JPS2DNeib();
 
  private:
@@ -142,12 +146,23 @@ struct JPS3DNeib {
   //                          6 forced neighbors to check
   //                          12 neighbors to add if forced
   static constexpr int nsz[4][2] = {{26, 0}, {1, 8}, {3, 12}, {7, 12}};
+  /** @brief Precompute 3D JPS neighbor and forced-neighbor lookup tables. */
   JPS3DNeib();
 
  private:
   void Neib(int dx, int dy, int dz, int norm1, int dev, int& tx, int& ty, int& tz);
-  void FNeib(int dx, int dy, int dz, int norm1, int dev, int& fx, int& fy, int& fz, int& nx,
-             int& ny, int& nz);
+  void FNeib(
+      int dx,
+      int dy,
+      int dz,
+      int norm1,
+      int dev,
+      int& fx,
+      int& fy,
+      int& fz,
+      int& nx,
+      int& ny,
+      int& nz);
 };
 
 /**
@@ -171,10 +186,19 @@ class GraphSearch {
    * @param global_planner initial guess planner, optional, default as ""
    * @param res map resolution, optional, default as 0.5
    */
-  GraphSearch(const int8_t* cMap, const std::shared_ptr<sando::VoxelMapUtil>& map_util, int xDim,
-              int yDim, int zDim, double eps, bool verbose, std::string global_planner,
-              double w_unknown, double w_align = 60.0, double decay_len_cells = 20.0,
-              double w_side = 0.2);
+  GraphSearch(
+      const int8_t* cMap,
+      const std::shared_ptr<sando::VoxelMapUtil>& map_util,
+      int xDim,
+      int yDim,
+      int zDim,
+      double eps,
+      bool verbose,
+      std::string global_planner,
+      double w_unknown,
+      double w_align = 60.0,
+      double decay_len_cells = 20.0,
+      double w_side = 0.2);
 
   /**
    * @brief start 3D planning thread
@@ -189,10 +213,23 @@ class GraphSearch {
    * @param max_expand maximum number of expansion allowed, optional, default is -1, means no
    * limitation
    */
-  bool plan(int xStart, int yStart, int zStart, int xGoal, int yGoal, int zGoal, double initial_g,
-            double& global_planning_time, double& hgp_static_jps_time, double& hgp_check_path_time,
-            double& hgp_dynamic_astar_time, double& hgp_recover_path_time, double current_time,
-            const Vec3f& start_vel, int max_expand = -1, int timeout_duration_ms = 1000);
+  bool plan(
+      int xStart,
+      int yStart,
+      int zStart,
+      int xGoal,
+      int yGoal,
+      int zGoal,
+      double initial_g,
+      double& global_planning_time,
+      double& hgp_static_jps_time,
+      double& hgp_check_path_time,
+      double& hgp_dynamic_astar_time,
+      double& hgp_recover_path_time,
+      double current_time,
+      const Vec3f& start_vel,
+      int max_expand = -1,
+      int timeout_duration_ms = 1000);
 
   /** @brief Get the optimal path found by the last planning call.
    *  @return Ordered sequence of states from start to goal.
@@ -227,23 +264,42 @@ class GraphSearch {
 
  private:
   /// Select planner
-  bool select_planner(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                      std::chrono::milliseconds timeout_duration);
+  bool select_planner(
+      StatePtr& currNode_ptr,
+      int max_expand,
+      int start_id,
+      int goal_id,
+      std::chrono::milliseconds timeout_duration);
   /// Main planning loop for Static JPS
-  bool static_jps_plan(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                       std::chrono::milliseconds timeout_duration);
+  bool static_jps_plan(
+      StatePtr& currNode_ptr,
+      int max_expand,
+      int start_id,
+      int goal_id,
+      std::chrono::milliseconds timeout_duration);
   /// Main planning loop for Dynamic A*
-  bool dynamic_astar_plan(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                          std::chrono::milliseconds timeout_duration);
+  bool dynamic_astar_plan(
+      StatePtr& currNode_ptr,
+      int max_expand,
+      int start_id,
+      int goal_id,
+      std::chrono::milliseconds timeout_duration);
   /// Main planning loop for Dynamic JPS++
-  bool hgp_plan(StatePtr& currNode_ptr, int max_expand, int start_id, int goal_id,
-                std::chrono::milliseconds timeout_duration);
+  bool hgp_plan(
+      StatePtr& currNode_ptr,
+      int max_expand,
+      int start_id,
+      int goal_id,
+      std::chrono::milliseconds timeout_duration);
   /// Get successor function for A*
-  void getSucc(const StatePtr& curr, std::vector<int>& succ_ids, std::vector<double>& succ_costs,
-               bool use_heat);
+  void getSucc(
+      const StatePtr& curr,
+      std::vector<int>& succ_ids,
+      std::vector<double>& succ_costs,
+      bool use_heat);
   /// Get successor function for JPS
-  void getJpsSucc(const StatePtr& curr, std::vector<int>& succ_ids,
-                  std::vector<double>& succ_costs);
+  void getJpsSucc(
+      const StatePtr& curr, std::vector<int>& succ_ids, std::vector<double>& succ_costs);
   /// Recover the optimal path
   std::vector<StatePtr> recoverPath(StatePtr node, int id);
 
@@ -269,8 +325,11 @@ class GraphSearch {
   bool jump(int x, int y, int z, int dx, int dy, int dz, int& new_x, int& new_y, int& new_z);
 
   /// Compute node time
-  double computeNodeTime(const Eigen::Vector3d& pf, const Eigen::Vector3d& p0,
-                         const Eigen::Vector3d& v0, StatePtr& currNode_ptr);
+  double computeNodeTime(
+      const Eigen::Vector3d& pf,
+      const Eigen::Vector3d& p0,
+      const Eigen::Vector3d& v0,
+      StatePtr& currNode_ptr);
 
   /// Simplify the path
   std::vector<StatePtr> removeLinePts(const std::vector<StatePtr>& path);

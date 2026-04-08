@@ -39,12 +39,15 @@ RUN wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
 ENV GUROBI_HOME="/opt/gurobi1103/linux64"
 ENV PATH="${PATH}:${GUROBI_HOME}/bin"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
-COPY docker/gurobi.lic /opt/gurobi1103/
+COPY gurobi.lic /opt/gurobi1103/
 
-# Copy SANDO from local machine (build context = repo root)
+# Clone SANDO with all submodules
 ENV SANDO_WS=/root/sando_ws
 ENV LIVOX_WS=/root/livox_ws
-COPY . ${SANDO_WS}/src/sando/
+RUN mkdir -p ${SANDO_WS}/src
+WORKDIR ${SANDO_WS}/src
+ARG DUMMY=unknown
+RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
 
 # Symlink deps for colcon package discovery (skip Livox-SDK2 and livox_ros_driver2 — built separately)
 WORKDIR ${SANDO_WS}/src
@@ -100,6 +103,6 @@ RUN echo "alias tks='tmux kill-server'" >> ~/.bashrc && \
     echo "alias cbps='cd ${SANDO_WS} && colcon build --packages-select'" >> ~/.bashrc
 
 # Entry point
-COPY docker/sando.sh /
+COPY sando.sh /
 RUN chmod +x /sando.sh
 ENTRYPOINT ["/sando.sh"]

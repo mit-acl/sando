@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -14,8 +14,8 @@ SANDO_NODE::SANDO_NODE() : Node("sando_node") {
   // Get id from ns
   ns_ = this->get_namespace();
   ns_ = ns_.substr(ns_.find_last_of("/") + 1);
-  id_str_ = ns_.substr(ns_.size() -
-                       2);  // ns is like NX01, so we get the last two characters and convert to int
+  id_str_ = ns_.substr(
+      ns_.size() - 2);  // ns is like NX01, so we get the last two characters and convert to int
   id_ = std::stoi(id_str_);
 
   // Declare, set, and print parameters
@@ -93,8 +93,9 @@ SANDO_NODE::SANDO_NODE() : Node("sando_node") {
       "traj_committed_colored", 10);  // visual level 1
   pub_traj_subopt_colored_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "traj_subopt_colored", 10);  // visual level 1
-  pub_setpoint_ = this->create_publisher<geometry_msgs::msg::PointStamped>("setpoint_vis",
-                                                                           10);  // visual level 1
+  pub_setpoint_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
+      "setpoint_vis",
+      10);  // visual level 1
   pub_actual_traj_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "actual_traj", 10);                                                         // visual level 1
   pub_fov_ = this->create_publisher<visualization_msgs::msg::Marker>("fov", 10);  // visual level 1
@@ -148,11 +149,11 @@ SANDO_NODE::SANDO_NODE() : Node("sando_node") {
       std::bind(&SANDO_NODE::terminalGoalCallback, this, std::placeholders::_1));
 
   // Timer for callback
-  timer_replanning_ = this->create_wall_timer(10ms, std::bind(&SANDO_NODE::replanCallback, this),
-                                              this->cb_group_replan_);
-  timer_goal_ =
-      this->create_wall_timer(std::chrono::duration<double>(par_.dc),
-                              std::bind(&SANDO_NODE::publishGoal, this), this->cb_group_goal_);
+  timer_replanning_ = this->create_wall_timer(
+      10ms, std::bind(&SANDO_NODE::replanCallback, this), this->cb_group_replan_);
+  timer_goal_ = this->create_wall_timer(
+      std::chrono::duration<double>(par_.dc), std::bind(&SANDO_NODE::publishGoal, this),
+      this->cb_group_goal_);
   if (use_benchmark_)
     timer_goal_reached_check_ = this->create_wall_timer(
         100ms, std::bind(&SANDO_NODE::goalReachedCheckCallback, this), this->cb_group_re_3_);
@@ -297,8 +298,9 @@ void SANDO_NODE::declareParameters() {
 
   // LOS post processing parameters
   this->declare_parameter("los_cells", 3);
-  this->declare_parameter("min_len",
-                          0.5);  // [m] minimum length between two waypoints after post processing
+  this->declare_parameter(
+      "min_len",
+      0.5);  // [m] minimum length between two waypoints after post processing
   this->declare_parameter("min_turn", 10.0);  // [deg] minimum turn angle after post processing
 
   // Path push visualization parameters
@@ -514,10 +516,11 @@ void SANDO_NODE::setParameters() {
   par_.environment_assumption = this->get_parameter("environment_assumption").as_string();
   if (par_.environment_assumption != "static" && par_.environment_assumption != "dynamic" &&
       par_.environment_assumption != "dynamic_worst_case") {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Invalid environment_assumption: '%s'. Must be 'static', 'dynamic', or "
-                 "'dynamic_worst_case'.",
-                 par_.environment_assumption.c_str());
+    RCLCPP_ERROR(
+        this->get_logger(),
+        "Invalid environment_assumption: '%s'. Must be 'static', 'dynamic', or "
+        "'dynamic_worst_case'.",
+        par_.environment_assumption.c_str());
     rclcpp::shutdown();
     return;
   }
@@ -633,8 +636,8 @@ void SANDO_NODE::printParameters() {
 
   // Vehicle type (UAV, Wheeled Robit, or Quadruped)
   RCLCPP_INFO(this->get_logger(), "Vehicle Type: %d", par_.vehicle_type);
-  RCLCPP_INFO(this->get_logger(), "Provide Goal in Global Frame: %d",
-              par_.provide_goal_in_global_frame);
+  RCLCPP_INFO(
+      this->get_logger(), "Provide Goal in Global Frame: %d", par_.provide_goal_in_global_frame);
   RCLCPP_INFO(this->get_logger(), "Use Hardware: %d", par_.use_hardware);
 
   // Flight mode
@@ -648,8 +651,9 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "Perform Benchmark?: %d", use_benchmark_);
   RCLCPP_INFO(this->get_logger(), "Global Planner: %s", par_.global_planner.c_str());
   RCLCPP_INFO(this->get_logger(), "Global Planner Verbose: %d", par_.global_planner_verbose);
-  RCLCPP_INFO(this->get_logger(), "Global Planner Huristic Weight: %f",
-              par_.global_planner_heuristic_weight);
+  RCLCPP_INFO(
+      this->get_logger(), "Global Planner Huristic Weight: %f",
+      par_.global_planner_heuristic_weight);
   RCLCPP_INFO(this->get_logger(), "Factor HGP: %f", par_.factor_hgp);
   RCLCPP_INFO(this->get_logger(), "Inflation HGP: %f", par_.inflation_hgp);
   RCLCPP_INFO(this->get_logger(), "X Min: %f", par_.x_min);
@@ -677,18 +681,20 @@ void SANDO_NODE::printParameters() {
 
   // Path push visualization parameters
   RCLCPP_INFO(this->get_logger(), "Use State Update?: %d", par_.use_state_update);
-  RCLCPP_INFO(this->get_logger(), "Use Random Color for Global Path?: %d",
-              par_.use_random_color_for_global_path);
-  RCLCPP_INFO(this->get_logger(), "Use Path Push for Paper?: %d",
-              par_.use_path_push_for_visualization);
+  RCLCPP_INFO(
+      this->get_logger(), "Use Random Color for Global Path?: %d",
+      par_.use_random_color_for_global_path);
+  RCLCPP_INFO(
+      this->get_logger(), "Use Path Push for Paper?: %d", par_.use_path_push_for_visualization);
 
   // Static obstacle push parameters
-  RCLCPP_INFO(this->get_logger(), "Environment Assumption: %s",
-              par_.environment_assumption.c_str());
-  RCLCPP_INFO(this->get_logger(), "Local Box Size: (%f, %f, %f)", par_.sfc_size[0],
-              par_.sfc_size[1], par_.sfc_size[2]);
-  RCLCPP_INFO(this->get_logger(), "Min Dist from Agent to Traj: %f",
-              par_.min_dist_from_agent_to_traj);
+  RCLCPP_INFO(
+      this->get_logger(), "Environment Assumption: %s", par_.environment_assumption.c_str());
+  RCLCPP_INFO(
+      this->get_logger(), "Local Box Size: (%f, %f, %f)", par_.sfc_size[0], par_.sfc_size[1],
+      par_.sfc_size[2]);
+  RCLCPP_INFO(
+      this->get_logger(), "Min Dist from Agent to Traj: %f", par_.min_dist_from_agent_to_traj);
   RCLCPP_INFO(this->get_logger(), "Use Shrinked Box: %d", par_.use_shrinked_box);
   RCLCPP_INFO(this->get_logger(), "Shrinked Box Size: %f", par_.shrinked_box_size);
 
@@ -705,8 +711,8 @@ void SANDO_NODE::printParameters() {
 
   // Communication delay parameters
   RCLCPP_INFO(this->get_logger(), "Use Comm Delay Inflation: %d", par_.use_comm_delay_inflation);
-  RCLCPP_INFO(this->get_logger(), "Comm Delay Inflation Alpha: %f",
-              par_.comm_delay_inflation_alpha);
+  RCLCPP_INFO(
+      this->get_logger(), "Comm Delay Inflation Alpha: %f", par_.comm_delay_inflation_alpha);
   RCLCPP_INFO(this->get_logger(), "Comm Delay Inflation Max: %f", par_.comm_delay_inflation_max);
   RCLCPP_INFO(this->get_logger(), "Comm Delay Filter Alpha: %f", par_.comm_delay_filter_alpha);
 
@@ -724,8 +730,9 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "J Max: %f", par_.j_max);
   RCLCPP_INFO(this->get_logger(), "Verbose Computation Time: %d", verbose_computation_time_);
   RCLCPP_INFO(this->get_logger(), "Local Traj Comp Verbose: %d", local_traj_comp_verbose_);
-  RCLCPP_INFO(this->get_logger(), "Drone Bbox: (%f, %f, %f)", par_.drone_bbox[0],
-              par_.drone_bbox[1], par_.drone_bbox[2]);
+  RCLCPP_INFO(
+      this->get_logger(), "Drone Bbox: (%f, %f, %f)", par_.drone_bbox[0], par_.drone_bbox[1],
+      par_.drone_bbox[2]);
   RCLCPP_INFO(this->get_logger(), "Goal Radius: %f", par_.goal_radius);
   RCLCPP_INFO(this->get_logger(), "Goal Seen Radius: %f", par_.goal_seen_radius);
 
@@ -734,8 +741,8 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "Num N: %d", par_.num_N);
   RCLCPP_INFO(this->get_logger(), "Use Dynamic Factor: %d", par_.use_dynamic_factor);
   RCLCPP_INFO(this->get_logger(), "Dynamic Factor K Radius: %f", par_.dynamic_factor_k_radius);
-  RCLCPP_INFO(this->get_logger(), "Dynamic Factor Initial Mean: %f",
-              par_.dynamic_factor_initial_mean);
+  RCLCPP_INFO(
+      this->get_logger(), "Dynamic Factor Initial Mean: %f", par_.dynamic_factor_initial_mean);
   RCLCPP_INFO(this->get_logger(), "Factor Initial: %f", par_.factor_initial);
   RCLCPP_INFO(this->get_logger(), "Factor Final: %f", par_.factor_final);
   RCLCPP_INFO(this->get_logger(), "Factor Constant Step Size: %f", par_.factor_constant_step_size);
@@ -748,8 +755,8 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "Traj Lifetime: %f", par_.traj_lifetime);
 
   // Dynamic k_value parameters
-  RCLCPP_INFO(this->get_logger(), "Num Replanning Before Adapt: %d",
-              par_.num_replanning_before_adapt);
+  RCLCPP_INFO(
+      this->get_logger(), "Num Replanning Before Adapt: %d", par_.num_replanning_before_adapt);
   RCLCPP_INFO(this->get_logger(), "Default K Value End: %d", par_.default_k_value);
   RCLCPP_INFO(this->get_logger(), "Alpha K Value: %f", par_.alpha_k_value_filtering);
   RCLCPP_INFO(this->get_logger(), "K Value Inflation: %f", par_.k_value_factor);
@@ -996,10 +1003,11 @@ void SANDO_NODE::getInitialPoseHwCallback() {
         tf2_buffer_->lookupTransform("map", initial_pose_topic_, tf2::TimePointZero);
 
     // Print out the initial pose
-    RCLCPP_INFO(this->get_logger(), "Initial pose received: (%f, %f, %f)",
-                init_pose_transform_stamped_.transform.translation.x,
-                init_pose_transform_stamped_.transform.translation.y,
-                init_pose_transform_stamped_.transform.translation.z);
+    RCLCPP_INFO(
+        this->get_logger(), "Initial pose received: (%f, %f, %f)",
+        init_pose_transform_stamped_.transform.translation.x,
+        init_pose_transform_stamped_.transform.translation.y,
+        init_pose_transform_stamped_.transform.translation.z);
 
     // Push the initial pose to sando
     sando_ptr_->setInitialPose(init_pose_transform_stamped_);
@@ -1017,8 +1025,10 @@ void SANDO_NODE::getInitialPoseHwCallback() {
 
 // ----------------------------------------------------------------------------
 
-void SANDO_NODE::convertDynTrajMsg2DynTraj(const dynus_interfaces::msg::DynTraj& msg,
-                                           std::shared_ptr<DynTraj>& traj, double current_time) {
+void SANDO_NODE::convertDynTrajMsg2DynTraj(
+    const dynus_interfaces::msg::DynTraj& msg,
+    std::shared_ptr<DynTraj>& traj,
+    double current_time) {
   // Inflate bbox using drone_bbox
   // We need to use the obstacle's bbox as well as ego drone's bbox
   traj->bbox << msg.bbox[0] / 2.0 + par_.drone_bbox[0] / 2.0,
@@ -1081,8 +1091,9 @@ void SANDO_NODE::convertDynTrajMsg2DynTraj(const dynus_interfaces::msg::DynTraj&
         // Change the mode only when we successfully compiled the analytic trajectory
         traj->mode = DynTraj::Mode::Analytic;
       } else {
-        RCLCPP_ERROR(this->get_logger(),
-                     "Failed to compile analytic traj id=%d, falling back to zeros.", traj->id);
+        RCLCPP_ERROR(
+            this->get_logger(), "Failed to compile analytic traj id=%d, falling back to zeros.",
+            traj->id);
         // leave mode as whatever it was (Piecewise/Quintic),
         // or explicitly set a safe default here
       }
@@ -1117,7 +1128,6 @@ void SANDO_NODE::convertDynTrajMsg2DynTraj(const dynus_interfaces::msg::DynTraj&
 }
 
 // ----------------------------------------------------------------------------
-
 
 void SANDO_NODE::publisCps() {
   // Retrieve control points
@@ -1237,11 +1247,11 @@ void SANDO_NODE::setComputationTimesToZero() {
 // ----------------------------------------------------------------------------
 
 void SANDO_NODE::retrieveData() {
-  sando_ptr_->retrieveData(final_g_, global_planning_time_, hgp_static_jps_time_,
-                           hgp_check_path_time_, hgp_dynamic_astar_time_, hgp_recover_path_time_,
-                           cvx_decomp_time_, local_traj_computation_time_, safety_check_time_,
-                           safe_paths_time_, yaw_sequence_time_, yaw_fitting_time_,
-                           successful_factor_);
+  sando_ptr_->retrieveData(
+      final_g_, global_planning_time_, hgp_static_jps_time_, hgp_check_path_time_,
+      hgp_dynamic_astar_time_, hgp_recover_path_time_, cvx_decomp_time_,
+      local_traj_computation_time_, safety_check_time_, safe_paths_time_, yaw_sequence_time_,
+      yaw_fitting_time_, successful_factor_);
 }
 
 // ----------------------------------------------------------------------------
@@ -1251,8 +1261,8 @@ void SANDO_NODE::printComputationTime(bool result) {
   RCLCPP_INFO(this->get_logger(), "Planner: %s", par_.global_planner.c_str());
   RCLCPP_INFO(this->get_logger(), "Result: %d", result);
   RCLCPP_INFO(this->get_logger(), "Cost (final node's g): %f", final_g_);
-  RCLCPP_INFO(this->get_logger(), "Total replanning time [ms]: %f",
-              replanning_computation_time_ * 1000.0);
+  RCLCPP_INFO(
+      this->get_logger(), "Total replanning time [ms]: %f", replanning_computation_time_ * 1000.0);
   RCLCPP_INFO(this->get_logger(), "Global Planning Time [ms]: %f", global_planning_time_);
   RCLCPP_INFO(this->get_logger(), "CVX Decomposition Time [ms]: %f", cvx_decomp_time_);
   RCLCPP_INFO(this->get_logger(), "Local Traj Time [ms]: %f", local_traj_computation_time_);
@@ -1289,14 +1299,15 @@ void SANDO_NODE::publishComputationTimes(bool result) {
 
 void SANDO_NODE::recordData(bool result) {
   // Record all the data into global_path_benchmark_
-  std::tuple<bool, double, double, double, double, double, double, double, double, double, double,
-             double, double, double>
+  std::tuple<
+      bool, double, double, double, double, double, double, double, double, double, double, double,
+      double, double>
       data;
 
-  data = std::make_tuple(result, final_g_, replanning_computation_time_, global_planning_time_,
-                         cvx_decomp_time_, local_traj_computation_time_, safe_paths_time_,
-                         safety_check_time_, yaw_sequence_time_, yaw_fitting_time_, 0.0, 0.0, 0.0,
-                         0.0);
+  data = std::make_tuple(
+      result, final_g_, replanning_computation_time_, global_planning_time_, cvx_decomp_time_,
+      local_traj_computation_time_, safe_paths_time_, safety_check_time_, yaw_sequence_time_,
+      yaw_fitting_time_, 0.0, 0.0, 0.0, 0.0);
 
   global_path_benchmark_.push_back(data);
 }
@@ -1484,13 +1495,14 @@ void SANDO_NODE::publishActualTraj() {
 
   visualization_msgs::msg::MarkerArray ma;
 
-  ma = stateVector2ColoredLineStripMarkerArray(actual_traj_hist_,
-                                               /*id=*/1,
-                                               /*ns=*/"actual_traj_" + id_str_,
-                                               /*max_value=*/vmax_for_color,
-                                               /*stamp=*/now,
-                                               /*line_width=*/actual_traj_line_width_,
-                                               /*max_points_vis=*/actual_traj_max_points_vis_);
+  ma = stateVector2ColoredLineStripMarkerArray(
+      actual_traj_hist_,
+      /*id=*/1,
+      /*ns=*/"actual_traj_" + id_str_,
+      /*max_value=*/vmax_for_color,
+      /*stamp=*/now,
+      /*line_width=*/actual_traj_line_width_,
+      /*max_points_vis=*/actual_traj_max_points_vis_);
 
   pub_actual_traj_->publish(ma);
 }
@@ -1579,8 +1591,9 @@ void SANDO_NODE::publishTraj() {
   // 2) Publish the committed (best) trajectory
   sando_ptr_->retrieveGoalSetpoints(goal_setpoints_);
   {
-    auto committed_ma = stateVector2ColoredMarkerArray(goal_setpoints_,
-                                                       /*type=*/1, par_.v_max, now);
+    auto committed_ma = stateVector2ColoredMarkerArray(
+        goal_setpoints_,
+        /*type=*/1, par_.v_max, now);
     pub_traj_committed_colored_->publish(committed_ma);
   }
 
@@ -1588,8 +1601,9 @@ void SANDO_NODE::publishTraj() {
   sando_ptr_->retrieveListSubOptGoalSetpoints(list_subopt_goal_setpoints_);
   visualization_msgs::msg::MarkerArray subopt_ma;
   for (int i = 0; i < (int)list_subopt_goal_setpoints_.size(); ++i) {
-    auto single = stateVector2ColoredMarkerArray(list_subopt_goal_setpoints_[i],
-                                                 /*type=*/i + 2, par_.v_max, now);
+    auto single = stateVector2ColoredMarkerArray(
+        list_subopt_goal_setpoints_[i],
+        /*type=*/i + 2, par_.v_max, now);
     // append all markers from this one:
     subopt_ma.markers.insert(subopt_ma.markers.end(), single.markers.begin(), single.markers.end());
   }
@@ -1613,12 +1627,13 @@ void SANDO_NODE::publishGlobalPath() {
     // Publish global_path (thin line + dots)
     clearMarkerArray(hgp_path_marker_, pub_hgp_path_marker_);
 
-    pathLineDotsToMarkerArray(global_path, &hgp_path_marker_, color(global_path_color),
-                              /*line_width=*/0.03,    // meters
-                              /*dot_diameter=*/0.06,  // meters
-                              /*base_id=*/50000,
-                              /*frame_id=*/viz_frame_,
-                              /*lifetime_sec=*/1.0);
+    pathLineDotsToMarkerArray(
+        global_path, &hgp_path_marker_, color(global_path_color),
+        /*line_width=*/0.03,    // meters
+        /*dot_diameter=*/0.06,  // meters
+        /*base_id=*/50000,
+        /*frame_id=*/viz_frame_,
+        /*lifetime_sec=*/1.0);
 
     pub_hgp_path_marker_->publish(hgp_path_marker_);
   }
@@ -1631,13 +1646,13 @@ void SANDO_NODE::publishGlobalPath() {
     // Publish original_global_path
     clearMarkerArray(original_hgp_path_marker_, pub_original_hgp_path_marker_);
 
-    pathLineDotsToMarkerArray(original_global_path, &original_hgp_path_marker_,
-                              color(original_global_path_color),
-                              /*line_width=*/0.03,    // meters
-                              /*dot_diameter=*/0.06,  // meters
-                              /*base_id=*/60000,
-                              /*frame_id=*/viz_frame_,
-                              /*lifetime_sec=*/1.0);
+    pathLineDotsToMarkerArray(
+        original_global_path, &original_hgp_path_marker_, color(original_global_path_color),
+        /*line_width=*/0.03,    // meters
+        /*dot_diameter=*/0.06,  // meters
+        /*base_id=*/60000,
+        /*frame_id=*/viz_frame_,
+        /*lifetime_sec=*/1.0);
 
     pub_original_hgp_path_marker_->publish(original_hgp_path_marker_);
   }
@@ -1675,10 +1690,10 @@ void SANDO_NODE::publishLocalGlobalPath() {
 
   if (!local_global_path_after_push.empty()) {
     // Publish local_global_path_after_push
-    clearMarkerArray(hgp_local_global_path_after_push_marker_,
-                     pub_local_global_path_after_push_marker_);
-    vectorOfVectors2MarkerArray(local_global_path_after_push,
-                                &hgp_local_global_path_after_push_marker_, color(ORANGE));
+    clearMarkerArray(
+        hgp_local_global_path_after_push_marker_, pub_local_global_path_after_push_marker_);
+    vectorOfVectors2MarkerArray(
+        local_global_path_after_push, &hgp_local_global_path_after_push_marker_, color(ORANGE));
     pub_local_global_path_after_push_marker_->publish(hgp_local_global_path_after_push_marker_);
   }
 }
@@ -1709,10 +1724,10 @@ void SANDO_NODE::publishDynamicHeatCloud() {
   msg.header.stamp = this->now();
 
   sensor_msgs::PointCloud2Modifier modifier(msg);
-  modifier.setPointCloud2Fields(4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
-                                sensor_msgs::msg::PointField::FLOAT32, "z", 1,
-                                sensor_msgs::msg::PointField::FLOAT32, "intensity", 1,
-                                sensor_msgs::msg::PointField::FLOAT32);
+  modifier.setPointCloud2Fields(
+      4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+      "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
   modifier.resize(heat_cloud.size());
 
   sensor_msgs::PointCloud2Iterator<float> iter_x(msg, "x");
@@ -1781,9 +1796,9 @@ BUILD_OCC_MSG:
   msg.header.stamp = this->now();
 
   sensor_msgs::PointCloud2Modifier modifier(msg);
-  modifier.setPointCloud2Fields(3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
-                                sensor_msgs::msg::PointField::FLOAT32, "z", 1,
-                                sensor_msgs::msg::PointField::FLOAT32);
+  modifier.setPointCloud2Fields(
+      3, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32);
   modifier.resize(pts.size());
 
   sensor_msgs::PointCloud2Iterator<float> iter_x(msg, "x");
@@ -1893,8 +1908,11 @@ void SANDO_NODE::publishHoverAvoidanceViz() {
 // ----------------------------------------------------------------------------
 
 void SANDO_NODE::createMarkerArrayFromVec_Vec3f(
-    const vec_Vec3f& occupied_cells, const std_msgs::msg::ColorRGBA& color, int namespace_id,
-    double scale, visualization_msgs::msg::MarkerArray* marker_array) {
+    const vec_Vec3f& occupied_cells,
+    const std_msgs::msg::ColorRGBA& color,
+    int namespace_id,
+    double scale,
+    visualization_msgs::msg::MarkerArray* marker_array) {
   visualization_msgs::msg::Marker marker;
   marker.header.frame_id = viz_frame_;
   marker.header.stamp = this->now();
@@ -2020,8 +2038,9 @@ void SANDO_NODE::publishFOV() {
 
 // ----------------------------------------------------------------------------
 
-void SANDO_NODE::mapCallback(const sensor_msgs::msg::PointCloud2::ConstPtr& map_msg,
-                             const sensor_msgs::msg::PointCloud2::ConstPtr& unk_msg) {
+void SANDO_NODE::mapCallback(
+    const sensor_msgs::msg::PointCloud2::ConstPtr& map_msg,
+    const sensor_msgs::msg::PointCloud2::ConstPtr& unk_msg) {
   // use PCL’s own Ptr (boost::shared_ptr)
   pcl::PointCloud<pcl::PointXYZ>::Ptr map_pc(new pcl::PointCloud<pcl::PointXYZ>());
   pcl::fromROSMsg(*map_msg, *map_pc);

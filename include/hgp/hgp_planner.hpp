@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -25,9 +25,20 @@ class HGPPlanner {
    * @brief Simple constructor
    * @param verbose enable debug mode
    */
-  HGPPlanner(std::string global_planner, bool verbose, double v_max, double a_max, double j_max,
-             int hgp_timeout_duration_ms, double w_unknown, double w_align, double decay_len_cells,
-             double w_side, int los_cells = 3, double min_len = 0.5, double min_turn = 10.0);
+  HGPPlanner(
+      std::string global_planner,
+      bool verbose,
+      double v_max,
+      double a_max,
+      double j_max,
+      int hgp_timeout_duration_ms,
+      double w_unknown,
+      double w_align,
+      double decay_len_cells,
+      double w_side,
+      int los_cells = 3,
+      double min_len = 0.5,
+      double min_turn = 10.0);
 
   /** @brief Set the voxel map utility used for collision checking.
    *  @param map_util Shared pointer to a 3D voxel map utility.
@@ -82,8 +93,13 @@ class HGPPlanner {
    *  @param eps Heuristic weight for A* search.
    *  @return True if a valid path was found.
    */
-  bool plan(const Vecf<3>& start, const Vecf<3>& start_vel, const Vecf<3>& goal, double& final_g,
-            double current_time, decimal_t eps = 1);
+  bool plan(
+      const Vecf<3>& start,
+      const Vecf<3>& start_vel,
+      const Vecf<3>& goal,
+      double& final_g,
+      double current_time,
+      decimal_t eps = 1);
 
   /** @brief Get the nodes in the open set after planning.
    *  @return Positions of open-set nodes.
@@ -163,8 +179,8 @@ class HGPPlanner {
    *  @param min_seg_len Minimum segment length to consider.
    *  @return Filtered path.
    */
-  vec_Vecf<3> angleSpacingFilter(const vec_Vecf<3>& in, double min_turn_deg,
-                                 double min_seg_len) const;
+  vec_Vecf<3> angleSpacingFilter(
+      const vec_Vecf<3>& in, double min_turn_deg, double min_seg_len) const;
 
  protected:
   // Assume using 3D voxel map for all 2d and 3d planning

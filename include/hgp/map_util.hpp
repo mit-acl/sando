@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -13,16 +13,14 @@
 #pragma once
 
 #include <omp.h>
-#include <pcl/kdtree/kdtree_flann.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <iostream>
 #include <mutex>
+#include <pcl/kdtree/kdtree_flann.h>
 #include <sando/sando_type.hpp>
-
 #include "hgp/data_type.hpp"
 #include "timer.hpp"
 
@@ -41,8 +39,16 @@ template <int Dim>
 class MapUtil {
  public:
   // Constructor
-  MapUtil(float res, float x_min, float x_max, float y_min, float y_max, float z_min, float z_max,
-          float inflation, float obst_max_vel) {
+  MapUtil(
+      float res,
+      float x_min,
+      float x_max,
+      float y_min,
+      float y_max,
+      float z_min,
+      float z_max,
+      float inflation,
+      float obst_max_vel) {
     /* --------- Initialize parameters --------- */
     setInflation(inflation);                               // Set inflation
     setResolution(res);                                    // Set the resolution
@@ -140,11 +146,19 @@ class MapUtil {
    *  @param obst_bbox Bounding box half-extents of dynamic obstacles.
    *  @param traj_max_time Time horizon for dynamic obstacle inflation and heat computation.
    */
-  void readMap(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& cloud,
-               const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& unknown_cloud, int cells_x,
-               int cells_y, int cells_z, const Vec3f& center_map, double z_ground, double z_max,
-               double inflation, const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox,
-               double traj_max_time) {
+  void readMap(
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& cloud,
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& unknown_cloud,
+      int cells_x,
+      int cells_y,
+      int cells_z,
+      const Vec3f& center_map,
+      double z_ground,
+      double z_max,
+      double inflation,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
+      double traj_max_time) {
     (void)unknown_cloud;  // unknown-space soft costs removed
     // 1) Compute X/Y dims with inflation pad
     int pad = int(std::ceil(5.0 * inflation / res_));
@@ -714,8 +728,14 @@ class MapUtil {
    *  @param apply_on_unknown If true, apply halo to unknown cells in addition to free cells.
    *  @param exclude_dynamic If true, exclude dynamically occupied voxels from static heat seeds.
    */
-  void setStaticHeatParams(float alpha, int p, float Hmax, float rmax_m, bool boundary_only = true,
-                           bool apply_on_unknown = false, bool exclude_dynamic = true) {
+  void setStaticHeatParams(
+      float alpha,
+      int p,
+      float Hmax,
+      float rmax_m,
+      bool boundary_only = true,
+      bool apply_on_unknown = false,
+      bool exclude_dynamic = true) {
     static_heat_alpha_ = std::max(0.0f, alpha);
     static_heat_p_ = std::max(1, p);
     static_heat_Hmax_ = Hmax;
@@ -726,11 +746,12 @@ class MapUtil {
   }
 
   /** @brief Set a per-seed radius function for static heat halo computation.
-   *  @param fn Function mapping seed voxel center (world coords) to halo radius; empty uses default.
+   *  @param fn Function mapping seed voxel center (world coords) to halo radius; empty uses
+   * default.
    *  @param default_radius_m Fallback radius when fn is not set.
    */
-  void setStaticHeatRadiusFunction(const std::function<float(const Eigen::Vector3f&)>& fn,
-                                   float default_radius_m) {
+  void setStaticHeatRadiusFunction(
+      const std::function<float(const Eigen::Vector3f&)>& fn, float default_radius_m) {
     static_heat_radius_fn_ = fn;
     static_heat_default_radius_m_ = std::max(0.0f, default_radius_m);
   }
@@ -745,8 +766,15 @@ class MapUtil {
    *  @param Hmax Maximum heat cap.
    *  @param base_inflation_m Base inflation radius for current obstacle position.
    */
-  void setDynamicHeatParams(float alpha0, float alpha1, int p, int q, float tau_w_ratio,
-                            float gamma, float Hmax, float base_inflation_m) {
+  void setDynamicHeatParams(
+      float alpha0,
+      float alpha1,
+      int p,
+      int q,
+      float tau_w_ratio,
+      float gamma,
+      float Hmax,
+      float base_inflation_m) {
     heat_alpha0_ = alpha0;
     heat_alpha1_ = alpha1;
     heat_p_ = std::max(1, p);
@@ -760,7 +788,8 @@ class MapUtil {
   /** @brief Set the base tube radius for dynamic heat corridor computation. */
   void setDynHeatTubeRadius(float r) { dyn_heat_tube_radius_m_ = r; }
 
-  /** @brief Enable soft-cost mode where occupied cells receive a finite cost instead of being blocked.
+  /** @brief Enable soft-cost mode where occupied cells receive a finite cost instead of being
+   * blocked.
    *  @param enable If true, occupied cells are traversable with a soft cost penalty.
    *  @param cost The soft cost value assigned to occupied cells.
    */
@@ -782,8 +811,8 @@ class MapUtil {
    *  @param pred_samples Predicted positions per obstacle, indexed [obstacle][time_step].
    *  @param pred_times Time stamps aligned with the prediction samples.
    */
-  void setDynamicPredictedSamples(const std::vector<vec_Vecf<3>>& pred_samples,
-                                  const std::vector<float>& pred_times) {
+  void setDynamicPredictedSamples(
+      const std::vector<vec_Vecf<3>>& pred_samples, const std::vector<float>& pred_times) {
     dyn_pred_samples_ = pred_samples;
     dyn_pred_times_ = pred_times;
   }
@@ -890,7 +919,8 @@ class MapUtil {
     z_map_max_ = z_max;
   }
 
-  /** @brief Set the assumed maximum velocity of dynamic obstacles for inflation radius computation. */
+  /** @brief Set the assumed maximum velocity of dynamic obstacles for inflation radius computation.
+   */
   void setObstMaxVelocity(float obst_max_vel) {
     // Set obstacle maximum velocity
     obst_max_vel_ = obst_max_vel;
@@ -966,8 +996,8 @@ class MapUtil {
    * @param float radius : The radius
    * @return void
    * */
-  void getNeighborIndices(const Veci<3>& point_int, std::vector<int>& neighbor_indices,
-                          float radius) {
+  void getNeighborIndices(
+      const Veci<3>& point_int, std::vector<int>& neighbor_indices, float radius) {
     // Get the radius in int
     float radius_int = radius / res_;
     Veci<3> radius_int_vec(radius_int, radius_int, radius_int);
@@ -1268,16 +1298,18 @@ class MapUtil {
    *  @param min_point_int Output minimum integer corner of the bounding box.
    *  @param max_point_int Output maximum integer corner of the bounding box.
    */
-  void computeVicinityMapInteger(const vec_Vecf<3>& path, const std::vector<float>& sfc_size,
-                                 Veci<3>& min_point_int, Veci<3>& max_point_int) const {
+  void computeVicinityMapInteger(
+      const vec_Vecf<3>& path,
+      const std::vector<float>& sfc_size,
+      Veci<3>& min_point_int,
+      Veci<3>& max_point_int) const {
     // 1. Compute the global bounding box around the path.
     Vecf<3> min_point_float = Vecf<3>::Constant(std::numeric_limits<float>::max());
     Vecf<3> max_point_float = Vecf<3>::Constant(std::numeric_limits<float>::lowest());
 
     for (const auto& point : path) {
       // Inflate the local box size (using factor 1.5 as in your example)
-      Vecf<3> inflated_sfc_size(1.5 * sfc_size[0], 1.5 * sfc_size[1],
-                                      1.5 * sfc_size[2]);
+      Vecf<3> inflated_sfc_size(1.5 * sfc_size[0], 1.5 * sfc_size[1], 1.5 * sfc_size[2]);
       Vecf<3> local_min = point - inflated_sfc_size;
       Vecf<3> local_max = point + inflated_sfc_size;
 
@@ -1293,8 +1325,8 @@ class MapUtil {
 
   // Cloud-getting actually happens here
   template <typename CheckFunc>
-  vec_Vecf<Dim> getCloud_(CheckFunc check, const Veci<3>& min_point_int,
-                          const Veci<3>& max_point_int) const {
+  vec_Vecf<Dim> getCloud_(
+      CheckFunc check, const Veci<3>& min_point_int, const Veci<3>& max_point_int) const {
     vec_Vecf<Dim> cloud;
 
     // Reserve an estimated size (optional, just to reduce reallocations)
@@ -1345,8 +1377,8 @@ class MapUtil {
 
   // Cloud-getter
   template <typename CheckFunc>
-  vec_Vecf<Dim> getCloud(CheckFunc check, const vec_Vecf<3>& path,
-                         const std::vector<float> sfc_size) const {
+  vec_Vecf<Dim> getCloud(
+      CheckFunc check, const vec_Vecf<3>& path, const std::vector<float> sfc_size) const {
     vec_Vecf<Dim> cloud;
 
     // Compute vicinty map integer
@@ -1380,11 +1412,11 @@ class MapUtil {
    *  @param sfc_size Half-extents of the local search box.
    *  @return Vector of occupied voxel positions in world coordinates.
    */
-  inline vec_Vecf<Dim> getOccupiedCloud(const vec_Vecf<3>& path,
-                                        const std::vector<float> sfc_size) const {
+  inline vec_Vecf<Dim> getOccupiedCloud(
+      const vec_Vecf<3>& path, const std::vector<float> sfc_size) const {
     // Get cloud for occupied cells
-    return getCloud([this](const Veci<Dim>& pti) -> bool { return isOccupied(pti); }, path,
-                    sfc_size);
+    return getCloud(
+        [this](const Veci<Dim>& pti) -> bool { return isOccupied(pti); }, path, sfc_size);
   }
 
   /** @brief Get all occupied voxel positions in the entire map.
@@ -1400,11 +1432,10 @@ class MapUtil {
    *  @param sfc_size Half-extents of the local search box.
    *  @return Vector of free voxel positions in world coordinates.
    */
-  inline vec_Vecf<Dim> getFreeCloud(const vec_Vecf<3>& path,
-                                    const std::vector<float> sfc_size) const {
+  inline vec_Vecf<Dim> getFreeCloud(
+      const vec_Vecf<3>& path, const std::vector<float> sfc_size) const {
     // Get cloud for free cells
-    return getCloud([this](const Veci<Dim>& pti) -> bool { return isFree(pti); }, path,
-                    sfc_size);
+    return getCloud([this](const Veci<Dim>& pti) -> bool { return isFree(pti); }, path, sfc_size);
   }
 
   /** @brief Get all free voxel positions in the entire map.
@@ -1420,11 +1451,11 @@ class MapUtil {
    *  @param sfc_size Half-extents of the local search box.
    *  @return Vector of unknown voxel positions in world coordinates.
    */
-  inline vec_Vecf<Dim> getUnknownCloud(const vec_Vecf<3>& path,
-                                       const std::vector<float> sfc_size) const {
+  inline vec_Vecf<Dim> getUnknownCloud(
+      const vec_Vecf<3>& path, const std::vector<float> sfc_size) const {
     // Get cloud for unknown cells
-    return getCloud([this](const Veci<Dim>& pti) -> bool { return isUnknown(pti); }, path,
-                    sfc_size);
+    return getCloud(
+        [this](const Veci<Dim>& pti) -> bool { return isUnknown(pti); }, path, sfc_size);
   }
 
   /** @brief Get all unknown voxel positions in the entire map.

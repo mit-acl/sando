@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -55,9 +55,8 @@ PieceWisePol convertPwpMsg2Pwp(const dynus_interfaces::msg::PWPTraj& pwp_msg) {
 
   if (pwp_msg.coeff_x.size() != pwp_msg.coeff_y.size() ||
       pwp_msg.coeff_x.size() != pwp_msg.coeff_z.size()) {
-    std::cout << " coeff_x,coeff_y,coeff_z of pwp_msg should have the same elements" << std::endl;
-    std::cout << " ================================" << std::endl;
-    abort();
+    throw std::runtime_error(
+        "convertPwpMsg2Pwp: coeff_x, coeff_y, coeff_z must have the same number of elements");
   }
 
   for (int i = 0; i < pwp_msg.times.size(); i++) {
@@ -331,8 +330,13 @@ std::vector<Eigen::Matrix<double, 3, 4>> convertCoefficients2ControlPoints(
   return control_points;
 }
 
-double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const double pf,
-                                    const double vf, const double v_max, const double a_max) {
+double getMinTimeDoubleIntegrator1D(
+    const double p0,
+    const double v0,
+    const double pf,
+    const double vf,
+    const double v_max,
+    const double a_max) {
   // The notation of this function is based on the paper "Constrained time-optimal control of double
   // integrator system and its application in MPC"
   // https://iopscience.iop.org/article/10.1088/1742-6596/783/1/012024
@@ -356,8 +360,9 @@ double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const doub
 
   if ((x2 <= B) && (x2 >= C)) {
     time = (-k2 * (x1 + x1r) +
-            2 * sqrt(pow(k2, 2) * pow(x1, 2) -
-                     k1 * k2 * ((k2 / (2 * k1)) * (pow(x1, 2) - pow(x1r, 2)) + x2 - x2r))) /
+            2 * sqrt(
+                    pow(k2, 2) * pow(x1, 2) -
+                    k1 * k2 * ((k2 / (2 * k1)) * (pow(x1, 2) - pow(x1r, 2)) + x2 - x2r))) /
            (k1 * k2);
   }
 
@@ -368,8 +373,9 @@ double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const doub
 
   else if ((x2 > B) && (x2 <= D)) {
     time = (k2 * (x1 + x1r) +
-            2 * sqrt(pow(k2, 2) * pow(x1, 2) +
-                     k1 * k2 * ((k2 / (2 * k1)) * (-pow(x1, 2) + pow(x1r, 2)) + x2 - x2r))) /
+            2 * sqrt(
+                    pow(k2, 2) * pow(x1, 2) +
+                    k1 * k2 * ((k2 / (2 * k1)) * (-pow(x1, 2) + pow(x1r, 2)) + x2 - x2r))) /
            (k1 * k2);
   }
 
@@ -382,9 +388,13 @@ double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const doub
   return time;
 }
 
-double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vector3d& v0,
-                                    const Eigen::Vector3d& pf, const Eigen::Vector3d& vf,
-                                    const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max) {
+double getMinTimeDoubleIntegrator3D(
+    const Eigen::Vector3d& p0,
+    const Eigen::Vector3d& v0,
+    const Eigen::Vector3d& pf,
+    const Eigen::Vector3d& vf,
+    const Eigen::Vector3d& v_max,
+    const Eigen::Vector3d& a_max) {
   double min_x = getMinTimeDoubleIntegrator1D(p0.x(), v0.x(), pf.x(), vf.x(), v_max.x(), a_max.x());
   double min_y = getMinTimeDoubleIntegrator1D(p0.y(), v0.y(), pf.y(), vf.y(), v_max.y(), a_max.y());
   double min_z = getMinTimeDoubleIntegrator1D(p0.z(), v0.z(), pf.z(), vf.z(), v_max.z(), a_max.z());
@@ -424,8 +434,8 @@ void angle_wrap(double& diff) {
 
 // P1-P2 is the direction used for projection. P2 is the terminal goal. wdx, wdy and wdz are the
 // widths of a 3D box centered on P1
-Eigen::Vector3d projectPointToBox(Eigen::Vector3d& P1, Eigen::Vector3d& P2, double wdx, double wdy,
-                                  double wdz) {
+Eigen::Vector3d projectPointToBox(
+    Eigen::Vector3d& P1, Eigen::Vector3d& P2, double wdx, double wdy, double wdz) {
   double x_max = P1(0) + wdx / 2;
   double x_min = P1(0) - wdx / 2;
   double y_max = P1(1) + wdy / 2;
@@ -461,8 +471,8 @@ Eigen::Vector3d projectPointToBox(Eigen::Vector3d& P1, Eigen::Vector3d& P2, doub
 
   if (intersections.size() == 0) {
     // There is no intersection
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),
-                 "This is impossible, there should be an intersection");
+    RCLCPP_ERROR(
+        rclcpp::get_logger("rclcpp"), "This is impossible, there should be an intersection");
   }
 
   // Initialize the distances
@@ -485,8 +495,8 @@ Eigen::Vector3d projectPointToBox(Eigen::Vector3d& P1, Eigen::Vector3d& P2, doub
 }
 
 // Project point to a sphere
-Eigen::Vector3d projectPointToSphere(const Eigen::Vector3d& P1, const Eigen::Vector3d& P2,
-                                     double radius) {
+Eigen::Vector3d projectPointToSphere(
+    const Eigen::Vector3d& P1, const Eigen::Vector3d& P2, double radius) {
   // If the point is already inside the sphere, return the point
   if ((P2 - P1).norm() <= radius) {
     return P2;
@@ -499,9 +509,10 @@ Eigen::Vector3d projectPointToSphere(const Eigen::Vector3d& P1, const Eigen::Vec
 }
 
 // Convert visualization_msgs::msg::MarkerArray to vec_Vecf<3>
-void convertMarkerArray2Vec_Vec_Vecf3(const visualization_msgs::msg::MarkerArray& marker_array,
-                                      std::vector<vec_Vecf<3>>& vec,
-                                      std::vector<double>& scale_vec) {
+void convertMarkerArray2Vec_Vec_Vecf3(
+    const visualization_msgs::msg::MarkerArray& marker_array,
+    std::vector<vec_Vecf<3>>& vec,
+    std::vector<double>& scale_vec) {
   // loop through the markers
   for (int i = 0; i < marker_array.markers.size(); i++) {
     // if the marker is empty, skip
@@ -545,8 +556,9 @@ void createMoreVertexes(vec_Vecf<3>& path, double d) {
 }
 
 double euclideanDistance(const Eigen::Vector3d& p1, const Eigen::Vector3d& p2) {
-  return std::sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]) +
-                   (p1[2] - p2[2]) * (p1[2] - p2[2]));
+  return std::sqrt(
+      (p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]) +
+      (p1[2] - p2[2]) * (p1[2] - p2[2]));
 }
 
 Eigen::Matrix4d transformStampedToMatrix(
@@ -576,8 +588,12 @@ Eigen::Matrix4d transformStampedToMatrix(
   return transformation_matrix;
 }
 
-void findVelocitiesInPath(const vec_Vecf<3>& path, vec_Vecf<3>& velocities, const RobotState& A,
-                          const Eigen::Vector3d& v_max_3d, bool verbose) {
+void findVelocitiesInPath(
+    const vec_Vecf<3>& path,
+    vec_Vecf<3>& velocities,
+    const RobotState& A,
+    const Eigen::Vector3d& v_max_3d,
+    bool verbose) {
   // Get the initial velocity (which is A.vel)
   velocities.push_back(A.vel);
 
@@ -678,9 +694,12 @@ void findVelocitiesInPath(const vec_Vecf<3>& path, vec_Vecf<3>& velocities, cons
 
 }  // End of findVelocitiesInPath
 
-std::vector<double> getTravelTimes(const vec_Vecf<3>& path, const RobotState& A, bool debug_verbose,
-                                   const Eigen::Vector3d& v_max_3d,
-                                   const Eigen::Vector3d& a_max_3d) {
+std::vector<double> getTravelTimes(
+    const vec_Vecf<3>& path,
+    const RobotState& A,
+    bool debug_verbose,
+    const Eigen::Vector3d& v_max_3d,
+    const Eigen::Vector3d& a_max_3d) {
   // First, estimate velocity at each point
   vec_Vecf<3> velocities;
   velocities.reserve(path.size());

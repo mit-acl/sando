@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,21 +8,19 @@
 
 #pragma once
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
 #include <deque>
-#include <hgp/utils.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
-#include <sando/sando_type.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
+#include <hgp/utils.hpp>
+#include <sando/sando_type.hpp>
+#include "rclcpp/rclcpp.hpp"
 #include "dynus_interfaces/msg/coeff_poly3.hpp"
 #include "dynus_interfaces/msg/dyn_traj.hpp"
 #include "dynus_interfaces/msg/pwp_traj.hpp"
-#include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/color_rgba.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace sando_utils {
 
@@ -107,8 +105,13 @@ std::vector<Eigen::Matrix<double, 3, 4>> convertCoefficients2ControlPoints(
  *  @param a_max Maximum acceleration.
  *  @return Minimum transfer time.
  */
-double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const double pf,
-                                    const double vf, const double v_max, const double a_max);
+double getMinTimeDoubleIntegrator1D(
+    const double p0,
+    const double v0,
+    const double pf,
+    const double vf,
+    const double v_max,
+    const double a_max);
 
 /** @brief Compute minimum time for a 3D double-integrator point-to-point maneuver.
  *  @param p0 Initial position.
@@ -119,9 +122,13 @@ double getMinTimeDoubleIntegrator1D(const double p0, const double v0, const doub
  *  @param a_max Per-axis maximum acceleration.
  *  @return Minimum transfer time (maximum across axes).
  */
-double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vector3d& v0,
-                                    const Eigen::Vector3d& pf, const Eigen::Vector3d& vf,
-                                    const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max);
+double getMinTimeDoubleIntegrator3D(
+    const Eigen::Vector3d& p0,
+    const Eigen::Vector3d& v0,
+    const Eigen::Vector3d& pf,
+    const Eigen::Vector3d& vf,
+    const Eigen::Vector3d& v_max,
+    const Eigen::Vector3d& a_max);
 
 /** @brief Convert a quaternion to Euler angles (roll, pitch, yaw).
  *  @param q Input quaternion.
@@ -167,8 +174,8 @@ void angle_wrap(double& diff);
  *  @param wdz Half-width of the box along z.
  *  @return Projected point on the box surface.
  */
-Eigen::Vector3d projectPointToBox(Eigen::Vector3d& P1, Eigen::Vector3d& P2, double wdx, double wdy,
-                                  double wdz);
+Eigen::Vector3d projectPointToBox(
+    Eigen::Vector3d& P1, Eigen::Vector3d& P2, double wdx, double wdy, double wdz);
 
 /** @brief Project a point onto the surface of a sphere.
  *  @param P1 Center of the sphere.
@@ -176,17 +183,18 @@ Eigen::Vector3d projectPointToBox(Eigen::Vector3d& P1, Eigen::Vector3d& P2, doub
  *  @param radius Radius of the sphere.
  *  @return Projected point on the sphere surface.
  */
-Eigen::Vector3d projectPointToSphere(const Eigen::Vector3d& P1, const Eigen::Vector3d& P2,
-                                     double radius);
+Eigen::Vector3d projectPointToSphere(
+    const Eigen::Vector3d& P1, const Eigen::Vector3d& P2, double radius);
 
 /** @brief Convert a MarkerArray of obstacles to vectors of polygon vertices and scales.
  *  @param marker_array Input MarkerArray containing obstacle markers.
  *  @param vec Output vector of polygon vertex lists.
  *  @param scale_vec Output vector of obstacle scales.
  */
-void convertMarkerArray2Vec_Vec_Vecf3(const visualization_msgs::msg::MarkerArray& marker_array,
-                                      std::vector<vec_Vecf<3>>& vec,
-                                      std::vector<double>& scale_vec);
+void convertMarkerArray2Vec_Vec_Vecf3(
+    const visualization_msgs::msg::MarkerArray& marker_array,
+    std::vector<vec_Vecf<3>>& vec,
+    std::vector<double>& scale_vec);
 
 /** @brief Subdivide path segments so that no segment exceeds a given length.
  *  @param path Path to subdivide (modified in place).
@@ -215,8 +223,12 @@ Eigen::Matrix4d transformStampedToMatrix(
  *  @param v_max_3d Per-axis maximum velocity limits.
  *  @param verbose Enable debug output.
  */
-void findVelocitiesInPath(const vec_Vecf<3>& path, vec_Vecf<3>& velocities, const RobotState& A,
-                          const Eigen::Vector3d& v_max_3d, bool verbose);
+void findVelocitiesInPath(
+    const vec_Vecf<3>& path,
+    vec_Vecf<3>& velocities,
+    const RobotState& A,
+    const Eigen::Vector3d& v_max_3d,
+    bool verbose);
 
 /** @brief Compute segment travel times along a path using double-integrator dynamics.
  *  @param path Input waypoint path.
@@ -226,9 +238,12 @@ void findVelocitiesInPath(const vec_Vecf<3>& path, vec_Vecf<3>& velocities, cons
  *  @param a_max_3d Per-axis maximum acceleration limits.
  *  @return Vector of travel times for each segment.
  */
-std::vector<double> getTravelTimes(const vec_Vecf<3>& path, const RobotState& A, bool debug_verbose,
-                                   const Eigen::Vector3d& v_max_3d,
-                                   const Eigen::Vector3d& a_max_3d);
+std::vector<double> getTravelTimes(
+    const vec_Vecf<3>& path,
+    const RobotState& A,
+    bool debug_verbose,
+    const Eigen::Vector3d& v_max_3d,
+    const Eigen::Vector3d& a_max_3d);
 
 /** @brief Create an identity geometry_msgs Pose (position zero, orientation identity).
  *  @return Identity Pose message.

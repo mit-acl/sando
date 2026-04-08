@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Eigen/Dense>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/passthrough.h>
@@ -18,14 +19,12 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-
-#include <Eigen/Dense>
 #include <dynus_interfaces/msg/dyn_traj.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <sando/sando_type.hpp>
-#include <sando/utils.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <sando/sando_type.hpp>
+#include <sando/utils.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 /** @brief Extended Kalman Filter state for 3D obstacle tracking.
  *
@@ -38,9 +37,9 @@ struct EKFState {
   Eigen::MatrixXd Q;  ///< Process noise covariance matrix.
   Eigen::MatrixXd R;  ///< Measurement noise covariance matrix.
 
-  double time_updated = 0.0;  ///< Timestamp of the last update.
-  Eigen::Vector3d bbox;       ///< Bounding box dimensions of the tracked obstacle.
-  int id;                     ///< Unique identifier for this EKF instance.
+  double time_updated = 0.0;       ///< Timestamp of the last update.
+  Eigen::Vector3d bbox;            ///< Bounding box dimensions of the tracked obstacle.
+  int id;                          ///< Unique identifier for this EKF instance.
   std_msgs::msg::ColorRGBA color;  ///< Visualization color for this obstacle.
 
   /** @brief Default constructor. */
@@ -53,8 +52,13 @@ struct EKFState {
    *  @param bbox Bounding box dimensions.
    *  @param id Unique obstacle identifier.
    */
-  EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_updated,
-           Eigen::Vector3d bbox, int id) {
+  EKFState(
+      int state_size,
+      Eigen::MatrixXd Q,
+      Eigen::MatrixXd R,
+      double time_updated,
+      Eigen::Vector3d bbox,
+      int id) {
     x = Eigen::VectorXd::Zero(state_size);
     P = Eigen::MatrixXd::Identity(state_size, state_size);
     this->Q = Q;
@@ -70,7 +74,7 @@ struct EKFState {
     this->color.r = static_cast<float>(rand()) / RAND_MAX;  // Random red
     this->color.g = static_cast<float>(rand()) / RAND_MAX;  // Random green
     this->color.b = static_cast<float>(rand()) / RAND_MAX;  // Random blue
-    this->color.a = 0.4;  // Opacity
+    this->color.a = 0.4;                                    // Opacity
   }
 };
 
@@ -91,7 +95,8 @@ struct Cluster {
   }
 };
 
-/** @brief ROS 2 node that clusters dynamic obstacles from point clouds and tracks them with an adaptive EKF. */
+/** @brief ROS 2 node that clusters dynamic obstacles from point clouds and tracks them with an
+ * adaptive EKF. */
 class ObstacleTrackerNode : public rclcpp::Node {
  public:
   /** @brief Construct the node, declare parameters, and set up subscriptions and publishers. */
@@ -149,12 +154,16 @@ class ObstacleTrackerNode : public rclcpp::Node {
   void deleteOldEKFstates();
   void publishPredictions(const std::vector<Cluster>& clusters);
   void publishBoxes(const std::vector<Cluster>& clusters);
-  void getCentroidsAndSizesOfClusters(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                      const std::vector<pcl::PointIndices>& cluster_indices,
-                                      std::vector<Eigen::Vector3d>& cluster_centroids,
-                                      std::vector<Eigen::Vector3d>& cluster_sizes);
+  void getCentroidsAndSizesOfClusters(
+      const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+      const std::vector<pcl::PointIndices>& cluster_indices,
+      std::vector<Eigen::Vector3d>& cluster_centroids,
+      std::vector<Eigen::Vector3d>& cluster_sizes);
   Eigen::VectorXd polyfit(const std::vector<double>& t, const std::vector<double>& y, int degree);
-  double calculateVariance(const std::vector<double>& t, const std::vector<double>& y,
-                           const Eigen::VectorXd& beta, int degree);
+  double calculateVariance(
+      const std::vector<double>& t,
+      const std::vector<double>& y,
+      const Eigen::VectorXd& beta,
+      int degree);
   void filterStaticObstacles();
 };

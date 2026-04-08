@@ -55,7 +55,7 @@ def _as(context, name, cast, default):
 
 
 # Optional: flip to True for one‑time verbose dump
-DEBUG_DYN_OBS = True
+DEBUG_DYN_OBS = False
 
 
 # ---------- Spawn Static Obstacles ----------

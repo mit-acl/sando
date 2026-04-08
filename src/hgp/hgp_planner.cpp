@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -10,10 +10,20 @@
 
 using namespace termcolor;
 
-HGPPlanner::HGPPlanner(std::string global_planner, bool verbose, double v_max, double a_max,
-                       double j_max, int hgp_timeout_duration_ms, double w_unknown, double w_align,
-                       double decay_len_cells, double w_side, int los_cells, double min_len,
-                       double min_turn)
+HGPPlanner::HGPPlanner(
+    std::string global_planner,
+    bool verbose,
+    double v_max,
+    double a_max,
+    double j_max,
+    int hgp_timeout_duration_ms,
+    double w_unknown,
+    double w_align,
+    double decay_len_cells,
+    double w_side,
+    int los_cells,
+    double min_len,
+    double min_turn)
     : global_planner_(global_planner),
       planner_verbose_(verbose),
       v_max_(v_max),
@@ -31,8 +41,8 @@ HGPPlanner::HGPPlanner(std::string global_planner, bool verbose, double v_max, d
 }
 
 // --- In hgp_planner.cpp (definitions) ---
-bool HGPPlanner::lineOfSightCapsule(const Vecf<3>& a, const Vecf<3>& b,
-                                    int inflate_radius_cells) const {
+bool HGPPlanner::lineOfSightCapsule(
+    const Vecf<3>& a, const Vecf<3>& b, int inflate_radius_cells) const {
   // Sample along the segment and check a "capsule" of radius r around it.
   // r is in *cells* (so r=1.5 checks a segment thickened by 1.5 voxels).
   const double res = map_util_->getRes();
@@ -107,8 +117,8 @@ static inline double angleDeg(const Vecf<3>& u, const Vecf<3>& v) {
   return std::acos(c) * 180.0 / M_PI;
 }
 
-vec_Vecf<3> HGPPlanner::angleSpacingFilter(const vec_Vecf<3>& in, double min_turn_deg,
-                                           double min_seg_len) const {
+vec_Vecf<3> HGPPlanner::angleSpacingFilter(
+    const vec_Vecf<3>& in, double min_turn_deg, double min_seg_len) const {
   if (in.size() < 3) return in;
   vec_Vecf<3> out;
   out.reserve(in.size());
@@ -305,8 +315,13 @@ vec_Vecf<3> HGPPlanner::getAllSet() const {
   return ps;
 }
 
-bool HGPPlanner::plan(const Vecf<3>& start, const Vecf<3>& start_vel, const Vecf<3>& goal,
-                      double& final_g, double current_time, decimal_t eps) {
+bool HGPPlanner::plan(
+    const Vecf<3>& start,
+    const Vecf<3>& start_vel,
+    const Vecf<3>& goal,
+    double& final_g,
+    double current_time,
+    decimal_t eps) {
   if (map_util_->map_.size() == 0) {
     std::cout << "map size: " << map_util_->map_.size() << std::endl;
     printf(ANSI_COLOR_RED "need to set the map!\n" ANSI_COLOR_RESET);
@@ -371,19 +386,19 @@ bool HGPPlanner::plan(const Vecf<3>& start, const Vecf<3>& start_vel, const Vecf
   double initial_g = (start - map_util_->intToFloat(start_int)).norm();
 
   // should we initialize the planner in constructor?
-  graph_search_ = std::make_shared<sando::GraphSearch>((map_util_->map_).data(), map_util_, dim(0),
-                                                       dim(1), dim(2), eps, planner_verbose_,
-                                                       global_planner_, w_unknown_);
+  graph_search_ = std::make_shared<sando::GraphSearch>(
+      (map_util_->map_).data(), map_util_, dim(0), dim(1), dim(2), eps, planner_verbose_,
+      global_planner_, w_unknown_);
   graph_search_->setStartAndGoal(start, goal);
   double max_values[3] = {v_max_, a_max_, j_max_};
   graph_search_->setBounds(max_values);
 
   // Run global plan module
   int max_expand = max_expand_;
-  graph_search_->plan(start_int(0), start_int(1), start_int(2), goal_int(0), goal_int(1),
-                      goal_int(2), initial_g, global_planning_time_, hgp_static_jps_time_,
-                      hgp_check_path_time_, hgp_dynamic_astar_time_, hgp_recover_path_time_,
-                      current_time, start_vel, max_expand, hgp_timeout_duration_ms_);
+  graph_search_->plan(
+      start_int(0), start_int(1), start_int(2), goal_int(0), goal_int(1), goal_int(2), initial_g,
+      global_planning_time_, hgp_static_jps_time_, hgp_check_path_time_, hgp_dynamic_astar_time_,
+      hgp_recover_path_time_, current_time, start_vel, max_expand, hgp_timeout_duration_ms_);
 
   const auto path = graph_search_->getPath();
 

@@ -19,10 +19,10 @@ DOCKER_FLAGS = xhost + && docker run -it \
 # ---- Build ----
 
 build:
-	docker build -t sando -f Dockerfile ..
+	docker build -t sando .
 
 build-no-cache:
-	docker build --no-cache -t sando -f Dockerfile ..
+	docker build --no-cache -t sando .
 
 # ---- Demo mode: pre-configured scenarios with automatic goal ----
 # Usage: make run-demo SCENARIO=static_easy

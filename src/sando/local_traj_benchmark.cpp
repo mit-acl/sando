@@ -1,48 +1,46 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
-#include <decomp_util/ellipsoid_decomp.h>
-#include <decomp_util/seed_decomp.h>
-
-#include <Eigen/Dense>
 #include <algorithm>
-#include <cctype>
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
-#include <decomp_ros_msgs/msg/ellipsoid_array.hpp>
-#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
-#include <decomp_rviz_plugins/data_ros_utils.hpp>
-#include <filesystem>
 #include <fstream>
 #include <future>
-#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <mutex>
-#include <optional>
-#include <rclcpp/rclcpp.hpp>
-#include <sando/gurobi_solver.hpp>
-#include <sando/utils.hpp>
-#include <std_msgs/msg/color_rgba.hpp>
 #include <string>
 #include <thread>
-#include <tuple>
-#include <type_traits>
 #include <vector>
+#include <Eigen/Dense>
+#include <decomp_util/ellipsoid_decomp.h>
+#include <decomp_util/seed_decomp.h>
+#include <decomp_rviz_plugins/data_ros_utils.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
+#include <sando/gurobi_solver.hpp>
+#include <sando/utils.hpp>
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"
 #include "sando/sando_type.hpp"
 #include "timer.hpp"
+#include <cctype>
+#include <condition_variable>
+#include <decomp_ros_msgs/msg/ellipsoid_array.hpp>
+#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
+#include <filesystem>
+#include <optional>
+#include <rclcpp/rclcpp.hpp>
+#include <tuple>
+#include <type_traits>
 
 namespace fs = std::filesystem;
 using namespace std::chrono;
@@ -162,9 +160,12 @@ static void fillStateFromPos(RobotState& s, const Vec3d& p) {
 }
 
 // Build Polyhedron<3> from A x <= b
-static Polyhedron<3> polyFromHalfspacesSeeded(Eigen::MatrixXd A, Eigen::VectorXd b,
-                                              const Vec3f& seed, double eps,
-                                              bool* did_flip_any = nullptr) {
+static Polyhedron<3> polyFromHalfspacesSeeded(
+    Eigen::MatrixXd A,
+    Eigen::VectorXd b,
+    const Vec3f& seed,
+    double eps,
+    bool* did_flip_any = nullptr) {
   if (did_flip_any) *did_flip_any = false;
 
   // Ensure seed satisfies all inequalities by flipping rows that violate it.
@@ -200,10 +201,16 @@ static Polyhedron<3> polyFromHalfspacesSeeded(Eigen::MatrixXd A, Eigen::VectorXd
 // - seg_end_times
 // - poly_out (vec_E<Polyhedron<3>>)
 // - l_constraints (std::vector<LinearConstraint3D>)
-static void loadMysco2(const fs::path& file, Vec3d& start, Vec3d& goal, vec_Vecf<3>& path,
-                       std::vector<double>& seg_end_times, vec_E<Polyhedron<3>>& poly_out,
-                       std::vector<LinearConstraint3D>& l_constraints, double poly_seed_eps,
-                       bool debug_poly_check) {
+static void loadMysco2(
+    const fs::path& file,
+    Vec3d& start,
+    Vec3d& goal,
+    vec_Vecf<3>& path,
+    std::vector<double>& seg_end_times,
+    vec_E<Polyhedron<3>>& poly_out,
+    std::vector<LinearConstraint3D>& l_constraints,
+    double poly_seed_eps,
+    bool debug_poly_check) {
   std::ifstream ifs(file, std::ios::binary);
   if (!ifs) throw std::runtime_error("Failed to open: " + file.string());
 
@@ -371,8 +378,13 @@ struct ConstraintReport {
 };
 
 static ConstraintReport analyzeConstraintsSampled(
-    const std::vector<RobotState>& samples, const std::vector<LinearConstraint3D>& l_constraints,
-    double dc, double v_max, double a_max, double j_max, double corridor_tol = 1e-6,
+    const std::vector<RobotState>& samples,
+    const std::vector<LinearConstraint3D>& l_constraints,
+    double dc,
+    double v_max,
+    double a_max,
+    double j_max,
+    double corridor_tol = 1e-6,
     double dyn_tol = 1e-6) {
   ConstraintReport rep;
 
@@ -564,11 +576,17 @@ static inline std::string sanitizeFilename(std::string s) {
 
 // Dump goal_setpoints (sampled at dt=dc) to CSV.
 // If traj_dump_dt > dc, downsample by stride = round(traj_dump_dt/dc), clamped >= 1.
-static void dumpTrajectoryCsvV1(const fs::path& out_csv, const std::string& planner_name,
-                                const std::string& case_file_basename, const std::string& frame_id,
-                                const std::vector<RobotState>& samples, double dc,
-                                double traj_dump_dt_requested, double factor_used,
-                                double cost_value, double total_traj_time_sec) {
+static void dumpTrajectoryCsvV1(
+    const fs::path& out_csv,
+    const std::string& planner_name,
+    const std::string& case_file_basename,
+    const std::string& frame_id,
+    const std::vector<RobotState>& samples,
+    double dc,
+    double traj_dump_dt_requested,
+    double factor_used,
+    double cost_value,
+    double total_traj_time_sec) {
   if (samples.empty()) return;
 
   if (dc <= 0.0) dc = 0.01;
@@ -636,8 +654,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
     declare_parameter<bool>("visualize", true);
     declare_parameter<double>("playback_period_sec", 0.1);
-    declare_parameter<double>("solve_delay_sec",
-                              0.0);  // delay between solving each case (for visualization)
+    declare_parameter<double>(
+        "solve_delay_sec",
+        0.0);  // delay between solving each case (for visualization)
     declare_parameter<bool>("latched", true);
 
     // NEW: trajectory dump settings
@@ -679,13 +698,13 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
     declare_parameter<std::vector<std::string>>("planner_names", std::vector<std::string>{});
     declare_parameter<std::vector<int64_t>>("num_N_list", std::vector<int64_t>{});
-    declare_parameter<std::vector<double>>("factor_initial_list",
-                                           std::vector<double>{2.0, 1.0, 1.0});
+    declare_parameter<std::vector<double>>(
+        "factor_initial_list", std::vector<double>{2.0, 1.0, 1.0});
     declare_parameter<std::vector<double>>("factor_final_list", std::vector<double>{4.0, 3.0, 2.0});
 
     declare_parameter<bool>("use_dynamic_factor", false);
-    declare_parameter<std::vector<double>>("dynamic_factor_initial_mean_list",
-                                           std::vector<double>{1.5, 1.5, 1.5});
+    declare_parameter<std::vector<double>>(
+        "dynamic_factor_initial_mean_list", std::vector<double>{1.5, 1.5, 1.5});
     declare_parameter<double>("dynamic_factor_k_radius", 0.4);
 
     declare_parameter<std::string>("planner_name", "SANDO");
@@ -841,26 +860,28 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
               (root / (planner_name_ + "_N" + std::to_string(par_.num_N))).string();
 
           if (!ensureDir(fs::path(traj_dump_run_dir_))) {
-            RCLCPP_WARN(get_logger(),
-                        "Failed to create traj dump dir: %s (disabling dump for this run)",
-                        traj_dump_run_dir_.c_str());
+            RCLCPP_WARN(
+                get_logger(), "Failed to create traj dump dir: %s (disabling dump for this run)",
+                traj_dump_run_dir_.c_str());
             traj_dump_enable_this_run_ = false;
           } else {
             traj_dump_enable_this_run_ = true;
-            RCLCPP_INFO(get_logger(), "Trajectory dump enabled. dir=%s dt_req=%.4f (dc=%.4f)",
-                        traj_dump_run_dir_.c_str(), traj_dump_dt_, par_.dc);
+            RCLCPP_INFO(
+                get_logger(), "Trajectory dump enabled. dir=%s dt_req=%.4f (dc=%.4f)",
+                traj_dump_run_dir_.c_str(), traj_dump_dt_, par_.dc);
           }
         } else {
           traj_dump_enable_this_run_ = false;
         }
 
-        RCLCPP_INFO(get_logger(),
-                    "Benchmarking planner=%s num_N=%d factors=[%.2f .. %.2f] step=%.2f (%s) cases "
-                    "in %s (output %s) using %s",
-                    planner_name_.c_str(), par_.num_N, factors_.front(), factors_.back(),
-                    par_.factor_constant_step_size,
-                    use_dynamic_factor_ ? "dynamic k-factor" : "fixed range", sfc_dir_.c_str(),
-                    csv_out_.c_str(), use_single_threaded_ ? "single thread" : "multiple threads");
+        RCLCPP_INFO(
+            get_logger(),
+            "Benchmarking planner=%s num_N=%d factors=[%.2f .. %.2f] step=%.2f (%s) cases "
+            "in %s (output %s) using %s",
+            planner_name_.c_str(), par_.num_N, factors_.front(), factors_.back(),
+            par_.factor_constant_step_size,
+            use_dynamic_factor_ ? "dynamic k-factor" : "fixed range", sfc_dir_.c_str(),
+            csv_out_.c_str(), use_single_threaded_ ? "single thread" : "multiple threads");
 
         // Create one solver per factor (persistent, reused across cases)
         // For dynamic factor mode, allocate for max possible window size
@@ -883,9 +904,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             use_single_threaded_ ? 0  // 0 = Gurobi auto (all cores)
                                  : std::max(1, num_cores / static_cast<int>(max_num_factors));
 
-        RCLCPP_INFO(get_logger(),
-                    "Hybrid threading: %d cores, %zu factors, %d Gurobi threads/solver", num_cores,
-                    max_num_factors, grb_threads_per_solver);
+        RCLCPP_INFO(
+            get_logger(), "Hybrid threading: %d cores, %zu factors, %d Gurobi threads/solver",
+            num_cores, max_num_factors, grb_threads_per_solver);
 
         for (size_t i = 0; i < max_num_factors; ++i) {
           auto s = std::make_shared<SolverGurobi>();
@@ -950,11 +971,12 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
     // Only create playback timer if playback_period_sec > 0 (for post-solve review)
     if (visualize_ && playback_period_sec_ > 0.0) {
-      RCLCPP_INFO(get_logger(),
-                  "Starting post-solve playback (period=%.2fs). Press Ctrl+C to exit.",
-                  playback_period_sec_);
-      playback_timer_ = create_wall_timer(std::chrono::duration<double>(playback_period_sec_),
-                                          std::bind(&LocalTrajBenchmarkNode::publishNext, this));
+      RCLCPP_INFO(
+          get_logger(), "Starting post-solve playback (period=%.2fs). Press Ctrl+C to exit.",
+          playback_period_sec_);
+      playback_timer_ = create_wall_timer(
+          std::chrono::duration<double>(playback_period_sec_),
+          std::bind(&LocalTrajBenchmarkNode::publishNext, this));
     } else {
       RCLCPP_INFO(get_logger(), "Benchmarks complete. Exiting in 0.5 seconds...");
       // Use a one-shot timer to exit the process cleanly
@@ -987,16 +1009,19 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
     }
   }
 
-  void maybeDumpTrajectory(const std::string& case_fname, const std::vector<RobotState>& goal_setpoints,
-                           const BenchResult& r) {
+  void maybeDumpTrajectory(
+      const std::string& case_fname,
+      const std::vector<RobotState>& goal_setpoints,
+      const BenchResult& r) {
     if (!traj_dump_enable_this_run_) return;
 
-    const std::string base = sanitizeFilename("traj_" + planner_name_ + "_N" +
-                                              std::to_string(par_.num_N) + "__" + case_fname);
+    const std::string base = sanitizeFilename(
+        "traj_" + planner_name_ + "_N" + std::to_string(par_.num_N) + "__" + case_fname);
     const fs::path out_csv = fs::path(traj_dump_run_dir_) / (base + ".csv");
 
-    dumpTrajectoryCsvV1(out_csv, planner_name_, case_fname, frame_id_, goal_setpoints, par_.dc,
-                        traj_dump_dt_, r.factor_used, r.cost_value, r.total_traj_time_sec);
+    dumpTrajectoryCsvV1(
+        out_csv, planner_name_, case_fname, frame_id_, goal_setpoints, par_.dc, traj_dump_dt_,
+        r.factor_used, r.cost_value, r.total_traj_time_sec);
   }
 
   // Per-thread timing breakdown for profiling multi-threaded overhead
@@ -1020,9 +1045,14 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
     double postsolve_ms{0.0};
   };
 
-  void writeTimingLog(const std::string& log_path, size_t case_idx, const std::string& planner_name,
-                      double cumul_total_ms, double poll_first_ready_ms, double poll_success_ms,
-                      const std::vector<ThreadTiming>& timings) {
+  void writeTimingLog(
+      const std::string& log_path,
+      size_t case_idx,
+      const std::string& planner_name,
+      double cumul_total_ms,
+      double poll_first_ready_ms,
+      double poll_success_ms,
+      const std::vector<ThreadTiming>& timings) {
     // Append mode — header written once
     bool write_header = !fs::exists(log_path) || fs::file_size(log_path) == 0;
     std::ofstream ofs(log_path, std::ios::app);
@@ -1123,8 +1153,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
         vec_E<Polyhedron<3>> poly_out;
         std::vector<LinearConstraint3D> l_constraints;
 
-        loadMysco2(r.file, start, goal, path, seg_end_times, poly_out, l_constraints,
-                   poly_seed_eps_, debug_poly_check_);
+        loadMysco2(
+            r.file, start, goal, path, seg_end_times, poly_out, l_constraints, poly_seed_eps_,
+            debug_poly_check_);
 
         r.start = start;
         r.goal = goal;
@@ -1229,8 +1260,8 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
           // Check for timeout
           if (r.total_opt_runtime_ms > per_case_timeout_sec_ * 1000.0) {
-            RCLCPP_WARN(get_logger(), "Case timeout after %.3f seconds",
-                        r.total_opt_runtime_ms / 1000.0);
+            RCLCPP_WARN(
+                get_logger(), "Case timeout after %.3f seconds", r.total_opt_runtime_ms / 1000.0);
             r.success = false;
             r.gurobi_error = false;
             r.status = "TIMEOUT (exceeded " + std::to_string(per_case_timeout_sec_) + "s)";
@@ -1245,15 +1276,15 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             std::vector<RobotState> goal_setpoints;
             solver->getGoalSetpoints(goal_setpoints);
 
-            const auto crep = analyzeConstraintsSampled(goal_setpoints, l_constraints, par_.dc,
-                                                        par_.v_max, par_.a_max, par_.j_max);
+            const auto crep = analyzeConstraintsSampled(
+                goal_setpoints, l_constraints, par_.dc, par_.v_max, par_.a_max, par_.j_max);
             applyConstraintReport(r, crep);
 
             r.opt_traj_ma =
                 stateVector2ColoredMarkerArray(goal_setpoints, /*type=*/1, par_.v_max, this->now());
-            RCLCPP_INFO(get_logger(),
-                        "Created opt_traj_ma with %zu markers from %zu goal_setpoints",
-                        r.opt_traj_ma.markers.size(), goal_setpoints.size());
+            RCLCPP_INFO(
+                get_logger(), "Created opt_traj_ma with %zu markers from %zu goal_setpoints",
+                r.opt_traj_ma.markers.size(), goal_setpoints.size());
             r.success = true;
             r.gurobi_error = false;
             r.status = "OK (factor=" + std::to_string(r.factor_used) + ")";
@@ -1449,15 +1480,16 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
                 std::vector<RobotState> goal_setpoints;
                 solver->getGoalSetpoints(goal_setpoints);
 
-                const auto crep = analyzeConstraintsSampled(goal_setpoints, l_constraints, par_.dc,
-                                                            par_.v_max, par_.a_max, par_.j_max);
+                const auto crep = analyzeConstraintsSampled(
+                    goal_setpoints, l_constraints, par_.dc, par_.v_max, par_.a_max, par_.j_max);
                 applyConstraintReport(r, crep);
 
-                r.opt_traj_ma = stateVector2ColoredMarkerArray(goal_setpoints,
-                                                               /*type=*/1, par_.v_max, this->now());
-                RCLCPP_INFO(get_logger(),
-                            "Created opt_traj_ma with %zu markers from %zu goal_setpoints",
-                            r.opt_traj_ma.markers.size(), goal_setpoints.size());
+                r.opt_traj_ma = stateVector2ColoredMarkerArray(
+                    goal_setpoints,
+                    /*type=*/1, par_.v_max, this->now());
+                RCLCPP_INFO(
+                    get_logger(), "Created opt_traj_ma with %zu markers from %zu goal_setpoints",
+                    r.opt_traj_ma.markers.size(), goal_setpoints.size());
 
                 r.success = true;
                 r.gurobi_error = false;
@@ -1479,8 +1511,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             // Write timing log for this attempt
             {
               double cumul_ms = 1e3 * duration<double>(steady_clock::now() - cumul_t0).count();
-              writeTimingLog(timing_log_path_, case_idx, planner_name_, cumul_ms,
-                             poll_first_ready_ms, poll_success_ms, attempt_timings);
+              writeTimingLog(
+                  timing_log_path_, case_idx, planner_name_, cumul_ms, poll_first_ready_ms,
+                  poll_success_ms, attempt_timings);
             }
 
             // If this attempt failed and dynamic factor is enabled, shift window and retry
@@ -1489,24 +1522,25 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
               double current_max = factors_.back();
               if (current_max + par_.factor_constant_step_size > par_.factor_final + 1e-9) {
                 // Can't shift further — give up
-                RCLCPP_WARN(get_logger(),
-                            "[Case %zu] All factor windows exhausted up to factor_final=%.2f",
-                            case_idx, par_.factor_final);
+                RCLCPP_WARN(
+                    get_logger(), "[Case %zu] All factor windows exhausted up to factor_final=%.2f",
+                    case_idx, par_.factor_final);
                 break;
               }
 
               for (auto& f : factors_) f += par_.factor_constant_step_size;
               // Remove factors that exceed factor_final
               factors_.erase(
-                  std::remove_if(factors_.begin(), factors_.end(),
-                                 [this](double f) { return f > par_.factor_final + 1e-9; }),
+                  std::remove_if(
+                      factors_.begin(), factors_.end(),
+                      [this](double f) { return f > par_.factor_final + 1e-9; }),
                   factors_.end());
 
               if (factors_.empty()) break;
 
-              RCLCPP_INFO(get_logger(),
-                          "[Case %zu] Retry: shifted window to [%.2f .. %.2f] (%zu factors)",
-                          case_idx, factors_.front(), factors_.back(), factors_.size());
+              RCLCPP_INFO(
+                  get_logger(), "[Case %zu] Retry: shifted window to [%.2f .. %.2f] (%zu factors)",
+                  case_idx, factors_.front(), factors_.back(), factors_.size());
             } else if (!case_solved) {
               // No retry for fixed-range mode or timeout
               break;
@@ -1529,8 +1563,8 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             const bool only_errors = (last_error_count > 0 && last_non_error_fail_count == 0);
 
             if (case_timed_out || r.total_opt_runtime_ms > per_case_timeout_sec_ * 1000.0) {
-              RCLCPP_WARN(get_logger(), "Case timeout after %.3f seconds",
-                          r.total_opt_runtime_ms / 1000.0);
+              RCLCPP_WARN(
+                  get_logger(), "Case timeout after %.3f seconds", r.total_opt_runtime_ms / 1000.0);
               r.gurobi_error = only_errors;
               r.status = "TIMEOUT (exceeded " + std::to_string(per_case_timeout_sec_) + "s)";
             } else if (any_non_error_fail) {
@@ -1623,8 +1657,8 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
   void writeFactorReport() const {
     // Write to benchmark_data/<planner>_factor_report.txt
-    std::string report_path = benchmark_data_dir_ + "/" +
-                              dyn_factor_reports_.front().planner_name + "_factor_report.txt";
+    std::string report_path =
+        benchmark_data_dir_ + "/" + dyn_factor_reports_.front().planner_name + "_factor_report.txt";
 
     std::ofstream ofs(report_path);
     if (!ofs) {
@@ -1690,8 +1724,8 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
 
   void publishCase(size_t idx) {
     if (idx >= results_.size()) {
-      RCLCPP_WARN(get_logger(), "publishCase: idx %zu out of range (size=%zu)", idx,
-                  results_.size());
+      RCLCPP_WARN(
+          get_logger(), "publishCase: idx %zu out of range (size=%zu)", idx, results_.size());
       return;
     }
 
@@ -1721,8 +1755,8 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
       mk.header.stamp = stamp;
     }
     pub_hgp_path_marker_->publish(r.global_path_ma);
-    RCLCPP_INFO(get_logger(), "Published global path with %zu markers",
-                r.global_path_ma.markers.size());
+    RCLCPP_INFO(
+        get_logger(), "Published global path with %zu markers", r.global_path_ma.markers.size());
 
     // Publish committed traj markers (if success)
     if (r.success) {
@@ -1734,12 +1768,13 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
           mk.header.stamp = stamp;
         }
         pub_traj_committed_colored_->publish(r.opt_traj_ma);
-        RCLCPP_INFO(get_logger(), "Published trajectory with %zu markers",
-                    r.opt_traj_ma.markers.size());
+        RCLCPP_INFO(
+            get_logger(), "Published trajectory with %zu markers", r.opt_traj_ma.markers.size());
       }
     } else {
-      RCLCPP_WARN(get_logger(), "Case %zu: FAILED (no trajectory to publish) - status: %s", idx,
-                  r.status.c_str());
+      RCLCPP_WARN(
+          get_logger(), "Case %zu: FAILED (no trajectory to publish) - status: %s", idx,
+          r.status.c_str());
     }
 
     // publish corridor polyhedra
@@ -1748,8 +1783,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
     pub_poly_->publish(r.poly_msg);
     RCLCPP_INFO(get_logger(), "Published %zu polyhedra", r.poly_msg.polyhedrons.size());
 
-    RCLCPP_INFO(get_logger(), "[%zu/%zu] %s: %s", idx + 1, results_.size(),
-                fs::path(r.file).filename().string().c_str(), r.status.c_str());
+    RCLCPP_INFO(
+        get_logger(), "[%zu/%zu] %s: %s", idx + 1, results_.size(),
+        fs::path(r.file).filename().string().c_str(), r.status.c_str());
   }
 
   void publishNext() {

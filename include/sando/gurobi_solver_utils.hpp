@@ -8,11 +8,10 @@
 
 #pragma once
 
-#include <Eigen/Dense>
 #include <sstream>
-#include <type_traits>
-
+#include <Eigen/Dense>
 #include "gurobi_c++.h"
+#include <type_traits>
 // using namespace std;
 
 /** @brief Find the smallest positive element in a vector.
@@ -37,8 +36,7 @@ inline double MinPositiveElement(std::vector<double> v) {
  *  @return Quadratic expression representing sum of squared elements.
  */
 template <typename T>
-GRBQuadExpr GetNorm2(const std::vector<T>& x)
-{
+GRBQuadExpr GetNorm2(const std::vector<T>& x) {
   GRBQuadExpr result = 0;
   for (int i = 0; i < x.size(); i++) {
     result = result + x[i] * x[i];
@@ -53,8 +51,8 @@ GRBQuadExpr GetNorm2(const std::vector<T>& x)
  *  @return Result vector of linear expressions A*x.
  */
 template <typename T>
-std::vector<GRBLinExpr> MatrixMultiply(const std::vector<std::vector<double>>& A,
-                                       const std::vector<T>& x) {
+std::vector<GRBLinExpr> MatrixMultiply(
+    const std::vector<std::vector<double>>& A, const std::vector<T>& x) {
   std::vector<GRBLinExpr> result;
 
   for (int i = 0; i < A.size(); i++) {
@@ -66,23 +64,6 @@ std::vector<GRBLinExpr> MatrixMultiply(const std::vector<std::vector<double>>& A
   }
   return result;
 }
-
-/*std::vector<GRBLinExpr> MatrixMultiply(const std::vector<std::vector<double>>& A, const
-std::vector<GRBLinExpr>& x)
-{
-  std::vector<GRBLinExpr> result;
-
-  for (int i = 0; i < A.size(); i++)
-  {
-    GRBLinExpr lin_exp = 0;
-    for (int m = 0; m < x.size(); m++)
-    {
-      lin_exp = lin_exp + A[i][m] * x[m];
-    }
-    result.push_back(lin_exp);
-  }
-  return result;
-}*/
 
 /** @brief Element-wise addition of two std::vectors.
  *  @tparam T Element type.

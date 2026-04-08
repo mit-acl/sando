@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,22 +7,20 @@
  * -------------------------------------------------------------------------- */
 
 #pragma once
+#include <deque>
+#include <iostream>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
-#include <deque>
-#include <hgp/data_utils.hpp>
-#include <hgp/termcolor.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
-#include <iostream>
-#include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
+#include <hgp/data_utils.hpp>
+#include <hgp/termcolor.hpp>
 #include "sando/sando_type.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #define RED 1
 #define RED_TRANS 2
@@ -54,10 +52,12 @@
  *  @param type Marker type (default: ARROW).
  *  @param radii Optional per-waypoint radii for marker scaling.
  */
-void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::MarkerArray* m_array,
-                                 std_msgs::msg::ColorRGBA color,
-                                 int type = visualization_msgs::msg::Marker::ARROW,
-                                 std::vector<double> radii = std::vector<double>());
+void vectorOfVectors2MarkerArray(
+    vec_Vecf<3> traj,
+    visualization_msgs::msg::MarkerArray* m_array,
+    std_msgs::msg::ColorRGBA color,
+    int type = visualization_msgs::msg::Marker::ARROW,
+    std::vector<double> radii = std::vector<double>());
 
 /** @brief Convert a path to a MarkerArray with line strips and dot markers.
  *  @param traj Vector of 3D waypoints.
@@ -69,11 +69,15 @@ void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::Mark
  *  @param frame_id TF frame for the markers.
  *  @param lifetime_sec Marker lifetime in seconds.
  */
-void pathLineDotsToMarkerArray(const vec_Vecf<3>& traj,
-                               visualization_msgs::msg::MarkerArray* m_array,
-                               const std_msgs::msg::ColorRGBA& color, double line_width = 0.03,
-                               double dot_diameter = 0.06, int base_id = 50000,
-                               const std::string& frame_id = "map", double lifetime_sec = 1.0);
+void pathLineDotsToMarkerArray(
+    const vec_Vecf<3>& traj,
+    visualization_msgs::msg::MarkerArray* m_array,
+    const std_msgs::msg::ColorRGBA& color,
+    double line_width = 0.03,
+    double dot_diameter = 0.06,
+    int base_id = 50000,
+    const std::string& frame_id = "map",
+    double lifetime_sec = 1.0);
 
 /** @brief Map a scalar value to a jet colormap color.
  *  @param v Value to map.
@@ -133,8 +137,8 @@ double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
  *  @param center Center of the sphere.
  *  @return Vector of sampled 3D points on the sphere.
  */
-std::vector<Eigen::Vector3d> samplePointsSphere(Eigen::Vector3d& B, double r,
-                                                Eigen::Vector3d& center);
+std::vector<Eigen::Vector3d> samplePointsSphere(
+    Eigen::Vector3d& B, double r, Eigen::Vector3d& center);
 
 /** @brief Sample points on a sphere surface guided by a JPS path.
  *  @param B First intersection of the JPS path with the sphere.
@@ -144,10 +148,12 @@ std::vector<Eigen::Vector3d> samplePointsSphere(Eigen::Vector3d& B, double r,
  *  @param last_index_inside_sphere Index of the last path point inside the sphere.
  *  @return Vector of sampled 3D points on the sphere.
  */
-std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(Eigen::Vector3d& B, double r,
-                                                       Eigen::Vector3d& center_sent,
-                                                       vec_Vecf<3>& path_sent,
-                                                       int last_index_inside_sphere);
+std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(
+    Eigen::Vector3d& B,
+    double r,
+    Eigen::Vector3d& center_sent,
+    vec_Vecf<3>& path_sent,
+    int last_index_inside_sphere);
 
 /** @brief Wrap an angle difference to the range [-pi, pi].
  *  @param diff Angle difference in radians (modified in place).
@@ -165,8 +171,9 @@ vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPt
  *  @param ptr_cloud2 Second point cloud pointer.
  *  @return Combined vector of 3D float points.
  */
-vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud1,
-                        const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud2);
+vec_Vec3f pclptr_to_vec(
+    const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud1,
+    const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud2);
 
 /** @brief Create a geometry_msgs Point at the origin (0, 0, 0).
  *  @return Point message at origin.
@@ -218,8 +225,11 @@ using vec_Vecf = vec_E<Vecf<N>>;
  *  @param intersection Output intersection point (if found).
  *  @return True if the segment intersects the plane.
  */
-bool getIntersectionWithPlane(const Eigen::Vector3d& P1, const Eigen::Vector3d& P2,
-                              const Eigen::Vector4d& coeff, Eigen::Vector3d& intersection);
+bool getIntersectionWithPlane(
+    const Eigen::Vector3d& P1,
+    const Eigen::Vector3d& P2,
+    const Eigen::Vector4d& coeff,
+    Eigen::Vector3d& intersection);
 
 /** @brief Compute the cumulative path length from a given index to the end.
  *  @param path Input path as a vector of 3D points.
@@ -241,8 +251,8 @@ void reduceJPSbyDistance(vec_Vecf<3>& path, double d);
  *  @param center Center of the sphere.
  *  @return Intersection point on the sphere surface.
  */
-Eigen::Vector3d getIntersectionWithSphere(Eigen::Vector3d& A, Eigen::Vector3d& B, double r,
-                                          Eigen::Vector3d& center);
+Eigen::Vector3d getIntersectionWithSphere(
+    Eigen::Vector3d& A, Eigen::Vector3d& B, double r, Eigen::Vector3d& center);
 
 /** @brief Find the first intersection of a path with a sphere.
  *  @param path Path starting inside the sphere.
@@ -252,9 +262,12 @@ Eigen::Vector3d getIntersectionWithSphere(Eigen::Vector3d& A, Eigen::Vector3d& B
  *  @param noPointsOutsideSphere Optional output: true if the entire path is inside the sphere.
  *  @return First intersection point on the sphere surface.
  */
-Eigen::Vector3d getFirstIntersectionWithSphere(vec_Vecf<3>& path, double r, Eigen::Vector3d& center,
-                                               int* last_index_inside_sphere = NULL,
-                                               bool* noPointsOutsideSphere = NULL);
+Eigen::Vector3d getFirstIntersectionWithSphere(
+    vec_Vecf<3>& path,
+    double r,
+    Eigen::Vector3d& center,
+    int* last_index_inside_sphere = NULL,
+    bool* noPointsOutsideSphere = NULL);
 
 /** @brief Find the last intersection of a path with a sphere.
  *  @param path Path starting inside the sphere.
@@ -277,8 +290,8 @@ double getDistancePath(vec_Vecf<3>& path);
  *  @param Jdist Output: distance from the last intersection to the path end.
  *  @return Last intersection point on the sphere surface.
  */
-Eigen::Vector3d getLastIntersectionWithSphere(vec_Vecf<3> path, double r, Eigen::Vector3d center,
-                                              double* Jdist);
+Eigen::Vector3d getLastIntersectionWithSphere(
+    vec_Vecf<3> path, double r, Eigen::Vector3d center, double* Jdist);
 
 /** @brief Extract path points lying between two concentric spheres.
  *  @param path Input path.
@@ -312,9 +325,8 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v) {
  *  @param stamp Timestamp for the markers.
  *  @return MarkerArray with jet-colored markers.
  */
-visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(const std::vector<RobotState>& data,
-                                                                    int type, double max_value,
-                                                                    const rclcpp::Time& stamp);
+visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(
+    const std::vector<RobotState>& data, int type, double max_value, const rclcpp::Time& stamp);
 
 /** @brief Convert a state vector to a jet-colored line strip MarkerArray.
  *  @param data Vector of states to visualize.
@@ -327,8 +339,13 @@ visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(const std::v
  *  @return MarkerArray with a jet-colored line strip.
  */
 visualization_msgs::msg::MarkerArray stateVector2ColoredLineStripMarkerArray(
-    const std::vector<RobotState>& data, int id, const std::string& ns, double max_value,
-    const rclcpp::Time& stamp, double line_width, size_t max_points_vis);
+    const std::vector<RobotState>& data,
+    int id,
+    const std::string& ns,
+    double max_value,
+    const rclcpp::Time& stamp,
+    double line_width,
+    size_t max_points_vis);
 
 /** @brief Remove vertices from a JPS path, keeping at most max_value points.
  *  @param JPS_path Path to prune (modified in place).

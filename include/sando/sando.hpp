@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,26 +8,24 @@
 
 #pragma once
 
-#include <decomp_util/ellipsoid_decomp.h>
-#include <decomp_util/seed_decomp.h>
 #include <math.h>
-#include <pcl/kdtree/kdtree.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <Eigen/StdVector>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <decomp_rviz_plugins/data_ros_utils.hpp>
 #include <future>
 #include <mutex>
-#include <sando/gurobi_solver.hpp>
-#include <sando/utils.hpp>
 #include <thread>
 #include <vector>
-
+#include <Eigen/StdVector>
+#include <pcl/kdtree/kdtree.h>
+#include <decomp_util/ellipsoid_decomp.h>
+#include <decomp_util/seed_decomp.h>
+#include <decomp_rviz_plugins/data_ros_utils.hpp>
+#include <sando/gurobi_solver.hpp>
+#include <sando/utils.hpp>
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"
 #include "sando/sando_type.hpp"
@@ -36,27 +34,18 @@
 enum { MAP = 0, UNKNOWN_MAP = 1 };
 enum { RETURN_LAST_VERTEX = 0, RETURN_INTERSECTION = 1 };
 
-using namespace sando;
-using namespace termcolor;
+using namespace sando;      // NOLINT(build/namespaces)
+using namespace termcolor;  // NOLINT(build/namespaces)
 
-// Type‐aliases
+// Type aliases
 using Vec3 = Eigen::Vector3d;
 using Vec3f = Eigen::Matrix<double, 3, 1>;
 using MatXd = Eigen::MatrixXd;
 using VecXd = Eigen::VectorXd;
 
-// ------------------------------------------
-// 2) The aligned‐allocator for local blocks:
-// ------------------------------------------
-// your PlaneBlock is still:
+// Aligned-allocator types for corridor constraint blocks
 using PlaneBlock = std::pair<Eigen::Matrix<double, Eigen::Dynamic, 3>, Eigen::VectorXd>;
-
-// replace your old ConstraintBlocks with:
-
-// 1) an aligned‐allocator for a vector of PlaneBlock
 using AlignedPlaneBlockVec = std::vector<PlaneBlock, Eigen::aligned_allocator<PlaneBlock>>;
-
-// 2) then your top‐level blocks is a vector of those
 using ConstraintBlocks =
     std::vector<AlignedPlaneBlockVec, Eigen::aligned_allocator<AlignedPlaneBlockVec>>;
 
@@ -71,11 +60,14 @@ class SANDO {
    */
   SANDO(Parameters par);
 
-  /** @brief Determines whether replanning is needed based on distance to the terminal goal and drone status.
+  /** @brief Determines whether replanning is needed based on distance to the terminal goal and
+   * drone status.
    *  @return True if replanning should be triggered.
    */
-  bool needReplan(const RobotState& local_state, const RobotState& local_G_term,
-                  const RobotState& last_plan_state);
+  bool needReplan(
+      const RobotState& local_state,
+      const RobotState& local_G_term,
+      const RobotState& last_plan_state);
 
   /** @brief Finds the starting state A and its timestamp for the next replan cycle.
    *  @param A Output starting state.
@@ -84,8 +76,8 @@ class SANDO {
    *  @param last_replaning_computation_time Computation time of the previous replan.
    *  @return True if a valid A was found within map bounds.
    */
-  bool findAandAtime(RobotState& A, double& A_time, double current_time,
-                     double last_replaning_computation_time);
+  bool findAandAtime(
+      RobotState& A, double& A_time, double current_time, double last_replaning_computation_time);
 
   /** @brief Checks whether a point is occupied in the voxel map.
    *  @return True if the point is occupied.
@@ -97,19 +89,22 @@ class SANDO {
    */
   bool checkIfPointFree(const Vec3f& point);
 
-  /** @brief Truncates the global path at the first intersection with unknown space, backtracking to a safe point.
+  /** @brief Truncates the global path at the first intersection with unknown space, backtracking to
+   * a safe point.
    *  @param global_path Global path to modify in place.
    */
   void findSafeSubGoal(vec_Vecf<3>& global_path);
 
-  /** @brief Runs the full replanning pipeline: global path planning, local trajectory optimization, and plan appending.
+  /** @brief Runs the full replanning pipeline: global path planning, local trajectory optimization,
+   * and plan appending.
    *  @param last_replaning_computation_time Computation time of the previous replan cycle.
    *  @param current_time Current ROS time.
    *  @return Tuple of (replan_succeeded, local_traj_attempted).
    */
   std::tuple<bool, bool> replan(double last_replaning_computation_time, double current_time);
 
-  /** @brief Enables adaptive k-value computation based on accumulated replanning computation times. */
+  /** @brief Enables adaptive k-value computation based on accumulated replanning computation times.
+   */
   void startAdaptKValue();
 
   /** @brief Gets the terminal goal state.
@@ -194,7 +189,8 @@ class SANDO {
    */
   bool getNextGoal(RobotState& next_goal);
 
-  /** @brief Checks whether all prerequisites for replanning are satisfied (state, goal, map initialized).
+  /** @brief Checks whether all prerequisites for replanning are satisfied (state, goal, map
+   * initialized).
    *  @return True if the planner is ready to replan.
    */
   bool checkReadyToReplan();
@@ -204,14 +200,17 @@ class SANDO {
    */
   void setTerminalGoal(const RobotState& term_goal);
 
-  /** @brief Logs a goal-related event to /tmp/sando_goal_log.txt for debugging.
+  /** @brief Logs a goal-related event to /tmp/sando_goal_log.txt when debug_verbose is enabled.
    *  @param event Description of the event.
    *  @param drone Current drone state.
    *  @param goal Terminal goal state.
    *  @param G_projected Projected subgoal position on the horizon sphere.
    */
-  void logGoalEvent(const std::string& event, const RobotState& drone, const RobotState& goal,
-                    const Eigen::Vector3d& G_projected);
+  void logGoalEvent(
+      const std::string& event,
+      const RobotState& drone,
+      const RobotState& goal,
+      const Eigen::Vector3d& G_projected);
 
   /** @brief Changes the drone's flight status and logs the transition.
    *  @param new_status New DroneStatus enum value.
@@ -229,7 +228,8 @@ class SANDO {
    */
   void yaw(double diff, RobotState& next_goal);
 
-  /** @brief Computes the subgoal G by projecting the terminal goal onto a sphere of the given horizon radius around A.
+  /** @brief Computes the subgoal G by projecting the terminal goal onto a sphere of the given
+   * horizon radius around A.
    *  @param A Starting state.
    *  @param G_term Terminal goal state.
    *  @param horizon Projection sphere radius.
@@ -241,7 +241,8 @@ class SANDO {
    */
   bool goalReachedCheck();
 
-  /** @brief Checks for nearby dynamic obstacles during hover and computes an evasion goal if needed.
+  /** @brief Checks for nearby dynamic obstacles during hover and computes an evasion goal if
+   * needed.
    *  @param current_time Current ROS time for evaluating obstacle trajectories.
    *  @return True if avoidance is needed and replanning should continue.
    */
@@ -282,8 +283,8 @@ class SANDO {
    *  @param local_global_path Output path before push.
    *  @param local_global_path_after_push Output path after push.
    */
-  void getLocalGlobalPath(vec_Vecf<3>& local_global_path,
-                          vec_Vecf<3>& local_global_path_after_push);
+  void getLocalGlobalPath(
+      vec_Vecf<3>& local_global_path, vec_Vecf<3>& local_global_path_after_push);
 
   /** @brief Gets the current global path (thread-safe).
    *  @param global_path Output global path.
@@ -300,7 +301,8 @@ class SANDO {
    */
   void getFreeGlobalPath(vec_Vecf<3>& free_global_path);
 
-  /** @brief Computes worst-case cumulative segment end times for corridor inflation using polytope assignment.
+  /** @brief Computes worst-case cumulative segment end times for corridor inflation using polytope
+   * assignment.
    *  @param initial_dt Base time step for each segment.
    *  @param factor Time scaling factor.
    *  @param num_seg Number of spatial segments.
@@ -308,7 +310,8 @@ class SANDO {
    */
   std::vector<double> computeWorstSegEndTimesPoly(double initial_dt, double factor, size_t num_seg);
 
-  /** @brief Generates a local trajectory by performing convex decomposition and Gurobi optimization.
+  /** @brief Generates a local trajectory by performing convex decomposition and Gurobi
+   * optimization.
    *  @param ellip Ellipsoid decomposition worker (per-thread).
    *  @param global_path Global waypoints defining the spatial corridor seeds.
    *  @param local_A Starting state.
@@ -324,16 +327,27 @@ class SANDO {
    *  @param obst_bbox Bounding box half-extents of dynamic obstacles.
    *  @param base_uo Obstacle voxel positions for corridor decomposition.
    *  @param poly_out_safe Output safe corridor polytopes for visualization.
-   *  @param precomputed_spatial_constraints Optional precomputed spatial constraints for static environments.
-   *  @param precomputed_spatial_poly_out Optional precomputed spatial polytopes for static environments.
+   *  @param precomputed_spatial_constraints Optional precomputed spatial constraints for static
+   * environments.
+   *  @param precomputed_spatial_poly_out Optional precomputed spatial polytopes for static
+   * environments.
    *  @return True if the trajectory optimization succeeded.
    */
   bool generateLocalTrajectory(
-      EllipsoidDecomp3D& ellip, const vec_Vecf<3>& global_path, const RobotState& local_A,
-      const RobotState& local_E, const std::vector<double>& sub_goal, double A_time,
-      double& gurobi_computation_time, double& cvx_decomp_time,
-      std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr, double factor, double initial_dt,
-      const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox, const vec_Vec3f& base_uo,
+      EllipsoidDecomp3D& ellip,
+      const vec_Vecf<3>& global_path,
+      const RobotState& local_A,
+      const RobotState& local_E,
+      const std::vector<double>& sub_goal,
+      double A_time,
+      double& gurobi_computation_time,
+      double& cvx_decomp_time,
+      std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr,
+      double factor,
+      double initial_dt,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
+      const vec_Vec3f& base_uo,
       vec_E<Polyhedron<3>>& poly_out_safe,
       const std::vector<LinearConstraint3D>* precomputed_spatial_constraints = nullptr,
       const vec_E<Polyhedron<3>>* precomputed_spatial_poly_out = nullptr);
@@ -342,33 +356,44 @@ class SANDO {
   void resetData();
 
   /** @brief Retrieves timing and factor data from the most recent successful replan. */
-  void retrieveData(double& final_g, double& global_planning_time, double& hgp_static_jps_time,
-                    double& hgp_check_path_time, double& hgp_dynamic_astar_time,
-                    double& hgp_recover_path_time, double& cvx_decomp_time,
-                    double& local_traj_computatoin_time, double& safety_check_time,
-                    double& safe_paths_time, double& yaw_sequence_time, double& yaw_fitting_time,
-                    double& successful_factor);
+  void retrieveData(
+      double& final_g,
+      double& global_planning_time,
+      double& hgp_static_jps_time,
+      double& hgp_check_path_time,
+      double& hgp_dynamic_astar_time,
+      double& hgp_recover_path_time,
+      double& cvx_decomp_time,
+      double& local_traj_computatoin_time,
+      double& safety_check_time,
+      double& safe_paths_time,
+      double& yaw_sequence_time,
+      double& yaw_fitting_time,
+      double& successful_factor);
 
   /** @brief Retrieves the whole and safe corridor polytopes from the last replan. */
   void retrievePolytopes(vec_E<Polyhedron<3>>& poly_out_whole, vec_E<Polyhedron<3>>& poly_out_safe);
 
-  /** @brief Retrieves the goal setpoints generated by the last successful trajectory optimization. */
+  /** @brief Retrieves the goal setpoints generated by the last successful trajectory optimization.
+   */
   void retrieveGoalSetpoints(std::vector<RobotState>& goal_setpoints);
 
   /** @brief Retrieves the list of sub-optimal goal setpoints from non-winning solver threads. */
-  void retrieveListSubOptGoalSetpoints(std::vector<std::vector<RobotState>>& list_subopt_goal_setpoints);
+  void retrieveListSubOptGoalSetpoints(
+      std::vector<std::vector<RobotState>>& list_subopt_goal_setpoints);
 
   /** @brief Retrieves the Bezier control points from the last successful trajectory. */
   void retrieveCPs(std::vector<Eigen::Matrix<double, 3, 4>>& cps);
 
-  /** @brief Runs the heatmap based global path planner (HGP) from state A to subgoal G, updating the global path.
+  /** @brief Runs the heatmap based global path planner (HGP) from state A to subgoal G, updating
+   * the global path.
    *  @param global_path Output global path waypoints.
    *  @param current_time Current ROS time.
    *  @param last_replaning_computation_time Computation time of the previous replan.
    *  @return True if a valid global path was found.
    */
-  bool generateGlobalPath(vec_Vecf<3>& global_path, double current_time,
-                          double last_replaning_computation_time);
+  bool generateGlobalPath(
+      vec_Vecf<3>& global_path, double current_time, double last_replaning_computation_time);
 
   /** @brief Pushes the global path away from obstacles to produce a free path.
    *  @param global_path Global path to deform in place.
@@ -378,56 +403,67 @@ class SANDO {
    */
   bool pushPath(vec_Vecf<3>& global_path, vec_Vecf<3>& free_global_path, double current_time);
 
-  /** @brief Plans the local trajectory by running parallel Gurobi optimizations across multiple time-scaling factors.
+  /** @brief Plans the local trajectory by running parallel Gurobi optimizations across multiple
+   * time-scaling factors.
    *  @param global_path Global path waypoints to use as corridor seeds.
    *  @param last_replaning_computation_time Computation time of the previous replan.
    *  @return True if at least one factor produced a feasible trajectory.
    */
   bool planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_computation_time);
 
-  /** @brief Appends the latest trajectory setpoints to the plan deque and manages k-value adaptation.
+  /** @brief Appends the latest trajectory setpoints to the plan deque and manages k-value
+   * adaptation.
    *  @return True if the plan was successfully updated.
    */
   bool appendToPlan();
 
-  /** @brief Sets the initial pose transform used for converting between local and global frames on hardware.
+  /** @brief Sets the initial pose transform used for converting between local and global frames on
+   * hardware.
    *  @param init_pose Transform from local to global frame.
    */
   void setInitialPose(const geometry_msgs::msg::TransformStamped& init_pose);
 
-  /** @brief Applies the initial pose forward transform (local to global) to a piecewise polynomial trajectory.
+  /** @brief Applies the initial pose forward transform (local to global) to a piecewise polynomial
+   * trajectory.
    *  @param pwp Piecewise polynomial to transform in place.
    */
   void applyInitiPoseTransform(PieceWisePol& pwp);
 
-  /** @brief Applies the initial pose inverse transform (global to local) to a piecewise polynomial trajectory.
+  /** @brief Applies the initial pose inverse transform (global to local) to a piecewise polynomial
+   * trajectory.
    *  @param pwp Piecewise polynomial to transform in place.
    */
   void applyInitiPoseInverseTransform(PieceWisePol& pwp);
 
-  /** @brief Stores incoming point cloud pointers for occupancy and unknown maps, bootstrapping the KD-tree if needed.
+  /** @brief Stores incoming point cloud pointers for occupancy and unknown maps, bootstrapping the
+   * KD-tree if needed.
    *  @param pclptr_map Occupied point cloud.
    *  @param pclptr_unk Unknown point cloud.
    */
-  void updateMapPtr(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_map,
-                    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk);
+  void updateMapPtr(
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_map,
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk);
 
-  /** @brief Updates the voxel map, KD-trees, and dynamic obstacle heat maps from stored point cloud data.
+  /** @brief Updates the voxel map, KD-trees, and dynamic obstacle heat maps from stored point cloud
+   * data.
    *  @param current_time Current ROS time.
    */
   void updateMap(double current_time);
 
-  /** @brief Stores an incoming occupancy-only point cloud pointer and triggers initial map update if needed.
+  /** @brief Stores an incoming occupancy-only point cloud pointer and triggers initial map update
+   * if needed.
    *  @param pclptr_map Occupied point cloud.
    */
   void updateOccupancyMapPtr(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_map);
 
-  /** @brief Updates the occupancy-only voxel map and KD-tree (used for fake_sim and rviz_only modes).
+  /** @brief Updates the occupancy-only voxel map and KD-tree (used for fake_sim and rviz_only
+   * modes).
    *  @param current_time Current ROS time.
    */
   void updateOccupancyMap(double current_time);
 
-  /** @brief Computes current obstacle positions, bounding boxes, and predicted trajectory samples for map update.
+  /** @brief Computes current obstacle positions, bounding boxes, and predicted trajectory samples
+   * for map update.
    *  @param obst_pos Output current positions of dynamic obstacles.
    *  @param obst_bbox Output bounding box half-extents of each obstacle.
    *  @param pred_samples Output predicted position samples, indexed [obstacle][time_step].
@@ -510,15 +546,15 @@ class SANDO {
   RobotState state_;                                     // State for the drone
   RobotState G_;                                         // This goal is always inside of the map
   RobotState A_;                                         // Starting point of the drone
-  double A_time_;                                   // Time of the starting point
+  double A_time_;                                        // Time of the starting point
   RobotState E_;                                         // The goal point of actual trajectory
   RobotState G_term_;                                    // Terminal goal
   std::deque<RobotState> plan_;                          // Plan for the drone
   std::deque<std::vector<RobotState>> plan_safe_paths_;  // Indicate if the state has a safe path
-  double previous_yaw_ = 0.0;                       // Previous yaw
-  double prev_dyaw_ = 0.0;                          // Previous dyaw
-  double dyaw_filtered_ = 0.0;                      // Filtered dyaw
-  PieceWisePol pwp_to_share_;                       // Piecewise polynomial to share
+  double previous_yaw_ = 0.0;                            // Previous yaw
+  double prev_dyaw_ = 0.0;                               // Previous dyaw
+  double dyaw_filtered_ = 0.0;                           // Filtered dyaw
+  PieceWisePol pwp_to_share_;                            // Piecewise polynomial to share
   vec_Vecf<3> obst_pos_;
   vec_Vecf<3> obst_bbox_;  // Bbox half-extents for each obstacle
 
@@ -600,8 +636,9 @@ class SANDO {
   bool init_pose_set_ = false;
 
   // Safe corridor
-  std::vector<Eigen::Matrix<double, Eigen::Dynamic, 3>,
-              Eigen::aligned_allocator<Eigen::Matrix<double, Eigen::Dynamic, 3>>>
+  std::vector<
+      Eigen::Matrix<double, Eigen::Dynamic, 3>,
+      Eigen::aligned_allocator<Eigen::Matrix<double, Eigen::Dynamic, 3>>>
       A_stat_;
   std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd>> b_stat_;
 

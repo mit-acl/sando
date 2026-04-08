@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,13 +8,12 @@
 
 #pragma once
 
-#include <Eigen/Core>
 #include <algorithm>  // for std::clamp
 #include <iostream>
 #include <memory>
-#include <sim/exprtk.hpp>
 #include <vector>
-
+#include <Eigen/Core>
+#include <sim/exprtk.hpp>
 #include "hgp/data_type.hpp"
 
 /** @brief Holds position, velocity, acceleration, and jerk vectors for a state derivative. */
@@ -206,7 +205,8 @@ struct Parameters {
   double hover_avoidance_min_repulsion_norm = 0.01;
 };
 
-/** @brief Precomputed basis conversion matrices for transforming between B-spline, Bezier, and MINVO representations. */
+/** @brief Precomputed basis conversion matrices for transforming between B-spline, Bezier, and
+ * MINVO representations. */
 struct BasisConverter {
   Eigen::Matrix<double, 4, 4> A_pos_mv_rest;
   Eigen::Matrix<double, 4, 4> A_pos_mv_rest_inv;
@@ -423,15 +423,15 @@ struct BasisConverter {
         0, 0, 0.5000, 1.0000, 0, 0, 0, 1.0000;
   }
 
-  //////MATRIX A FOR MINVO POSITION/////////
+  /** @brief Get the MINVO position basis matrix. */
   Eigen::Matrix<double, 4, 4> getArestMinvo() { return A_pos_mv_rest; }
-  //////MATRIX A FOR Bezier POSITION/////////
+  /** @brief Get the Bezier position basis matrix. */
   Eigen::Matrix<double, 4, 4> getArestBezier() { return A_pos_be_rest; }
 
-  //////MATRIX A FOR BSPLINE POSITION/////////
+  /** @brief Get the B-spline position basis matrix (interior segment). */
   Eigen::Matrix<double, 4, 4> getArestBSpline() { return A_pos_bs_rest; }
 
-  //////MATRICES A FOR MINVO POSITION/////////
+  /** @brief Get per-segment MINVO position basis matrices. */
   std::vector<Eigen::Matrix<double, 4, 4>> getAMinvo(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> A_pos_mv;  // will have as many elements as num_pol
     for (int i = 0; i < num_pol; i++) {
@@ -440,7 +440,7 @@ struct BasisConverter {
     return A_pos_mv;
   }
 
-  //////MATRICES A FOR Bezier POSITION/////////
+  /** @brief Get per-segment Bezier position basis matrices. */
   std::vector<Eigen::Matrix<double, 4, 4>> getABezier(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> A_pos_be;  // will have as many elements as num_pol
     for (int i = 0; i < num_pol; i++) {
@@ -449,7 +449,7 @@ struct BasisConverter {
     return A_pos_be;
   }
 
-  //////MATRICES A FOR BSPLINE POSITION/////////
+  /** @brief Get per-segment B-spline position basis matrices. */
   std::vector<Eigen::Matrix<double, 4, 4>> getABSpline(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> A_pos_bs;  // will have as many elements as num_pol
     A_pos_bs.push_back(A_pos_bs_seg0);
@@ -462,7 +462,7 @@ struct BasisConverter {
     return A_pos_bs;
   }
 
-  //////BSPLINE to MINVO POSITION/////////
+  /** @brief Get B-spline to MINVO position conversion matrices per segment. */
   std::vector<Eigen::Matrix<double, 4, 4>> getMinvoPosConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> M_pos_bs2mv;  // will have as many elements as num_pol
     M_pos_bs2mv.push_back(M_pos_bs2mv_seg0);
@@ -475,8 +475,7 @@ struct BasisConverter {
     return M_pos_bs2mv;
   }
 
-  //////BEZIER to MINVO POSITION/////////
-  //////Q_{MINVO} = M_{BEZIER2MINVO} * Q_{BEZIER}
+  /** @brief Get the Bezier-to-MINVO position conversion matrix for a single segment. */
   Eigen::Matrix<double, 4, 4> getMinvoPosConverterFromBezier() {
     // Compute the conversion matrix for one segment
     Eigen::Matrix<double, 4, 4> M_be2mv = A_pos_mv_rest_inv * A_pos_be_rest;
@@ -484,7 +483,7 @@ struct BasisConverter {
     return M_be2mv;
   }
 
-  //////BSPLINE to BEZIER POSITION/////////
+  /** @brief Get B-spline to Bezier position conversion matrices per segment. */
   std::vector<Eigen::Matrix<double, 4, 4>> getBezierPosConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> M_pos_bs2be;  // will have as many elements as num_pol
     M_pos_bs2be.push_back(M_pos_bs2be_seg0);
@@ -497,7 +496,7 @@ struct BasisConverter {
     return M_pos_bs2be;
   }
 
-  //////BSPLINE to BSPLINE POSITION/////////
+  /** @brief Get B-spline to B-spline position conversion matrices (identity) per segment. */
   std::vector<Eigen::Matrix<double, 4, 4>> getBSplinePosConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 4, 4>> M_pos_bs2bs;  // will have as many elements as num_pol
     for (int i = 0; i < num_pol; i++) {
@@ -506,7 +505,7 @@ struct BasisConverter {
     return M_pos_bs2bs;
   }
 
-  //////BSPLINE to MINVO Velocity/////////
+  /** @brief Get B-spline to MINVO velocity conversion matrices per segment. */
   std::vector<Eigen::Matrix<double, 3, 3>> getMinvoVelConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 3, 3>> M_vel_bs2mv;  // will have as many elements as num_pol
     M_vel_bs2mv.push_back(M_vel_bs2mv_seg0);
@@ -517,7 +516,7 @@ struct BasisConverter {
     return M_vel_bs2mv;
   }
 
-  //////BSPLINE to BEZIER Velocity/////////
+  /** @brief Get B-spline to Bezier velocity conversion matrices per segment. */
   std::vector<Eigen::Matrix<double, 3, 3>> getBezierVelConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 3, 3>> M_vel_bs2be;  // will have as many elements as segments
     M_vel_bs2be.push_back(M_vel_bs2be_seg0);
@@ -528,7 +527,7 @@ struct BasisConverter {
     return M_vel_bs2be;
   }
 
-  //////BSPLINE to BSPLINE Velocity/////////
+  /** @brief Get B-spline to B-spline velocity conversion matrices (identity) per segment. */
   std::vector<Eigen::Matrix<double, 3, 3>> getBSplineVelConverters(int num_pol) {
     std::vector<Eigen::Matrix<double, 3, 3>> M_vel_bs2bs;  // will have as many elements as num_pol
     for (int i = 0; i < num_pol; i++) {
@@ -663,7 +662,10 @@ struct PieceWisePol {
     return vel;
   }
 
-  /// Evaluate acceleration (second derivative) at time t
+  /** @brief Evaluate the acceleration (second derivative) at time t.
+   *  @param t Absolute time at which to evaluate.
+   *  @return 3D acceleration vector.
+   */
   inline Eigen::Vector3d acceleration(double t) const {
     Eigen::Vector3d a{0, 0, 0};
 
@@ -717,7 +719,8 @@ struct PieceWisePol {
   }
 };
 
-/** @brief Dynamic trajectory representation supporting both piecewise polynomial and analytic (ExprTk) modes. */
+/** @brief Dynamic trajectory representation supporting both piecewise polynomial and analytic
+ * (ExprTk) modes. */
 struct DynTraj {
   /// Which representation to use
   enum class Mode { Piecewise, Analytic } mode{Mode::Analytic};
@@ -750,13 +753,14 @@ struct DynTraj {
 
   DynTraj() = default;
 
-  /// Switch to a piecewise cubic representation
+  /** @brief Switch to a piecewise cubic representation. */
   inline void setPiecewise(const PieceWisePol& poly) {
     mode = Mode::Piecewise;
     pwp = poly;
   }
 
-  /** @brief Compile the analytic trajectory expressions (traj_x/y/z and optionally traj_vx/vy/vz) via ExprTk.
+  /** @brief Compile the analytic trajectory expressions (traj_x/y/z and optionally traj_vx/vy/vz)
+   * via ExprTk.
    *  @return True if all required expressions compiled successfully.
    */
   bool compileAnalytic() {
@@ -811,7 +815,10 @@ struct DynTraj {
     return ok;
   }
 
-  /// Evaluate position at time t
+  /** @brief Evaluate position at time t.
+   *  @param t Absolute time at which to evaluate.
+   *  @return 3D position vector.
+   */
   inline Eigen::Vector3d eval(double t) const {
     switch (mode) {
       case Mode::Piecewise:
@@ -879,7 +886,10 @@ struct DynTraj {
     return {expr_x.value(), expr_y.value(), expr_z.value()};
   }
 
-  /// Evaluate velocity at time t
+  /** @brief Evaluate velocity at time t.
+   *  @param t Absolute time at which to evaluate.
+   *  @return 3D velocity vector.
+   */
   inline Eigen::Vector3d velocity(double t) const {
     switch (mode) {
       case Mode::Piecewise:
@@ -890,7 +900,8 @@ struct DynTraj {
     return Eigen::Vector3d::Zero();
   }
 
-  /** @brief Evaluate velocity using analytic expressions, falling back to numerical differentiation.
+  /** @brief Evaluate velocity using analytic expressions, falling back to numerical
+   * differentiation.
    *  @param t Absolute time at which to evaluate.
    *  @return 3D velocity vector.
    */
@@ -910,7 +921,10 @@ struct DynTraj {
     return {(x1 - x0) / dt, (y1 - y0) / dt, (z1 - z0) / dt};
   }
 
-  /// Evaluate acceleration at time t
+  /** @brief Evaluate acceleration at time t.
+   *  @param t Absolute time at which to evaluate.
+   *  @return 3D acceleration vector.
+   */
   inline Eigen::Vector3d accel(double t) const {
     switch (mode) {
       case Mode::Piecewise:
@@ -950,7 +964,7 @@ struct DynTraj {
     }
   }
 
-  /// Print debug info
+  /** @brief Print debug info about this trajectory to stdout. */
   inline void print() const {
     std::cout << "DynTraj id=" << id << " mode=" << modeName(mode) << "\n";
 
@@ -1017,8 +1031,11 @@ struct RobotState {
    *  @param accel Acceleration vector.
    *  @param jerk Jerk vector.
    */
-  void setState(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel,
-                const Eigen::Vector3d& accel, const Eigen::Vector3d& jerk) {
+  void setState(
+      const Eigen::Vector3d& pos,
+      const Eigen::Vector3d& vel,
+      const Eigen::Vector3d& accel,
+      const Eigen::Vector3d& jerk) {
     this->pos = pos;
     this->vel = vel;
     this->accel = accel;

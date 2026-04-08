@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# /* ----------------------------------------------------------------------------
+#  * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
+#  * Massachusetts Institute of Technology
+#  * All Rights Reserved
+#  * Authors: Kota Kondo, et al.
+#  * See LICENSE file for the license information
+#  * -------------------------------------------------------------------------- */
+
 """Main SANDO launch: Gazebo simulation with optional RViz and dynamic obstacles."""
 
 import os
