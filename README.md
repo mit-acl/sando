@@ -2,7 +2,24 @@
 
 *Under review (double-blind). Author identifying material has been removed from this snapshot.*
 
-> Supplementary videos are omitted from this anonymous snapshot.
+<table>
+<tr>
+<td width="50%"><b>Spatiotemporal SFC</b><br><video src="https://github.com/user-attachments/assets/7279e010-bde3-4061-9a28-07a145092276" width="100%" autoplay loop muted playsinline controls></video></td>
+<td width="50%"><b>Hardware Heatmap</b><br><video src="https://github.com/user-attachments/assets/f9bf40c3-18ec-498c-80f7-e7ff92dcb2a6" width="100%" autoplay loop muted playsinline controls></video></td>
+</tr>
+<tr>
+<td width="50%"><b>Sim Interactive</b><br><video src="https://github.com/user-attachments/assets/6718410a-aa0d-4726-a6ca-605a22e25b2c" width="100%" autoplay loop muted playsinline controls></video></td>
+<td width="50%"><b>Sim Static</b><br><video src="https://github.com/user-attachments/assets/61e676a6-4b03-480a-90b3-4dafb19d7198" width="100%" autoplay loop muted playsinline controls></video></td>
+</tr>
+<tr>
+<td width="50%"><b>Sim Dynamic</b><br><video src="https://github.com/user-attachments/assets/f672ad26-3e06-4cbf-99d2-fd6b2eaeac1d" width="100%" autoplay loop muted playsinline controls></video></td>
+<td width="50%"><b>Hardware Single Dynamic</b><br><video src="https://github.com/user-attachments/assets/3a6a9805-078e-4b12-bc5e-d3421edce9cf" width="100%" autoplay loop muted playsinline controls></video></td>
+</tr>
+<tr>
+<td width="50%"><b>Hardware Multiple Dynamic</b><br><video src="https://github.com/user-attachments/assets/aac54514-d8fb-4aa7-8304-63ffc71c2bad" width="100%" autoplay loop muted playsinline controls></video></td>
+<td width="50%"><b>Hardware Dynamic + Static</b><br><video src="https://github.com/user-attachments/assets/175d183b-60ea-40a3-92ae-1ece3cdf40e6" width="100%" autoplay loop muted playsinline controls></video></td>
+</tr>
+</table>
 
 SANDO plans safe, dynamically-feasible trajectories for UAVs in environments with both static and dynamic obstacles, including previously unseen ones detected at runtime via onboard sensors.
 
