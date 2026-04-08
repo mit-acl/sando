@@ -23,9 +23,11 @@
 
 SANDO plans safe, dynamically-feasible trajectories for UAVs in environments with both static and dynamic obstacles, including previously unseen ones detected at runtime via onboard sensors.
 
-**Full video:** [https://youtu.be/Pvb-VPUdLvg](https://youtu.be/Pvb-VPUdLvg)
+**Full video:** [https://youtu.be/_T10DJiLQXg](https://youtu.be/_T10DJiLQXg)
 
-**Paper:** [https://arxiv.org/abs/2511.10822](https://arxiv.org/abs/2511.10822)
+**arXiv Paper:** Coming soon!
+
+**ResearchGate Paper:** [https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments](https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments)
 
 ```bibtex
 @article{kondo2025sando,
