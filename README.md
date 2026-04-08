@@ -1,5 +1,7 @@
 # SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments
 
+If you like this project, please consider starring ⭐ the repo!
+
 **Submitted to the IEEE Transactions on Robotics (T-RO)**
 
 <table>
@@ -35,8 +37,6 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
       year={2026},
 }
 ```
-
-If you like this project, please consider starring the repo!
 
 ## Quick Start (Docker)
 
