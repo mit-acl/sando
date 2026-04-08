@@ -38,19 +38,6 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 }
 ```
 
-## Quick Start (Docker)
-
-```bash
-git clone --recursive https://github.com/mit-acl/sando.git && cd sando/docker
-# Place your Gurobi WLS license at docker/gurobi.lic before building.
-# Must be a WLS (Web License Service) license — other license types (named-user,
-# compute server) do not work inside Docker containers.
-# Free WLS Academic licenses: https://portal.gurobi.com/iam/licenses/request
-cp /path/to/your/gurobi.lic ./gurobi.lic
-make build                         # ~15 min first time
-make run-interactive               # click goals in RViz! (click "2D Nav Goal" in RViz toolbar and click in the map or you can hit "g" and click in the map)
-```
-
 ## What You Can Do
 
 SANDO provides **four simulation modes** at three difficulty levels (50 / 100 / 200 obstacles):
@@ -82,16 +69,29 @@ python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/set
 
 ### Docker (Recommended)
 
-1. Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
-2. Obtain a Gurobi **WLS** license (free [WLS Academic](https://portal.gurobi.com/iam/licenses/request) for academics). Other license types (named-user, compute server) do not work inside Docker.
-3. Clone and build:
+1. **Install [Docker](https://docs.docker.com/engine/install/ubuntu/).**
+
+2. **Obtain a Gurobi WLS license.** Free [WLS Academic](https://portal.gurobi.com/iam/licenses/request) for academics. Other license types (named-user, compute server) do not work inside Docker.
+
+3. **Clone the repo and place the license:**
    ```bash
    git clone --recursive https://github.com/mit-acl/sando.git
    cd sando/docker
-   cp /path/to/your/gurobi.lic ./gurobi.lic   # required - change the path to your WLS license file
+   cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
+   ```
+
+4. **Build the image** (~15 min first time):
+   ```bash
    make build
    ```
-4. Run any simulation mode above
+
+5. **Run a simulation:**
+   ```bash
+   make run-interactive               # click goals in RViz (use "2D Nav Goal" or hit "g")
+   make run-demo SCENARIO=static_easy # auto-goal demo
+   ```
+
+   See the [What You Can Do](#what-you-can-do) section above for the full list of modes.
 
 <details>
 <summary><b>Docker tips</b></summary>
