@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.

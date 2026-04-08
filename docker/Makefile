@@ -8,14 +8,13 @@ else
 GPU_FLAGS =
 endif
 
-DOCKER_RUN = xhost + && docker run -it \
+DOCKER_FLAGS = xhost + && docker run -it \
 	$(GPU_FLAGS) \
 	--privileged \
 	-e DISPLAY=$(DISPLAY) \
 	--network=host \
-	--env="DISPLAY" \
 	--env="QT_X11_NO_MITSHM=1" \
-	--rm sando
+	--rm
 
 # ---- Build ----
 
@@ -34,7 +33,7 @@ build-no-cache:
 SCENARIO ?= static_easy
 
 run-demo:
-	$(DOCKER_RUN) -e MODE=demo -e SCENARIO=$(SCENARIO)
+	$(DOCKER_FLAGS) -e MODE=demo -e SCENARIO=$(SCENARIO) sando
 
 # Convenience aliases
 run-static-easy:
@@ -64,15 +63,8 @@ NUM_OBSTACLES ?= 50
 DYNAMIC_RATIO ?= 0.65
 
 run-interactive:
-	$(DOCKER_RUN) -e MODE=interactive -e NUM_OBSTACLES=$(NUM_OBSTACLES) -e DYNAMIC_RATIO=$(DYNAMIC_RATIO)
+	$(DOCKER_FLAGS) -e MODE=interactive -e NUM_OBSTACLES=$(NUM_OBSTACLES) -e DYNAMIC_RATIO=$(DYNAMIC_RATIO) sando
 
 # ---- Debug shell ----
 shell:
-	xhost + && docker run -it \
-		$(GPU_FLAGS) \
-		--privileged \
-		-e DISPLAY=$(DISPLAY) \
-		--network=host \
-		--env="DISPLAY" \
-		--env="QT_X11_NO_MITSHM=1" \
-		--rm --entrypoint /bin/bash sando
+	$(DOCKER_FLAGS) --entrypoint /bin/bash sando

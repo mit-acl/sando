@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "sando/sando.hpp"
-
 #include <chrono>
 #include <fstream>
 
@@ -35,9 +34,10 @@ SANDO::SANDO(Parameters par) : par_(par) {
     }
   } else {
     // Constant factor search
-    num_dynamic_factors_ = static_cast<int>((par_.factor_final - par_.factor_initial) /
-                                            par_.factor_constant_step_size) +
-                           1;
+    num_dynamic_factors_ =
+        static_cast<int>(
+            (par_.factor_final - par_.factor_initial) / par_.factor_constant_step_size) +
+        1;
     factors_.reserve(num_dynamic_factors_);
     for (int i = 0; i < num_dynamic_factors_; i++) {
       double factor = par_.factor_initial + i * par_.factor_constant_step_size;
@@ -45,7 +45,7 @@ SANDO::SANDO(Parameters par) : par_(par) {
     }
   }
 
-  // Set up unconstrained optimization solver for whole trajectory.
+  // Set up optimization solver for whole trajectory.
   // Hybrid threading: distribute CPU cores across external factor threads
   // so each Gurobi instance gets multiple internal threads rather than
   // all threads competing for all cores.
@@ -129,9 +129,10 @@ void SANDO::computeG(const RobotState& A, const RobotState& G_term, double horiz
 
 // ----------------------------------------------------------------------------
 
-
-bool SANDO::needReplan(const RobotState& local_state, const RobotState& local_G_term,
-                       const RobotState& last_plan_state) {
+bool SANDO::needReplan(
+    const RobotState& local_state,
+    const RobotState& local_G_term,
+    const RobotState& last_plan_state) {
   // Compute the distance to the terminal goal
   double dist_to_term_G = (local_state.pos - local_G_term.pos).norm();
   double dist_from_last_plan_state_to_term_G = (last_plan_state.pos - local_G_term.pos).norm();
@@ -181,8 +182,8 @@ bool SANDO::needReplan(const RobotState& local_state, const RobotState& local_G_
 
 // ----------------------------------------------------------------------------
 
-bool SANDO::findAandAtime(RobotState& A, double& A_time, double current_time,
-                          double last_replaning_computation_time) {
+bool SANDO::findAandAtime(
+    RobotState& A, double& A_time, double current_time, double last_replaning_computation_time) {
   mtx_plan_.lock();
   int plan_size = plan_.size();
   mtx_plan_.unlock();
@@ -457,8 +458,8 @@ void SANDO::getStaticPushPoints(vec_Vecf<3>& static_push_points) {
 
 // ----------------------------------------------------------------------------
 
-void SANDO::getLocalGlobalPath(vec_Vecf<3>& local_global_path,
-                               vec_Vecf<3>& local_global_path_after_push) {
+void SANDO::getLocalGlobalPath(
+    vec_Vecf<3>& local_global_path, vec_Vecf<3>& local_global_path_after_push) {
   local_global_path = local_global_path_;
   local_global_path_after_push = local_global_path_after_push_;
 }
@@ -513,12 +514,20 @@ void SANDO::resetData() {
 
 // ----------------------------------------------------------------------------
 
-void SANDO::retrieveData(double& final_g, double& global_planning_time, double& hgp_static_jps_time,
-                         double& hgp_check_path_time, double& hgp_dynamic_astar_time,
-                         double& hgp_recover_path_time, double& cvx_decomp_time,
-                         double& local_traj_computatoin_time, double& safety_check_time,
-                         double& safe_paths_time, double& yaw_sequence_time,
-                         double& yaw_fitting_time, double& successful_factor) {
+void SANDO::retrieveData(
+    double& final_g,
+    double& global_planning_time,
+    double& hgp_static_jps_time,
+    double& hgp_check_path_time,
+    double& hgp_dynamic_astar_time,
+    double& hgp_recover_path_time,
+    double& cvx_decomp_time,
+    double& local_traj_computatoin_time,
+    double& safety_check_time,
+    double& safe_paths_time,
+    double& yaw_sequence_time,
+    double& yaw_fitting_time,
+    double& successful_factor) {
   final_g = final_g_;
   global_planning_time = global_planning_time_;
   hgp_static_jps_time = hgp_static_jps_time_;
@@ -536,8 +545,8 @@ void SANDO::retrieveData(double& final_g, double& global_planning_time, double& 
 
 // ----------------------------------------------------------------------------
 
-void SANDO::retrievePolytopes(vec_E<Polyhedron<3>>& poly_out_whole,
-                              vec_E<Polyhedron<3>>& poly_out_safe) {
+void SANDO::retrievePolytopes(
+    vec_E<Polyhedron<3>>& poly_out_whole, vec_E<Polyhedron<3>>& poly_out_safe) {
   poly_out_whole = poly_out_whole_;
   poly_out_safe = poly_out_safe_;
 }
@@ -653,8 +662,8 @@ std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, dou
 
 // ----------------------------------------------------------------------------
 
-bool SANDO::generateGlobalPath(vec_Vecf<3>& global_path, double current_time,
-                               double last_replaning_computation_time) {
+bool SANDO::generateGlobalPath(
+    vec_Vecf<3>& global_path, double current_time, double last_replaning_computation_time) {
   // Get G and G_term
   RobotState local_G, local_G_term;
   getG(local_G);
@@ -729,9 +738,9 @@ bool SANDO::generateGlobalPath(vec_Vecf<3>& global_path, double current_time,
 
   // Solve HGP
   vec_Vecf<3> raw_global_path;
-  if (!hgp_manager_.solveHGP(local_A.pos, start_dir_hint, local_G.pos, final_g_,
-                             par_.global_planner_heuristic_weight, A_time, global_path,
-                             raw_global_path)) {
+  if (!hgp_manager_.solveHGP(
+          local_A.pos, start_dir_hint, local_G.pos, final_g_, par_.global_planner_heuristic_weight,
+          A_time, global_path, raw_global_path)) {
     if (par_.debug_verbose)
       std::cout << bold << red << "HGP did not find a solution" << reset << std::endl;
     hgp_failure_count_++;
@@ -739,8 +748,8 @@ bool SANDO::generateGlobalPath(vec_Vecf<3>& global_path, double current_time,
     return false;
   }
 
-  // Log replan details to file
-  {
+  // Log replan details to file (only when debug_verbose is enabled)
+  if (par_.debug_verbose) {
     static const std::string path = "/tmp/sando_goal_log.txt";
     std::ofstream f(path, std::ios::app);
     if (f.is_open()) {
@@ -789,8 +798,9 @@ bool SANDO::generateGlobalPath(vec_Vecf<3>& global_path, double current_time,
   if (par_.debug_verbose) std::cout << "global_path.size(): " << global_path.size() << std::endl;
 
   // Get computation time
-  hgp_manager_.getComputationTime(global_planning_time_, hgp_static_jps_time_, hgp_check_path_time_,
-                                  hgp_dynamic_astar_time_, hgp_recover_path_time_);
+  hgp_manager_.getComputationTime(
+      global_planning_time_, hgp_static_jps_time_, hgp_check_path_time_, hgp_dynamic_astar_time_,
+      hgp_recover_path_time_);
 
   return true;
 }
@@ -859,8 +869,9 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
     const float z_floor_thresh = static_cast<float>(par_.z_min) + static_cast<float>(par_.res);
     const size_t before = base_map.size();
     base_map.erase(
-        std::remove_if(base_map.begin(), base_map.end(),
-                       [z_floor_thresh](const Vec3f& pt) { return pt.z() <= z_floor_thresh; }),
+        std::remove_if(
+            base_map.begin(), base_map.end(),
+            [z_floor_thresh](const Vec3f& pt) { return pt.z() <= z_floor_thresh; }),
         base_map.end());
     if (par_.debug_verbose && base_map.size() != before)
       std::cout << "[replan] Filtered " << (before - base_map.size())
@@ -889,8 +900,9 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
   // Pre-compute convex decomposition if environment is static or dynamic_worst_case
   std::vector<LinearConstraint3D> shared_spatial_constraints;
   vec_E<Polyhedron<3>> shared_spatial_poly_out;
-  bool use_precomputed_constraints = (par_.environment_assumption == "static" ||
-                                      par_.environment_assumption == "dynamic_worst_case");
+  bool use_precomputed_constraints =
+      (par_.environment_assumption == "static" ||
+       par_.environment_assumption == "dynamic_worst_case");
 
   if (use_precomputed_constraints) {
     const size_t P = (global_path.size() >= 2) ? (global_path.size() - 1) : 0;
@@ -910,9 +922,9 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
     }
 
     // Run spatial convex decomposition once before threading
-    if (!hgp_manager_.cvxEllipsoidDecomp(ellip_workers_[0], global_path, base_map, obst_pos,
-                                         obst_bbox, seg_end_times, shared_spatial_constraints,
-                                         shared_spatial_poly_out)) {
+    if (!hgp_manager_.cvxEllipsoidDecomp(
+            ellip_workers_[0], global_path, base_map, obst_pos, obst_bbox, seg_end_times,
+            shared_spatial_constraints, shared_spatial_poly_out)) {
       std::cout << bold << red
                 << "Precomputed spatial convex decomposition failed for static environment" << reset
                 << std::endl;
@@ -965,8 +977,8 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
             // Signal other threads to stop
             if (result) any_thread_succeeded->store(true, std::memory_order_relaxed);
 
-            return {result, thread_gurobi_time, thread_convx_decomp_time, factor,
-                    thread_poly_out_safe};
+            return {
+                result, thread_gurobi_time, thread_convx_decomp_time, factor, thread_poly_out_safe};
           } catch (const std::exception& ex) {
             std::cerr << "Exception in async task with factor " << factor << ": " << ex.what()
                       << std::endl;
@@ -1008,8 +1020,9 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
       if (futures[i].wait_for(std::chrono::microseconds(0)) != std::future_status::ready) continue;
 
       // Collect the result
-      auto [result, thread_gurobi_time, thread_convx_decomp_time, thread_factor,
-            thread_poly_out_safe] = futures[i].get();
+      auto
+          [result, thread_gurobi_time, thread_convx_decomp_time, thread_factor,
+           thread_poly_out_safe] = futures[i].get();
       collected[i] = true;
       num_collected++;
 
@@ -1136,9 +1149,11 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
           factors_[i] = factors_[i] + par_.factor_constant_step_size;
         }
         // remove any factors that exceed factor_final
-        factors_.erase(std::remove_if(factors_.begin(), factors_.end(),
-                                      [this](double f) { return f > par_.factor_final; }),
-                       factors_.end());
+        factors_.erase(
+            std::remove_if(
+                factors_.begin(), factors_.end(),
+                [this](double f) { return f > par_.factor_final; }),
+            factors_.end());
       }
     }
   }
@@ -1152,19 +1167,8 @@ void SANDO::getPieceWisePol(PieceWisePol& pwp) { pwp = pwp_to_share_; }
 
 // ----------------------------------------------------------------------------
 
-// Computes worst-case segment end times (cumulative) for corridor inflation,
-// while respecting the "worst assignment" idea over polytopes:
-//
-// - You have num_seg segments (from global_path.size()-1).
-// - You have P polytopes (par_.num_P).
-// - Worst assignment rule:
-//     * Give 1 segment to as many of the last (P-1) polytopes as possible
-//     * First polytope gets the remaining segments
-//
-// Returns seg_end_times with size = num_seg,
-// where seg_end_times[i] is cumulative end time at end of segment i.
-std::vector<double> SANDO::computeWorstSegEndTimesPoly(double initial_dt, double factor,
-                                                       size_t num_seg) {
+std::vector<double> SANDO::computeWorstSegEndTimesPoly(
+    double initial_dt, double factor, size_t num_seg) {
   std::vector<double> seg_end_times;
   seg_end_times.reserve(num_seg);
 
@@ -1226,11 +1230,20 @@ std::vector<double> SANDO::computeWorstSegEndTimesPoly(double initial_dt, double
 // ----------------------------------------------------------------------------
 
 bool SANDO::generateLocalTrajectory(
-    EllipsoidDecomp3D& ellip, const vec_Vecf<3>& global_path, const RobotState& local_A,
-    const RobotState& local_E, const std::vector<double>& sub_goal, double A_time,
-    double& gurobi_computation_time, double& cvx_decomp_time,
-    std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr, double factor, double initial_dt,
-    const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox, const vec_Vec3f& base_uo,
+    EllipsoidDecomp3D& ellip,
+    const vec_Vecf<3>& global_path,
+    const RobotState& local_A,
+    const RobotState& local_E,
+    const std::vector<double>& sub_goal,
+    double A_time,
+    double& gurobi_computation_time,
+    double& cvx_decomp_time,
+    std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr,
+    double factor,
+    double initial_dt,
+    const vec_Vecf<3>& obst_pos,
+    const vec_Vecf<3>& obst_bbox,
+    const vec_Vec3f& base_uo,
     vec_E<Polyhedron<3>>& poly_out_safe,
     const std::vector<LinearConstraint3D>* precomputed_spatial_constraints,
     const vec_E<Polyhedron<3>>* precomputed_spatial_poly_out) {
@@ -1268,9 +1281,9 @@ bool SANDO::generateLocalTrajectory(
     cvx_decomp_time = 0.0;  // No decomposition time since we're using precomputed
   } else {
     // Dynamic environment: compute time-layered constraints for this thread
-    if (!hgp_manager_.cvxEllipsoidDecompTimeLayered(ellip, global_path, base_uo, obst_pos,
-                                                    obst_bbox, time_end_times,
-                                                    l_constraints_by_time, poly_out_by_time)) {
+    if (!hgp_manager_.cvxEllipsoidDecompTimeLayered(
+            ellip, global_path, base_uo, obst_pos, obst_bbox, time_end_times, l_constraints_by_time,
+            poly_out_by_time)) {
       poly_out_safe.clear();
       return false;
     }
@@ -1470,11 +1483,13 @@ void SANDO::cleanUpOldTrajs(double current_time) {
   std::lock_guard<std::mutex> lock(mtx_trajs_);
 
   // remove_if moves all “expired” to the end, then erase() chops them off
-  trajs_.erase(std::remove_if(trajs_.begin(), trajs_.end(),
-                              [&](const std::shared_ptr<DynTraj>& t) {
-                                return (current_time - t->time_received) > par_.traj_lifetime;
-                              }),
-               trajs_.end());
+  trajs_.erase(
+      std::remove_if(
+          trajs_.begin(), trajs_.end(),
+          [&](const std::shared_ptr<DynTraj>& t) {
+            return (current_time - t->time_received) > par_.traj_lifetime;
+          }),
+      trajs_.end());
 }
 
 // ----------------------------------------------------------------------------
@@ -1772,8 +1787,12 @@ void SANDO::yaw(double diff, RobotState& next_goal) {
 
 // ----------------------------------------------------------------------------
 
-void SANDO::logGoalEvent(const std::string& event, const RobotState& drone, const RobotState& goal,
-                         const Eigen::Vector3d& G_projected) {
+void SANDO::logGoalEvent(
+    const std::string& event,
+    const RobotState& drone,
+    const RobotState& goal,
+    const Eigen::Vector3d& G_projected) {
+  if (!par_.debug_verbose) return;
   static const std::string path = "/tmp/sando_goal_log.txt";
   std::ofstream f(path, std::ios::app);
   if (!f.is_open()) return;
@@ -1944,8 +1963,9 @@ bool SANDO::checkReadyToReplan() {
 
 // ----------------------------------------------------------------------------
 
-void SANDO::updateMapPtr(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_map,
-                         const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk) {
+void SANDO::updateMapPtr(
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_map,
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk) {
   // 1) Atomically store the incoming clouds
   {
     std::lock_guard<std::mutex> lk(mtx_pclptr_map_);
@@ -1987,8 +2007,8 @@ void SANDO::updateMap(double current_time) {
   std::vector<vec_Vecf<3>> pred_samples;
   std::vector<float> pred_times;
 
-  traj_max_time_ = computeObstPosAndTrajMaxTimeForMapUpdate(obst_pos, obst_bbox, pred_samples,
-                                                            pred_times, current_time);
+  traj_max_time_ = computeObstPosAndTrajMaxTimeForMapUpdate(
+      obst_pos, obst_bbox, pred_samples, pred_times, current_time);
 
   hgp_manager_.setDynamicPredictedSamples(pred_samples, pred_times);
 
@@ -2000,8 +2020,9 @@ void SANDO::updateMap(double current_time) {
     std::lock_guard<std::mutex> lk(mtx_pclptr_map_);
     std::lock_guard<std::mutex> lk2(mtx_pclptr_unk_);
 
-    hgp_manager_.updateMap(wdx_, wdy_, wdz_, map_center_, pclptr_map_, pclptr_unk_, obst_pos,
-                           obst_bbox, traj_max_time_);
+    hgp_manager_.updateMap(
+        wdx_, wdy_, wdz_, map_center_, pclptr_map_, pclptr_unk_, obst_pos, obst_bbox,
+        traj_max_time_);
 
     if (par_.debug_verbose)
       std::cout << "Map update time: " << timer_map.getElapsedMicros() / 1000.0 << " ms"
@@ -2014,8 +2035,9 @@ void SANDO::updateMap(double current_time) {
       kdtree_map_initialized_ = true;
       hgp_manager_.updateVecOccupied(pclptr_to_vec(pclptr_map_));
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("sando"),
-                  "updateMap: member pclptr_map_ was null or empty; skipping KD-tree update");
+      RCLCPP_WARN(
+          rclcpp::get_logger("sando"),
+          "updateMap: member pclptr_map_ was null or empty; skipping KD-tree update");
     }
   }
 
@@ -2030,8 +2052,9 @@ void SANDO::updateMap(double current_time) {
       hgp_manager_.updateVecUnknownOccupied(pclptr_to_vec(pclptr_unk_));
       hgp_manager_.insertVecOccupiedToVecUnknownOccupied();
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("sando"),
-                  "updateMap: member pclptr_unk_ was null or empty; skipping KD‐tree update");
+      RCLCPP_WARN(
+          rclcpp::get_logger("sando"),
+          "updateMap: member pclptr_unk_ was null or empty; skipping KD‐tree update");
     }
   }
 }
@@ -2065,8 +2088,8 @@ void SANDO::updateOccupancyMap(double current_time) {
   std::vector<vec_Vecf<3>> pred_samples;
   std::vector<float> pred_times;
 
-  traj_max_time_ = computeObstPosAndTrajMaxTimeForMapUpdate(obst_pos, obst_bbox, pred_samples,
-                                                            pred_times, current_time);
+  traj_max_time_ = computeObstPosAndTrajMaxTimeForMapUpdate(
+      obst_pos, obst_bbox, pred_samples, pred_times, current_time);
 
   hgp_manager_.setDynamicPredictedSamples(pred_samples, pred_times);
 
@@ -2076,8 +2099,9 @@ void SANDO::updateOccupancyMap(double current_time) {
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr empty_pclptr_unk(new pcl::PointCloud<pcl::PointXYZ>());
 
-    hgp_manager_.updateMap(wdx_, wdy_, wdz_, map_center_, pclptr_map_, empty_pclptr_unk, obst_pos,
-                           obst_bbox, traj_max_time_);
+    hgp_manager_.updateMap(
+        wdx_, wdy_, wdz_, map_center_, pclptr_map_, empty_pclptr_unk, obst_pos, obst_bbox,
+        traj_max_time_);
 
     // 3) Known‐space KD‐tree
     if (pclptr_map_ && !pclptr_map_->points.empty()) {
@@ -2086,8 +2110,9 @@ void SANDO::updateOccupancyMap(double current_time) {
       kdtree_map_initialized_ = true;
       hgp_manager_.updateVecOccupied(pclptr_to_vec(pclptr_map_));
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("sando"),
-                  "updateMap: member pclptr_map_ was null or empty; skipping KD-tree update");
+      RCLCPP_WARN(
+          rclcpp::get_logger("sando"),
+          "updateMap: member pclptr_map_ was null or empty; skipping KD-tree update");
     }
   }
 }
@@ -2183,12 +2208,14 @@ void SANDO::setInitialPose(const geometry_msgs::msg::TransformStamped& init_pose
   init_pose_ = init_pose;
 
   // Extract and normalize quaternion
-  Eigen::Quaterniond q(init_pose_.transform.rotation.w, init_pose_.transform.rotation.x,
-                       init_pose_.transform.rotation.y, init_pose_.transform.rotation.z);
+  Eigen::Quaterniond q(
+      init_pose_.transform.rotation.w, init_pose_.transform.rotation.x,
+      init_pose_.transform.rotation.y, init_pose_.transform.rotation.z);
   q.normalize();
 
-  Eigen::Vector3d t(init_pose_.transform.translation.x, init_pose_.transform.translation.y,
-                    init_pose_.transform.translation.z);
+  Eigen::Vector3d t(
+      init_pose_.transform.translation.x, init_pose_.transform.translation.y,
+      init_pose_.transform.translation.z);
 
   // Rotation matrix and its transpose (= inverse for orthogonal matrices)
   Eigen::Matrix3d R = q.toRotationMatrix();
@@ -2384,8 +2411,9 @@ bool SANDO::checkHoverAvoidance(double current_time) {
       bool found_safe = false;
       for (double angle : angles) {
         double cos_a = std::cos(angle), sin_a = std::sin(angle);
-        Eigen::Vector3d rotated_dir(direction.x() * cos_a - direction.y() * sin_a,
-                                    direction.x() * sin_a + direction.y() * cos_a, direction.z());
+        Eigen::Vector3d rotated_dir(
+            direction.x() * cos_a - direction.y() * sin_a,
+            direction.x() * sin_a + direction.y() * cos_a, direction.z());
         Eigen::Vector3d candidate =
             local_state.pos + par_.hover_avoidance_h * rotated_dir.normalized();
         if (par_.hover_avoidance_2d)
@@ -2408,8 +2436,9 @@ bool SANDO::checkHoverAvoidance(double current_time) {
       bool found_free = false;
       for (double angle : angles) {
         double cos_a = std::cos(angle), sin_a = std::sin(angle);
-        Eigen::Vector3d rotated_dir(direction.x() * cos_a - direction.y() * sin_a,
-                                    direction.x() * sin_a + direction.y() * cos_a, direction.z());
+        Eigen::Vector3d rotated_dir(
+            direction.x() * cos_a - direction.y() * sin_a,
+            direction.x() * sin_a + direction.y() * cos_a, direction.z());
         Eigen::Vector3d candidate =
             local_state.pos + par_.hover_avoidance_h * rotated_dir.normalized();
         if (par_.hover_avoidance_2d)

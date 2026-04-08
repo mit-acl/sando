@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -76,8 +76,8 @@ GoalToCmdVel::GoalToCmdVel()
       "state", 10, std::bind(&GoalToCmdVel::stateCallback, this, std::placeholders::_1));
 
   // Timers
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(10),
-                                   std::bind(&GoalToCmdVel::cmdVelCallback, this));
+  timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(10), std::bind(&GoalToCmdVel::cmdVelCallback, this));
 }
 
 void GoalToCmdVel::stateCallback(const dynus_interfaces::msg::State::SharedPtr msg) {

@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "hgp/hgp_manager.hpp"
-
 #include <mutex>
 
 /// The type of map data Tmap is defined as a 1D array
@@ -30,14 +29,14 @@ void HGPManager::setParameters(const Parameters& par) {
   use_shrinked_box_ = par.use_shrinked_box;
   shrinked_box_size_ = par.shrinked_box_size;
   // sfc_size_ is std::vector<float> but par.sfc_size is std::vector<double>
-  sfc_size_ = {static_cast<float>(par.sfc_size[0]),
-                     static_cast<float>(par.sfc_size[1]),
-                     static_cast<float>(par.sfc_size[2])};
+  sfc_size_ = {
+      static_cast<float>(par.sfc_size[0]), static_cast<float>(par.sfc_size[1]),
+      static_cast<float>(par.sfc_size[2])};
 
   // shared pointer to the map util for actual planning
-  map_util_ = std::make_shared<sando::VoxelMapUtil>(par.factor_hgp * par.res, par.x_min, par.x_max,
-                                                    par.y_min, par.y_max, par.z_min, par.z_max,
-                                                    par.inflation_hgp, par.obst_max_vel);
+  map_util_ = std::make_shared<sando::VoxelMapUtil>(
+      par.factor_hgp * par.res, par.x_min, par.x_max, par.y_min, par.y_max, par.z_min, par.z_max,
+      par.inflation_hgp, par.obst_max_vel);
 
   // ---------------- Global-planner configuration: YAML-driven heat map parameters ----------------
 
@@ -47,9 +46,9 @@ void HGPManager::setParameters(const Parameters& par) {
 
   // Dynamic heat configuration
   map_util_->setDynamicHeatEnabled(par.dynamic_heat_enabled);
-  map_util_->setDynamicHeatParams(par.heat_alpha0, par.heat_alpha1, par.heat_p, par.heat_q,
-                                  par.heat_tau_ratio, par.heat_gamma, par.heat_Hmax,
-                                  par.dyn_base_inflation_m);
+  map_util_->setDynamicHeatParams(
+      par.heat_alpha0, par.heat_alpha1, par.heat_p, par.heat_q, par.heat_tau_ratio, par.heat_gamma,
+      par.heat_Hmax, par.dyn_base_inflation_m);
   map_util_->setDynHeatTubeRadius(par.dyn_heat_tube_radius_m);
   map_util_->setHeatWeight(par.heat_weight);
 
@@ -69,9 +68,10 @@ void HGPManager::setParameters(const Parameters& par) {
 
   // Static heat configuration
   map_util_->setStaticHeatEnabled(par.static_heat_enabled);
-  map_util_->setStaticHeatParams(par.static_heat_alpha, par.static_heat_p, par.static_heat_Hmax,
-                                 par.static_heat_rmax_m, par.static_heat_boundary_only,
-                                 par.static_heat_apply_on_unknown, par.static_heat_exclude_dynamic);
+  map_util_->setStaticHeatParams(
+      par.static_heat_alpha, par.static_heat_p, par.static_heat_Hmax, par.static_heat_rmax_m,
+      par.static_heat_boundary_only, par.static_heat_apply_on_unknown,
+      par.static_heat_exclude_dynamic);
 
   // Static heat radius function
   map_util_->setStaticHeatRadiusFunction(
@@ -84,8 +84,8 @@ void HGPManager::setParameters(const Parameters& par) {
 
 // ----------------------------------------------------------------------------
 
-void HGPManager::setDynamicPredictedSamples(const std::vector<vec_Vecf<3>>& pred_samples,
-                                            const std::vector<float>& pred_times) {
+void HGPManager::setDynamicPredictedSamples(
+    const std::vector<vec_Vecf<3>>& pred_samples, const std::vector<float>& pred_times) {
   std::lock_guard<std::mutex> lock(mtx_map_util_);
   if (map_util_) map_util_->setDynamicPredictedSamples(pred_samples, pred_times);
 }
@@ -97,11 +97,22 @@ std::shared_ptr<sando::VoxelMapUtil> HGPManager::getMapUtilSharedPtr() {
 
 void HGPManager::cleanUpPath(vec_Vecf<3>& path) { planner_ptr_->cleanUpPath(path); }
 
-void HGPManager::setupHGPPlanner(const std::string& global_planner, bool global_planner_verbose,
-                                 double res, double v_max, double a_max, double j_max,
-                                 int hgp_timeout_duration_ms, int max_num_expansion,
-                                 double w_unknown, double w_align, double decay_len_cells,
-                                 double w_side, int los_cells, double min_len, double min_turn) {
+void HGPManager::setupHGPPlanner(
+    const std::string& global_planner,
+    bool global_planner_verbose,
+    double res,
+    double v_max,
+    double a_max,
+    double j_max,
+    int hgp_timeout_duration_ms,
+    int max_num_expansion,
+    double w_unknown,
+    double w_align,
+    double decay_len_cells,
+    double w_side,
+    int los_cells,
+    double min_len,
+    double min_turn) {
   // Get the parameters
   v_max_ = v_max;
   v_max_3d_ = Eigen::Vector3d(v_max, v_max, v_max);
@@ -159,8 +170,8 @@ bool HGPManager::checkIfPointOccupied(const Vec3f& point) {
 
 // Sample along [p0, p1] at a safe step to ensure we don't skip thin obstacles.
 // Uses the occupancy from the (already inflated) planning map.
-inline bool isSegmentFree(const sando::VoxelMapUtil& map, const Vec3f& p0, const Vec3f& p1,
-                          const double sample_step) {
+inline bool isSegmentFree(
+    const sando::VoxelMapUtil& map, const Vec3f& p0, const Vec3f& p1, const double sample_step) {
   const Vec3f d = p1 - p0;
   const double L = d.norm();
   if (L <= 1e-6) return true;
@@ -181,8 +192,11 @@ inline bool isSegmentFree(const sando::VoxelMapUtil& map, const Vec3f& p0, const
 
 // Greedily collapse a path into maximal collision-free segments.
 // This mirrors the "generate a long segment if it’s collision free" behavior.
-inline void collapseIntoLongSegments(const sando::VoxelMapUtil& map, double res,
-                                     vec_Vecf<3>& path_inout, double sample_step = -1.0) {
+inline void collapseIntoLongSegments(
+    const sando::VoxelMapUtil& map,
+    double res,
+    vec_Vecf<3>& path_inout,
+    double sample_step = -1.0) {
   if (path_inout.size() <= 2) return;
 
   const double step = (sample_step > 0.0) ? sample_step : 0.5 * res;
@@ -217,9 +231,15 @@ inline void collapseIntoLongSegments(const sando::VoxelMapUtil& map, double res,
   path_inout.swap(simplified);
 }
 
-bool HGPManager::solveHGP(const Vec3f& start_sent, const Vec3f& start_vel, const Vec3f& goal_sent,
-                          double& final_g, double weight, double current_time, vec_Vecf<3>& path,
-                          vec_Vecf<3>& raw_path) {
+bool HGPManager::solveHGP(
+    const Vec3f& start_sent,
+    const Vec3f& start_vel,
+    const Vec3f& goal_sent,
+    double& final_g,
+    double weight,
+    double current_time,
+    vec_Vecf<3>& path,
+    vec_Vecf<3>& raw_path) {
   {
     std::lock_guard<std::mutex> lock(mtx_map_util_);
     map_util_for_planning_ = std::make_shared<sando::VoxelMapUtil>(*map_util_);
@@ -316,9 +336,12 @@ void HGPManager::getFreeCells(vec_Vecf<3>& free_cells) {
   free_cells = map_util_->getFreeCloud();
 }
 
-void HGPManager::getComputationTime(double& global_planning_time, double& hgp_static_jps_time,
-                                    double& hgp_check_path_time, double& hgp_dynamic_astar_time,
-                                    double& hgp_recover_path_time) {
+void HGPManager::getComputationTime(
+    double& global_planning_time,
+    double& hgp_static_jps_time,
+    double& hgp_check_path_time,
+    double& hgp_dynamic_astar_time,
+    double& hgp_recover_path_time) {
   // Get the computation time
   global_planning_time = planner_ptr_->getInitialGuessPlanningTime();
   hgp_static_jps_time = planner_ptr_->getStaticJPSPlanningTime();
@@ -352,12 +375,15 @@ void HGPManager::insertVecOccupiedToVecUnknownOccupied() {
   vec_uo_.insert(vec_uo_.end(), vec_o_.begin(), vec_o_.end());
 }
 
-bool HGPManager::cvxEllipsoidDecomp(EllipsoidDecomp3D& ellip, const vec_Vecf<3>& path,
-                                    const vec_Vec3f& base_uo, const vec_Vecf<3>& obst_pos,
-                                    const vec_Vecf<3>& obst_bbox,
-                                    const std::vector<double>& seg_end_times,
-                                    std::vector<LinearConstraint3D>& l_constraints,
-                                    vec_E<Polyhedron<3>>& poly_out) {
+bool HGPManager::cvxEllipsoidDecomp(
+    EllipsoidDecomp3D& ellip,
+    const vec_Vecf<3>& path,
+    const vec_Vec3f& base_uo,
+    const vec_Vecf<3>& obst_pos,
+    const vec_Vecf<3>& obst_bbox,
+    const std::vector<double>& seg_end_times,
+    std::vector<LinearConstraint3D>& l_constraints,
+    vec_E<Polyhedron<3>>& poly_out) {
   if (path.size() < 2) return false;
 
   const size_t num_seg = path.size() - 1;
@@ -515,8 +541,8 @@ bool HGPManager::cvxEllipsoidDecompTimeLayered(
       poly_out_by_time[n][p] = polys[0];
 
       const auto pt_inside = (path[p] + path[p + 1]) / 2.0;
-      LinearConstraint3D cs(pt_inside, poly_out_by_time[n][p].hyperplanes(),
-                            poly_out_by_time[n][p]);
+      LinearConstraint3D cs(
+          pt_inside, poly_out_by_time[n][p].hyperplanes(), poly_out_by_time[n][p]);
 
       if (cs.A_.hasNaN() || cs.b_.hasNaN()) {
         std::cout << "cvxEllipsoidDecompTimeLayered: A_ or b_ has NaN at (n=" << n << ", p=" << p
@@ -563,8 +589,9 @@ inline const std::vector<Offset3i>& sphereOffsetsCached(int m) {
   if (it != cache.end()) return it->second;
 
   std::vector<Offset3i> offs;
-  offs.reserve(static_cast<std::size_t>(2 * m + 1) * static_cast<std::size_t>(2 * m + 1) *
-               static_cast<std::size_t>(2 * m + 1));
+  offs.reserve(
+      static_cast<std::size_t>(2 * m + 1) * static_cast<std::size_t>(2 * m + 1) *
+      static_cast<std::size_t>(2 * m + 1));
 
   const int m2 = m * m;
   for (int ix = -m; ix <= m; ++ix) {
@@ -590,8 +617,11 @@ inline bool isUnknownVoxel(const sando::VoxelMapUtil& map, const Veci<3>& idx) {
 
 // ----------------------------------------------------------------------------
 
-void HGPManager::obstacle_to_vec(vec_Vec3f& pts, const vec_Vecf<3>& obst_pos,
-                                 const vec_Vecf<3>& obst_bbox, double traj_max_time) {
+void HGPManager::obstacle_to_vec(
+    vec_Vec3f& pts,
+    const vec_Vecf<3>& obst_pos,
+    const vec_Vecf<3>& obst_bbox,
+    double traj_max_time) {
   // Inflate radius around unknown boundary and dynamic obstacles.
   // Unknown boundary is extracted from the *current contents* of pts (assumed to include unknown
   // voxels). Dynamic obstacles are provided separately in obst_pos.
@@ -724,15 +754,15 @@ void HGPManager::obstacle_to_vec(vec_Vec3f& pts, const vec_Vecf<3>& obst_pos,
         return ab * c;
       };
 
-      const std::size_t vol = safeMul3(static_cast<std::size_t>(dx), static_cast<std::size_t>(dy),
-                                       static_cast<std::size_t>(dz));
+      const std::size_t vol = safeMul3(
+          static_cast<std::size_t>(dx), static_cast<std::size_t>(dy), static_cast<std::size_t>(dz));
 
       const int dx2 = dx + 2 * m;
       const int dy2 = dy + 2 * m;
       const int dz2 = dz + 2 * m;
-      const std::size_t vol2 =
-          safeMul3(static_cast<std::size_t>(dx2), static_cast<std::size_t>(dy2),
-                   static_cast<std::size_t>(dz2));
+      const std::size_t vol2 = safeMul3(
+          static_cast<std::size_t>(dx2), static_cast<std::size_t>(dy2),
+          static_cast<std::size_t>(dz2));
 
       const bool use_dense = (vol > 0 && vol <= kMaxDenseCells) &&
                              (vol2 > 0 && vol2 <= kMaxDenseInflCells) &&
@@ -980,18 +1010,23 @@ void HGPManager::obstacle_to_vec(vec_Vec3f& pts, const vec_Vecf<3>& obst_pos,
   }
 }
 
-void HGPManager::updateMap(double wdx, double wdy, double wdz, const Vec3f& center_map,
-                           const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr,
-                           const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk,
-                           const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox,
-                           double traj_max_time) {
+void HGPManager::updateMap(
+    double wdx,
+    double wdy,
+    double wdz,
+    const Vec3f& center_map,
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr,
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk,
+    const vec_Vecf<3>& obst_pos,
+    const vec_Vecf<3>& obst_bbox,
+    double traj_max_time) {
   // Get the current time to see the computation time for readmap
   auto start_time = std::chrono::high_resolution_clock::now();
 
   mtx_map_util_.lock();
-  map_util_->readMap(pclptr, pclptr_unk, (int)(wdx / res_), (int)(wdy / res_), (int)(wdz / res_),
-                     center_map, par_.z_min, par_.z_max, par_.inflation_hgp, obst_pos, obst_bbox,
-                     traj_max_time);
+  map_util_->readMap(
+      pclptr, pclptr_unk, (int)(wdx / res_), (int)(wdy / res_), (int)(wdz / res_), center_map,
+      par_.z_min, par_.z_max, par_.inflation_hgp, obst_pos, obst_bbox, traj_max_time);
   mtx_map_util_.unlock();
 
   // Get the elapsed time for reading the map

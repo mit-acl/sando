@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -51,15 +51,15 @@ class Timer {
    *  @return Elapsed time in microseconds.
    */
   double getElapsedMicros() const {
-    return std::chrono::duration_cast<std::chrono::microseconds>(high_resolution_clock::now() -
-                                                                 _start)
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+               high_resolution_clock::now() - _start)
         .count();
   }
 
   /** @brief Stream insertion operator that outputs elapsed time in milliseconds. */
   template <typename T, typename Traits>
-  friend std::basic_ostream<T, Traits>& operator<<(std::basic_ostream<T, Traits>& out,
-                                                   const Timer& timer) {
+  friend std::basic_ostream<T, Traits>& operator<<(
+      std::basic_ostream<T, Traits>& out, const Timer& timer) {
     return out << timer.getElapsedMs();
   }
 };

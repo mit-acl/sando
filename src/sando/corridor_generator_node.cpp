@@ -1,42 +1,39 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
+#include <chrono>
+#include <cstdint>
+#include <fstream>
+#include <mutex>
+#include <string>
+#include <vector>
+#include <Eigen/Dense>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#include <Eigen/Dense>
-#include <chrono>
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <mutex>
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <string>
-#include <vector>
+#include <filesystem>
+#include <rclcpp/rclcpp.hpp>
 
 // Your project headers (adjust include paths to match your repo)
 #include <decomp_util/ellipsoid_decomp.h>
 #include <decomp_util/seed_decomp.h>
-
-#include <decomp_ros_msgs/msg/ellipsoid_array.hpp>
-#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
 #include <decomp_rviz_plugins/data_ros_utils.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sando/gurobi_solver.hpp>
 #include <sando/utils.hpp>
-
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"
 #include "hgp/utils.hpp"
 #include "sando/sando_type.hpp"
 #include "timer.hpp"
+#include <decomp_ros_msgs/msg/ellipsoid_array.hpp>
+#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
 
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
@@ -73,9 +70,8 @@ static vec_Vec3f pclToVec3f(const pcl::PointCloud<pcl::PointXYZ>& cloud) {
 
 // Cumulative end-time per segment for dynamic-obstacle inflation.
 // If you don’t care about dynamic inflation for corridor generation, this is still fine.
-static std::vector<double> computeSegEndTimesFromPath(const vec_Vecf<3>& path,
-                                                      double nominal_speed_mps,
-                                                      double min_dt = 1e-3) {
+static std::vector<double> computeSegEndTimesFromPath(
+    const vec_Vecf<3>& path, double nominal_speed_mps, double min_dt = 1e-3) {
   std::vector<double> seg_end_times;
   if (path.size() < 2) return seg_end_times;
   const size_t num_seg = path.size() - 1;
@@ -105,9 +101,13 @@ static std::vector<double> computeSegEndTimesFromPath(const vec_Vecf<3>& path,
 //     u32 num_planes
 //     A[num_planes][3] (double)
 //     b[num_planes] (double)
-static void saveCorridorBinary(const fs::path& filepath, const Vec3f& start, const Vec3f& goal,
-                               const vec_Vecf<3>& path, const std::vector<double>& seg_end_times,
-                               const std::vector<LinearConstraint3D>& l_constraints) {
+static void saveCorridorBinary(
+    const fs::path& filepath,
+    const Vec3f& start,
+    const Vec3f& goal,
+    const vec_Vecf<3>& path,
+    const std::vector<double>& seg_end_times,
+    const std::vector<LinearConstraint3D>& l_constraints) {
   std::ofstream ofs(filepath, std::ios::binary);
   if (!ofs) throw std::runtime_error("Failed to open file for writing: " + filepath.string());
 
@@ -282,8 +282,8 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     par_.drone_radius = get_parameter("drone_radius").as_double();
     par_.obst_max_vel = get_parameter("obst_max_vel").as_double();
 
-    par_.sfc_size = get_parameter("sfc_size")
-                              .as_double_array();  // should be vector<double> in your struct
+    par_.sfc_size =
+        get_parameter("sfc_size").as_double_array();  // should be vector<double> in your struct
     par_.use_shrinked_box = get_parameter("use_shrinked_box").as_bool();
     par_.shrinked_box_size = get_parameter("shrinked_box_size").as_double();
     par_.max_dist_vertexes = get_parameter("max_dist_vertexes").as_double();
@@ -359,11 +359,10 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     pub_path_ = create_publisher<visualization_msgs::msg::MarkerArray>(path_topic_, qos_latched);
 
     if (republish_period_sec_ > 1e-6) {
-      repub_timer_ =
-          create_wall_timer(std::chrono::duration<double>(republish_period_sec_),
-                            std::bind(&CorridorGeneratorNode::republishCachedMsgs, this));
+      repub_timer_ = create_wall_timer(
+          std::chrono::duration<double>(republish_period_sec_),
+          std::bind(&CorridorGeneratorNode::republishCachedMsgs, this));
     }
-
   }
 
  private:
@@ -386,8 +385,9 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     // Create an empty point cloud for unknowns
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_unk(new pcl::PointCloud<pcl::PointXYZ>());
 
-    hgp_.updateMap(wdx_, wdy_, wdz_, map_center_, cloud, cloud_unk, obst_pos_empty, obst_bbox_empty,
-                   traj_max_time);
+    hgp_.updateMap(
+        wdx_, wdy_, wdz_, map_center_, cloud, cloud_unk, obst_pos_empty, obst_bbox_empty,
+        traj_max_time);
 
     // Also store occupied vector for decomp obstacle set
     hgp_.updateVecOccupied(pclToVec3f(*cloud));
@@ -495,9 +495,9 @@ class CorridorGeneratorNode final : public rclcpp::Node {
 
       vec_Vecf<3> obst_pos_empty;  // set this if you want dynamic obstacle inflation in corridor
       vec_Vecf<3> obst_bbox_empty;
-      const bool decomp_ok =
-          hgp_.cvxEllipsoidDecomp(ellip, path, base_uo, obst_pos_empty, obst_bbox_empty,
-                                  seg_end_times, l_constraints, poly_out);
+      const bool decomp_ok = hgp_.cvxEllipsoidDecomp(
+          ellip, path, base_uo, obst_pos_empty, obst_bbox_empty, seg_end_times, l_constraints,
+          poly_out);
 
       if (!decomp_ok) {
         RCLCPP_WARN(get_logger(), "Goal %zu: cvxEllipsoidDecomp failed. Skipping.", gi);
@@ -519,8 +519,8 @@ class CorridorGeneratorNode final : public rclcpp::Node {
         seg_info += std::to_string(len).substr(0, 4) + "m";
         if (s + 2 < path.size()) seg_info += ", ";
       }
-      RCLCPP_INFO(get_logger(), "Goal %zu: %zu segments [%s]", gi, l_constraints.size(),
-                  seg_info.c_str());
+      RCLCPP_INFO(
+          get_logger(), "Goal %zu: %zu segments [%s]", gi, l_constraints.size(), seg_info.c_str());
     }
   }
 
@@ -530,18 +530,21 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     return oss.str();
   }
 
-  void publishCorridorAndPath(size_t goal_idx, const vec_Vecf<3>& path,
-                              const vec_E<Polyhedron<3>>& poly_out,
-                              const EllipsoidDecomp3D& ellip) {
+  void publishCorridorAndPath(
+      size_t goal_idx,
+      const vec_Vecf<3>& path,
+      const vec_E<Polyhedron<3>>& poly_out,
+      const EllipsoidDecomp3D& ellip) {
     // 1) Path — use pathLineDotsToMarkerArray (same as live planner)
     //    Use unique base_id per goal so markers accumulate in RViz.
     visualization_msgs::msg::MarkerArray path_msg;
-    pathLineDotsToMarkerArray(path, &path_msg, color(RED),
-                              /*line_width=*/0.03,
-                              /*dot_diameter=*/0.06,
-                              /*base_id=*/static_cast<int>(goal_idx) * 1000,
-                              /*frame_id=*/frame_id_,
-                              /*lifetime_sec=*/0.0);  // 0 = forever
+    pathLineDotsToMarkerArray(
+        path, &path_msg, color(RED),
+        /*line_width=*/0.03,
+        /*dot_diameter=*/0.06,
+        /*base_id=*/static_cast<int>(goal_idx) * 1000,
+        /*frame_id=*/frame_id_,
+        /*lifetime_sec=*/0.0);  // 0 = forever
 
     // 2) Polyhedra corridor (decomp_rviz_plugins-compatible)
     decomp_ros_msgs::msg::PolyhedronArray poly_msg = DecompROS::polyhedron_array_to_ros(poly_out);

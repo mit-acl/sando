@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -27,8 +27,13 @@ void ekf_predict(EKFState& ekf_state, double dt) {
 }
 
 // Adaptive EKF Update Step for 3D
-void aekf_update(EKFState& ekf_state, const Eigen::VectorXd& z, double alpha, double time_updated,
-                 const Eigen::Vector3d& bbox, bool use_adaptive_kf) {
+void aekf_update(
+    EKFState& ekf_state,
+    const Eigen::VectorXd& z,
+    double alpha,
+    double time_updated,
+    const Eigen::Vector3d& bbox,
+    bool use_adaptive_kf) {
   Eigen::MatrixXd H(3, 9);  // Measurement matrix (we only measure position [x, y, z])
   H << 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0;
 
@@ -63,8 +68,10 @@ void aekf_update(EKFState& ekf_state, const Eigen::VectorXd& z, double alpha, do
 }
 
 // Associate cluster with the nearest EKF state using Euclidean distance
-int associate_cluster_with_ekf(const Eigen::Vector3d& cluster_centroid,
-                               const std::vector<EKFState>& ekf_states, double cluster_tolerance) {
+int associate_cluster_with_ekf(
+    const Eigen::Vector3d& cluster_centroid,
+    const std::vector<EKFState>& ekf_states,
+    double cluster_tolerance) {
   double min_distance = cluster_tolerance;  // Minimum distance to associate
   int closest_ekf_idx = -1;
 
@@ -155,7 +162,6 @@ void ObstacleTrackerNode::declareAndsetParameters() {
   velocity_threshold_ = this->get_parameter("velocity_threshold").as_double();
   acceleration_threshold_ = this->get_parameter("acceleration_threshold").as_double();
   use_hardware_ = this->get_parameter("use_hardware").as_bool();
-
 }
 
 // PointCloud2 callback function
@@ -187,8 +193,8 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
   // Transform the cloud to the map frame
   geometry_msgs::msg::TransformStamped transform_stamped;
   try {
-    transform_stamped = tf2_buffer_->lookupTransform(frame_id_, targ_frame_id, msg->header.stamp,
-                                                     rclcpp::Duration::from_seconds(10.0));
+    transform_stamped = tf2_buffer_->lookupTransform(
+        frame_id_, targ_frame_id, msg->header.stamp, rclcpp::Duration::from_seconds(10.0));
   } catch (tf2::TransformException& ex) {
     RCLCPP_WARN(this->get_logger(), "Transform error: %s", ex.what());
     return;
@@ -250,8 +256,9 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
     if (closest_ekf_idx >= 0) {
       // Update the existing EKF state
       ekf_predict(ekf_states_[closest_ekf_idx], adaptive_kf_dt_);  // EKF Prediction step
-      aekf_update(ekf_states_[closest_ekf_idx], centroid, adaptive_kf_alpha_, this->now().seconds(),
-                  bbox, use_adaptive_kf_);  // EKF Update step
+      aekf_update(
+          ekf_states_[closest_ekf_idx], centroid, adaptive_kf_alpha_, this->now().seconds(), bbox,
+          use_adaptive_kf_);  // EKF Update step
       cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], centroid);
     } else {
       // No match found, add a new EKF state
@@ -312,7 +319,8 @@ void ObstacleTrackerNode::calculateAverageQandR(Eigen::MatrixXd& Q_avg, Eigen::M
 void ObstacleTrackerNode::getCentroidsAndSizesOfClusters(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
     const std::vector<pcl::PointIndices>& cluster_indices,
-    std::vector<Eigen::Vector3d>& cluster_centroids, std::vector<Eigen::Vector3d>& cluster_bboxes) {
+    std::vector<Eigen::Vector3d>& cluster_centroids,
+    std::vector<Eigen::Vector3d>& cluster_bboxes) {
   // Create and add new markers & Get the min/max values for each cluster
   for (size_t i = 0; i < cluster_indices.size(); ++i) {
     auto& indices = cluster_indices[i];
@@ -450,12 +458,12 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster>& cluster
 
   for (int i = 0; i < clusters.size(); ++i) {
     // Initialize position, velocity, and acceleration from EKF state
-    Eigen::Vector3d current_position(clusters[i].ekf_state.x[0], clusters[i].ekf_state.x[1],
-                                     clusters[i].ekf_state.x[2]);
-    Eigen::Vector3d current_velocity(clusters[i].ekf_state.x[3], clusters[i].ekf_state.x[4],
-                                     clusters[i].ekf_state.x[5]);
-    Eigen::Vector3d acceleration(clusters[i].ekf_state.x[6], clusters[i].ekf_state.x[7],
-                                 clusters[i].ekf_state.x[8]);
+    Eigen::Vector3d current_position(
+        clusters[i].ekf_state.x[0], clusters[i].ekf_state.x[1], clusters[i].ekf_state.x[2]);
+    Eigen::Vector3d current_velocity(
+        clusters[i].ekf_state.x[3], clusters[i].ekf_state.x[4], clusters[i].ekf_state.x[5]);
+    Eigen::Vector3d acceleration(
+        clusters[i].ekf_state.x[6], clusters[i].ekf_state.x[7], clusters[i].ekf_state.x[8]);
 
     // Avoid high acceleration values
     for (int j = 0; j < 3; ++j) {
@@ -634,8 +642,8 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster>& cluster
   if (visual_level_ >= 0) pub_markers_->publish(markers);
 }
 
-Eigen::VectorXd ObstacleTrackerNode::polyfit(const std::vector<double>& t,
-                                             const std::vector<double>& y, int degree) {
+Eigen::VectorXd ObstacleTrackerNode::polyfit(
+    const std::vector<double>& t, const std::vector<double>& y, int degree) {
   // Number of data points
   int n = t.size();
 
@@ -658,9 +666,11 @@ Eigen::VectorXd ObstacleTrackerNode::polyfit(const std::vector<double>& t,
   return beta;
 }
 
-double ObstacleTrackerNode::calculateVariance(const std::vector<double>& t,
-                                              const std::vector<double>& y,
-                                              const Eigen::VectorXd& beta, int degree) {
+double ObstacleTrackerNode::calculateVariance(
+    const std::vector<double>& t,
+    const std::vector<double>& y,
+    const Eigen::VectorXd& beta,
+    int degree) {
   // Calculate residuals and estimate variance
   int n = t.size();
   double residual_sum = 0.0;

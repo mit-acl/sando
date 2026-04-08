@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -14,7 +14,6 @@
 // Convex Decomposition includes
 #include <decomp_util/ellipsoid_decomp.h>
 #include <decomp_util/seed_decomp.h>
-
 #include <decomp_rviz_plugins/data_ros_utils.hpp>
 
 // Map includes
@@ -26,10 +25,9 @@
 #include <hgp/utils.hpp>
 
 // Other includes
-#include <Eigen/Dense>
 #include <mutex>
+#include <Eigen/Dense>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
 #include "timer.hpp"
 
 // prefix
@@ -40,6 +38,7 @@ using std::placeholders::_3;
 
 class HGPManager {
  public:
+  /** @brief Default constructor. */
   HGPManager();
 
   /** @brief Configure the manager with planner parameters.
@@ -64,11 +63,22 @@ class HGPManager {
    *  @param min_len Minimum segment length for path simplification.
    *  @param min_turn Minimum turn angle for path simplification.
    */
-  void setupHGPPlanner(const std::string& global_planner, bool global_planner_verbose, double res,
-                       double v_max, double a_max, double j_max, int timeout_duration_ms,
-                       int max_num_expansion, double w_unknown, double w_align,
-                       double decay_len_cells, double w_side, int los_cells = 3,
-                       double min_len = 0.5, double min_turn = 10.0);
+  void setupHGPPlanner(
+      const std::string& global_planner,
+      bool global_planner_verbose,
+      double res,
+      double v_max,
+      double a_max,
+      double j_max,
+      int timeout_duration_ms,
+      int max_num_expansion,
+      double w_unknown,
+      double w_align,
+      double decay_len_cells,
+      double w_side,
+      int los_cells = 3,
+      double min_len = 0.5,
+      double min_turn = 10.0);
 
   /** @brief Retrieve all occupied cells from the map (thread-safe).
    *  @param occupied_cells Output vector of occupied cell positions.
@@ -85,8 +95,8 @@ class HGPManager {
    *  @param path Reference path used to define the vicinity region.
    *  @param use_for_safe_path If true, includes unknown cells as occupied.
    */
-  void getOccupiedCellsForCvxDecomp(vec_Vecf<3>& occupied_cells, const vec_Vecf<3>& path,
-                                    bool use_for_safe_path);
+  void getOccupiedCellsForCvxDecomp(
+      vec_Vecf<3>& occupied_cells, const vec_Vecf<3>& path, bool use_for_safe_path);
 
   /** @brief Retrieve dynamic occupied, free, and unknown cells for visualization.
    *  @param occupied_cells Output vector of occupied cell positions.
@@ -94,8 +104,11 @@ class HGPManager {
    *  @param unknown_cells Output vector of unknown cell positions.
    *  @param current_time Current simulation time for dynamic obstacle state.
    */
-  void getDynamicOccupiedCellsForVis(vec_Vecf<3>& occupied_cells, vec_Vecf<3>& free_cells,
-                                     vec_Vecf<3>& unknown_cells, double current_time);
+  void getDynamicOccupiedCellsForVis(
+      vec_Vecf<3>& occupied_cells,
+      vec_Vecf<3>& free_cells,
+      vec_Vecf<3>& unknown_cells,
+      double current_time);
 
   /** @brief Update the voxel map from point cloud data and dynamic obstacle state.
    *  @param wdx Map window width in x (meters).
@@ -108,10 +121,16 @@ class HGPManager {
    *  @param obst_bbox Bounding box half-extents of dynamic obstacles.
    *  @param traj_max_time Maximum trajectory time horizon for dynamic inflation.
    */
-  void updateMap(double wdx, double wdy, double wdz, const Vec3f& center_map,
-                 const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr,
-                 const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk,
-                 const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox, double traj_max_time);
+  void updateMap(
+      double wdx,
+      double wdy,
+      double wdz,
+      const Vec3f& center_map,
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr,
+      const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& pclptr_unk,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
+      double traj_max_time);
 
   /** @brief Clear occupied voxels around the start position to ensure a valid planning origin.
    *  @param start_sent Start position (may be snapped to free space).
@@ -142,9 +161,15 @@ class HGPManager {
    *  @param raw_path Output raw path before simplification.
    *  @return True if a valid path was found.
    */
-  bool solveHGP(const Vec3f& start_sent, const Vec3f& start_vel, const Vec3f& goal_sent,
-                double& final_g, double weight, double current_time, vec_Vecf<3>& path,
-                vec_Vecf<3>& raw_path);
+  bool solveHGP(
+      const Vec3f& start_sent,
+      const Vec3f& start_vel,
+      const Vec3f& goal_sent,
+      double& final_g,
+      double weight,
+      double current_time,
+      vec_Vecf<3>& path,
+      vec_Vecf<3>& raw_path);
 
   /** @brief Truncate a path to include only waypoints in free space.
    *  @param path Input path to check.
@@ -160,9 +185,12 @@ class HGPManager {
    *  @param hgp_dynamic_astar_time Time spent in dynamic A* (seconds).
    *  @param hgp_recover_path_time Time spent recovering the path (seconds).
    */
-  void getComputationTime(double& global_planning_time, double& hgp_static_jps_time,
-                          double& hgp_check_path_time, double& hgp_dynamic_astar_time,
-                          double& hgp_recover_path_time);
+  void getComputationTime(
+      double& global_planning_time,
+      double& hgp_static_jps_time,
+      double& hgp_check_path_time,
+      double& hgp_dynamic_astar_time,
+      double& hgp_recover_path_time);
 
   /** @brief Compute convex ellipsoid decomposition per path segment with time-varying obstacles.
    *  @param ellip Per-worker ellipsoid decomposition utility.
@@ -179,8 +207,10 @@ class HGPManager {
       EllipsoidDecomp3D& ellip,  // per-worker decomp util
       const vec_Vecf<3>& path,
       const vec_Vec3f& base_uo,  // snapshot of (unknown+occupied) or (occupied-only)
-      const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox,
-      const std::vector<double>& seg_end_times, std::vector<LinearConstraint3D>& l_constraints,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
+      const std::vector<double>& seg_end_times,
+      std::vector<LinearConstraint3D>& l_constraints,
       vec_E<Polyhedron<3>>& poly_out);
 
   /** @brief Compute time-layered convex decomposition for temporal safety corridors.
@@ -195,8 +225,11 @@ class HGPManager {
    *  @return True if decomposition succeeded for all time layers and segments.
    */
   bool cvxEllipsoidDecompTimeLayered(
-      EllipsoidDecomp3D& ellip, const vec_Vecf<3>& path, const vec_Vec3f& base_uo,
-      const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox,
+      EllipsoidDecomp3D& ellip,
+      const vec_Vecf<3>& path,
+      const vec_Vec3f& base_uo,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
       const std::vector<double>& time_end_times,
       std::vector<std::vector<LinearConstraint3D>>& l_constraints_by_time,
       std::vector<vec_E<Polyhedron<3>>>& poly_out_by_time);
@@ -205,17 +238,21 @@ class HGPManager {
    *  @param pred_samples Predicted position samples per obstacle, aligned with pred_times.
    *  @param pred_times Time stamps corresponding to the predicted samples.
    */
-  void setDynamicPredictedSamples(const std::vector<vec_Vecf<3>>& pred_samples,
-                                  const std::vector<float>& pred_times);
+  void setDynamicPredictedSamples(
+      const std::vector<vec_Vecf<3>>& pred_samples, const std::vector<float>& pred_times);
 
-  /** @brief Inflate dynamic obstacles and unknown boundary voxels into a point set for decomposition.
+  /** @brief Inflate dynamic obstacles and unknown boundary voxels into a point set for
+   * decomposition.
    *  @param pts Input/output point set; inflated points are appended.
    *  @param obst_pos Dynamic obstacle positions.
    *  @param obst_bbox Dynamic obstacle bounding box half-extents.
    *  @param traj_max_time Time horizon for motion-based inflation radius.
    */
-  void obstacle_to_vec(vec_Vec3f& pts, const vec_Vecf<3>& obst_pos, const vec_Vecf<3>& obst_bbox,
-                       double traj_max_time);
+  void obstacle_to_vec(
+      vec_Vec3f& pts,
+      const vec_Vecf<3>& obst_pos,
+      const vec_Vecf<3>& obst_bbox,
+      double traj_max_time);
 
   /** @brief Check whether a point lies in a free voxel.
    *  @param point Query position in world coordinates.
@@ -287,7 +324,8 @@ class HGPManager {
    */
   void updateVecUnknownOccupied(const vec_Vec3f& vec_uo);
 
-  /** @brief Append the occupied point vector into the unknown+occupied point vector (thread-safe). */
+  /** @brief Append the occupied point vector into the unknown+occupied point vector (thread-safe).
+   */
   void insertVecOccupiedToVecUnknownOccupied();
 
   /** @brief Get a thread-safe shared pointer to the underlying voxel map utility.
@@ -295,7 +333,7 @@ class HGPManager {
    */
   std::shared_ptr<sando::VoxelMapUtil> getMapUtilSharedPtr();
 
-  // Helper: construct Veci<3> from 3 ints.
+  /** @brief Construct a Veci<3> from three integer indices. */
   static inline Veci<3> idxs_to_veci3(int x, int y, int z) {
     Veci<3> v;
     v << x, y, z;

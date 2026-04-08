@@ -1,36 +1,35 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
-#include <decomp_util/seed_decomp.h>  // Polyhedron / Hyperplane
-
-#include <Eigen/Dense>
 #include <algorithm>
-#include <cctype>
 #include <cmath>
-#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
-#include <decomp_rviz_plugins/data_ros_utils.hpp>  // DecompROS::polyhedron_array_to_ros
-#include <filesystem>
 #include <fstream>
-#include <geometry_msgs/msg/point.hpp>
 #include <iomanip>
 #include <limits>
 #include <map>
-#include <optional>
-#include <rclcpp/rclcpp.hpp>
 #include <set>
 #include <sstream>
-#include <std_msgs/msg/color_rgba.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <Eigen/Dense>
+#include <decomp_util/seed_decomp.h>               // Polyhedron / Hyperplane
+#include <decomp_rviz_plugins/data_ros_utils.hpp>  // DecompROS::polyhedron_array_to_ros
+#include <geometry_msgs/msg/point.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <cctype>
+#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
+#include <filesystem>
+#include <optional>
+#include <rclcpp/rclcpp.hpp>
 
 namespace fs = std::filesystem;
 
@@ -243,8 +242,8 @@ static inline geometry_msgs::msg::Point toPoint(double x, double y, double z) {
   return p;
 }
 
-static inline visualization_msgs::msg::Marker deleteAllMarker(const std::string& frame_id,
-                                                              const rclcpp::Time& stamp) {
+static inline visualization_msgs::msg::Marker deleteAllMarker(
+    const std::string& frame_id, const rclcpp::Time& stamp) {
   visualization_msgs::msg::Marker m;
   m.header.frame_id = frame_id;
   m.header.stamp = stamp;
@@ -268,8 +267,8 @@ static double readD(std::ifstream& ifs) {
 }
 
 // Build Polyhedron<3> from A x <= b, ensuring seed is inside by flipping violating planes.
-static Polyhedron<3> polyFromHalfspacesSeeded(Eigen::MatrixXd A, Eigen::VectorXd b,
-                                              const Vec3f& seed, double eps) {
+static Polyhedron<3> polyFromHalfspacesSeeded(
+    Eigen::MatrixXd A, Eigen::VectorXd b, const Vec3f& seed, double eps) {
   for (int r = 0; r < A.rows(); ++r) {
     const double v = A.row(r).dot(seed) - b(r);
     if (v > eps) {
@@ -293,9 +292,13 @@ static Polyhedron<3> polyFromHalfspacesSeeded(Eigen::MatrixXd A, Eigen::VectorXd
   return poly;
 }
 
-static void loadMysco2CorridorAndPath(const fs::path& file, Vec3d& start, Vec3d& goal,
-                                      std::vector<Vec3f>& path_pts, vec_E<Polyhedron<3>>& polys,
-                                      double poly_seed_eps) {
+static void loadMysco2CorridorAndPath(
+    const fs::path& file,
+    Vec3d& start,
+    Vec3d& goal,
+    std::vector<Vec3f>& path_pts,
+    vec_E<Polyhedron<3>>& polys,
+    double poly_seed_eps) {
   std::ifstream ifs(file, std::ios::binary);
   if (!ifs) throw std::runtime_error("Failed to open: " + file.string());
 
@@ -353,8 +356,12 @@ static void loadMysco2CorridorAndPath(const fs::path& file, Vec3d& start, Vec3d&
 }
 
 static visualization_msgs::msg::MarkerArray makeGuidePathMarkers(
-    const std::vector<Vec3f>& path, const std::string& frame_id, const rclcpp::Time& stamp,
-    const std_msgs::msg::ColorRGBA& color, double line_width, double point_diam) {
+    const std::vector<Vec3f>& path,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    const std_msgs::msg::ColorRGBA& color,
+    double line_width,
+    double point_diam) {
   visualization_msgs::msg::MarkerArray arr;
   arr.markers.push_back(deleteAllMarker(frame_id, stamp));
 
@@ -388,11 +395,16 @@ static visualization_msgs::msg::MarkerArray makeGuidePathMarkers(
 }
 
 // Screenshot-mode helper: append guide path markers WITHOUT DELETEALL, with unique ns/id.
-static void appendGuidePathMarkersNoDelete(visualization_msgs::msg::MarkerArray& arr, int& id,
-                                           const std::vector<Vec3f>& path,
-                                           const std::string& frame_id, const rclcpp::Time& stamp,
-                                           const std_msgs::msg::ColorRGBA& color, double line_width,
-                                           double point_diam, const std::string& ns_prefix) {
+static void appendGuidePathMarkersNoDelete(
+    visualization_msgs::msg::MarkerArray& arr,
+    int& id,
+    const std::vector<Vec3f>& path,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    const std_msgs::msg::ColorRGBA& color,
+    double line_width,
+    double point_diam,
+    const std::string& ns_prefix) {
   visualization_msgs::msg::Marker line;
   line.header.frame_id = frame_id;
   line.header.stamp = stamp;
@@ -592,10 +604,15 @@ static inline std::string prettyPlannerName(const std::string& planner_key) {
   return planner_key;
 }
 
-static void appendStartOnce(visualization_msgs::msg::MarkerArray& arr, int& id,
-                            const std::string& frame_id, const rclcpp::Time& stamp,
-                            const geometry_msgs::msg::Point& start_pt, double point_diam,
-                            double label_height, double label_z_offset) {
+static void appendStartOnce(
+    visualization_msgs::msg::MarkerArray& arr,
+    int& id,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    const geometry_msgs::msg::Point& start_pt,
+    double point_diam,
+    double label_height,
+    double label_z_offset) {
   const double start_goal_point_scale = 3.0;
   const double start_goal_text_scale = 2.5;
   const double start_text_dy = 0.6;
@@ -638,11 +655,15 @@ static void appendStartOnce(visualization_msgs::msg::MarkerArray& arr, int& id,
   }
 }
 
-static void appendPlannerLegendOnce(visualization_msgs::msg::MarkerArray& arr, int& id,
-                                    const std::vector<std::string>& planners_sorted,
-                                    const std::string& frame_id, const rclcpp::Time& stamp,
-                                    const geometry_msgs::msg::Point& anchor, double label_height,
-                                    double label_z_offset) {
+static void appendPlannerLegendOnce(
+    visualization_msgs::msg::MarkerArray& arr,
+    int& id,
+    const std::vector<std::string>& planners_sorted,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    const geometry_msgs::msg::Point& anchor,
+    double label_height,
+    double label_z_offset) {
   if (planners_sorted.empty()) return;
 
   const float alpha_text = 1.0f;
@@ -693,10 +714,18 @@ static void appendPlannerLegendOnce(visualization_msgs::msg::MarkerArray& arr, i
 
 // Core builder that APPENDS markers (no DELETEALL). Used by both loop and screenshot modes.
 static void appendTrajOverlayMarkers(
-    visualization_msgs::msg::MarkerArray& arr, int& id,
-    const std::map<std::string, TrajCsv>& planner_to_traj, const std::string& frame_id,
-    const rclcpp::Time& stamp, bool show_points, bool show_labels, double line_width,
-    double point_diam, double label_height, double label_z_offset, const std::string& ns_prefix,
+    visualization_msgs::msg::MarkerArray& arr,
+    int& id,
+    const std::map<std::string, TrajCsv>& planner_to_traj,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    bool show_points,
+    bool show_labels,
+    double line_width,
+    double point_diam,
+    double label_height,
+    double label_z_offset,
+    const std::string& ns_prefix,
     const std::string& goal_text_override,
     const std::optional<geometry_msgs::msg::Point>& start_opt,
     const std::optional<geometry_msgs::msg::Point>& goal_opt,
@@ -954,28 +983,36 @@ static void appendTrajOverlayMarkers(
 // Loop-mode wrapper: returns a standalone MarkerArray (with DELETEALL).
 // Loop-mode wrapper: returns a standalone MarkerArray (with DELETEALL).
 static visualization_msgs::msg::MarkerArray makeTrajOverlayMarkers(
-    const std::map<std::string, TrajCsv>& planner_to_traj, const std::string& frame_id,
-    const rclcpp::Time& stamp, bool show_points, bool show_labels, double line_width,
-    double point_diam, double label_height, double label_z_offset,
+    const std::map<std::string, TrajCsv>& planner_to_traj,
+    const std::string& frame_id,
+    const rclcpp::Time& stamp,
+    bool show_points,
+    bool show_labels,
+    double line_width,
+    double point_diam,
+    double label_height,
+    double label_z_offset,
     const std::string& goal_text_override,
     const std::optional<geometry_msgs::msg::Point>& start_opt,
     const std::optional<geometry_msgs::msg::Point>& goal_opt,
-    const std::unordered_map<std::string, int>* global_planner_index, int global_planner_count) {
+    const std::unordered_map<std::string, int>* global_planner_index,
+    int global_planner_count) {
   visualization_msgs::msg::MarkerArray arr;
   arr.markers.push_back(deleteAllMarker(frame_id, stamp));
   int id = 1;
 
   // IMPORTANT: forward the global palette into appendTrajOverlayMarkers()
-  appendTrajOverlayMarkers(arr, id, planner_to_traj, frame_id, stamp, show_points, show_labels,
-                           line_width, point_diam, label_height, label_z_offset,
-                           /*ns_prefix=*/"", goal_text_override, start_opt, goal_opt,
-                           /*publish_start=*/true,
-                           /*publish_goal_and_case_label=*/true,
-                           /*publish_planner_labels=*/true,
-                           /*global_planner_index=*/global_planner_index,
-                           /*global_planner_count=*/global_planner_count,
-                           /*goal_label_dx=*/0.0,
-                           /*goal_label_dy=*/0.6);
+  appendTrajOverlayMarkers(
+      arr, id, planner_to_traj, frame_id, stamp, show_points, show_labels, line_width, point_diam,
+      label_height, label_z_offset,
+      /*ns_prefix=*/"", goal_text_override, start_opt, goal_opt,
+      /*publish_start=*/true,
+      /*publish_goal_and_case_label=*/true,
+      /*publish_planner_labels=*/true,
+      /*global_planner_index=*/global_planner_index,
+      /*global_planner_count=*/global_planner_count,
+      /*goal_label_dx=*/0.0,
+      /*goal_label_dy=*/0.6);
 
   return arr;
 }
@@ -986,16 +1023,13 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
  public:
   VisualizeLocalTrajsNode() : Node("visualize_local_trajs") {
     // Inputs
-    sfc_dir_ =
-        declare_parameter<std::string>("sfc_dir", "");
+    sfc_dir_ = declare_parameter<std::string>("sfc_dir", "");
     file_ext_ = declare_parameter<std::string>("file_ext", ".mysco2");
-    traj_dump_root_dir_ = declare_parameter<std::string>(
-        "traj_dump_root_dir", "");
+    traj_dump_root_dir_ = declare_parameter<std::string>("traj_dump_root_dir", "");
 
     // New: multiple roots
     traj_dump_root_dirs_ = declare_parameter<std::vector<std::string>>(
-        "traj_dump_root_dirs",
-        std::vector<std::string>{traj_dump_root_dir_});
+        "traj_dump_root_dirs", std::vector<std::string>{traj_dump_root_dir_});
 
     // Topics
     frame_id_ = declare_parameter<std::string>("frame_id", "map");
@@ -1088,8 +1122,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
 
       if (visualize_) {
         const double period = std::max(0.05, playback_period_sec_);
-        timer_ = create_wall_timer(std::chrono::duration<double>(period),
-                                   std::bind(&VisualizeLocalTrajsNode::publishNext, this));
+        timer_ = create_wall_timer(
+            std::chrono::duration<double>(period),
+            std::bind(&VisualizeLocalTrajsNode::publishNext, this));
       } else {
         publishCase(0);
       }
@@ -1104,21 +1139,23 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
     } else if (mode_ == "single") {
       const size_t idx = static_cast<size_t>(std::max(0, single_case_index_));
       if (idx >= cases_.size()) {
-        RCLCPP_ERROR(get_logger(), "single_case_index=%d but only %zu cases loaded.",
-                     single_case_index_, cases_.size());
+        RCLCPP_ERROR(
+            get_logger(), "single_case_index=%d but only %zu cases loaded.", single_case_index_,
+            cases_.size());
         return;
       }
-      RCLCPP_INFO(get_logger(), "Mode=single. Publishing case %zu (%s).", idx,
-                  cases_[idx].case_file.c_str());
+      RCLCPP_INFO(
+          get_logger(), "Mode=single. Publishing case %zu (%s).", idx,
+          cases_[idx].case_file.c_str());
       // Republish periodically so late-joining RViz sees it
       screenshot_timer_ = create_wall_timer(std::chrono::seconds(2), [this, idx]() {
         publishCase(idx);
-        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000, "Single case %zu re-published.",
-                             idx);
+        RCLCPP_INFO_THROTTLE(
+            get_logger(), *get_clock(), 10000, "Single case %zu re-published.", idx);
       });
     } else {
-      RCLCPP_ERROR(get_logger(), "Unknown mode: '%s'. Use mode:=loop, screenshot, or single",
-                   mode_.c_str());
+      RCLCPP_ERROR(
+          get_logger(), "Unknown mode: '%s'. Use mode:=loop, screenshot, or single", mode_.c_str());
     }
   }
 
@@ -1217,11 +1254,12 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
         msg.lifetime = rclcpp::Duration::from_seconds(1000.0);
         cb.poly_msg = msg;
 
-        cb.guide_path_ma = makeGuidePathMarkers(path_pts, frame_id_, now(),
-                                                makeColor(0.6f, 0.6f, 0.6f, 1.0f), 0.04, 0.08);
+        cb.guide_path_ma = makeGuidePathMarkers(
+            path_pts, frame_id_, now(), makeColor(0.6f, 0.6f, 0.6f, 1.0f), 0.04, 0.08);
       } catch (const std::exception& e) {
-        RCLCPP_WARN(get_logger(), "Failed loading mysco2 %s: %s", cb.mysco2_path.string().c_str(),
-                    e.what());
+        RCLCPP_WARN(
+            get_logger(), "Failed loading mysco2 %s: %s", cb.mysco2_path.string().c_str(),
+            e.what());
         continue;
       }
 
@@ -1254,10 +1292,11 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
 
     RCLCPP_INFO(get_logger(), "Global planner palette: %d planners.", global_planner_count_);
 
-    RCLCPP_INFO(get_logger(),
-                "Scan complete: %zu cases in sfc_dir, %zu cases with trajectories, %zu trajectory "
-                "CSVs loaded.",
-                mysco2_files.size(), cases_.size(), traj_count);
+    RCLCPP_INFO(
+        get_logger(),
+        "Scan complete: %zu cases in sfc_dir, %zu cases with trajectories, %zu trajectory "
+        "CSVs loaded.",
+        mysco2_files.size(), cases_.size(), traj_count);
   }
 
   void publishNext() {
@@ -1309,9 +1348,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
 
     pub_traj_->publish(traj_ma);
 
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000,
-                         "Visualizing case %zu/%zu: %s (variants=%zu)", idx + 1, cases_.size(),
-                         cb.case_file.c_str(), cb.planner_to_traj.size());
+    RCLCPP_INFO_THROTTLE(
+        get_logger(), *get_clock(), 2000, "Visualizing case %zu/%zu: %s (variants=%zu)", idx + 1,
+        cases_.size(), cb.case_file.c_str(), cb.planner_to_traj.size());
   }
 
   void publishScreenshotOverlay() {
@@ -1382,8 +1421,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
         poly_all.header.stamp = stamp;
         poly_init = true;
       } else {
-        poly_all.polyhedrons.insert(poly_all.polyhedrons.end(), cb.poly_msg.polyhedrons.begin(),
-                                    cb.poly_msg.polyhedrons.end());
+        poly_all.polyhedrons.insert(
+            poly_all.polyhedrons.end(), cb.poly_msg.polyhedrons.begin(),
+            cb.poly_msg.polyhedrons.end());
       }
 
       // Guide path accumulation
@@ -1400,8 +1440,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
             v.z() = p.z;
             path_pts.push_back(v);
           }
-          appendGuidePathMarkersNoDelete(guide_all, guide_id, path_pts, frame_id_, stamp,
-                                         makeColor(0.6f, 0.6f, 0.6f, 1.0f), 0.04, 0.08, ns_prefix);
+          appendGuidePathMarkersNoDelete(
+              guide_all, guide_id, path_pts, frame_id_, stamp, makeColor(0.6f, 0.6f, 0.6f, 1.0f),
+              0.04, 0.08, ns_prefix);
         }
       }
 
@@ -1433,8 +1474,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
 
     // Publish global start once
     if (global_start_opt) {
-      appendStartOnce(traj_all, traj_id, frame_id_, stamp, *global_start_opt, traj_point_diam_,
-                      label_height_, label_z_offset_);
+      appendStartOnce(
+          traj_all, traj_id, frame_id_, stamp, *global_start_opt, traj_point_diam_, label_height_,
+          label_z_offset_);
     }
 
     // Publish planner legend once (use global planner list; stable colors)
@@ -1447,8 +1489,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
         anchor = toPoint(0.0, 0.0, 0.0);
       }
 
-      appendPlannerLegendOnce(traj_all, traj_id, planners_sorted, frame_id_, stamp, anchor,
-                              label_height_, label_z_offset_);
+      appendPlannerLegendOnce(
+          traj_all, traj_id, planners_sorted, frame_id_, stamp, anchor, label_height_,
+          label_z_offset_);
     }
 
     // Publish

@@ -36,8 +36,8 @@
 #include <windows.h>
 #endif
 
-#include <cstdio>
 #include <iostream>
+#include <cstdio>
 
 namespace termcolor {
 // Forward declaration of the `_internal` namespace.
@@ -142,8 +142,9 @@ inline std::ostream& grey(std::ostream& stream) {
 #if defined(TERMCOLOR_OS_MACOS) || defined(TERMCOLOR_OS_LINUX)
     stream << "\033[30m";
 #elif defined(TERMCOLOR_OS_WINDOWS)
-    _internal::win_change_attributes(stream,
-                                     0  // grey (black)
+    _internal::win_change_attributes(
+        stream,
+        0  // grey (black)
     );
 #endif
   }
@@ -232,8 +233,9 @@ inline std::ostream& on_grey(std::ostream& stream) {
 #if defined(TERMCOLOR_OS_MACOS) || defined(TERMCOLOR_OS_LINUX)
     stream << "\033[40m";
 #elif defined(TERMCOLOR_OS_WINDOWS)
-    _internal::win_change_attributes(stream, -1,
-                                     0  // grey (black)
+    _internal::win_change_attributes(
+        stream, -1,
+        0  // grey (black)
     );
 #endif
   }
@@ -311,8 +313,8 @@ inline std::ostream& on_white(std::ostream& stream) {
 #if defined(TERMCOLOR_OS_MACOS) || defined(TERMCOLOR_OS_LINUX)
     stream << "\033[47m";
 #elif defined(TERMCOLOR_OS_WINDOWS)
-    _internal::win_change_attributes(stream, -1,
-                                     BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED);
+    _internal::win_change_attributes(
+        stream, -1, BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED);
 #endif
   }
 

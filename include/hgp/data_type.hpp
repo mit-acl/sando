@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -18,10 +18,9 @@
 #define DATA_TYPE_H
 
 #include <stdio.h>
-
+#include <vector>
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
-#include <vector>
 
 /// Set red font in printf funtion
 #ifndef ANSI_COLOR_RED

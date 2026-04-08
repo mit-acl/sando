@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
 # Massachusetts Institute of Technology
 # All Rights Reserved
 # Authors: Kota Kondo, et al.
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         "--bag_path",
         type=str,
         help="Path to save the bag",
-        default="/home/swarm/data/sando",
+        default=os.path.expanduser("~/data/sando"),
     )
     # parser.add_argument("--agents", nargs="+", help="List of agents to record", default=["NX01", "NX02", "NX03"])
     parser.add_argument(

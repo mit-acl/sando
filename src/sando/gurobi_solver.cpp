@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 
 #include <unistd.h>
-
 #include <chrono>
 #include <iomanip>
 #include <sando/gurobi_solver.hpp>
@@ -47,8 +46,9 @@ SolverGurobi::SolverGurobi() {
 SolverGurobi::~SolverGurobi() {}
 
 bool SolverGurobi::usingFaster_() const {
-  return (planner_name_ == "FASTER" || planner_name_ == "original_faster" ||
-          planner_name_ == "safe_faster");
+  return (
+      planner_name_ == "FASTER" || planner_name_ == "original_faster" ||
+      planner_name_ == "safe_faster");
 }
 
 void SolverGurobi::setPlannerName(const std::string& name) { planner_name_ = name; }
@@ -110,26 +110,26 @@ void SolverGurobi::setDynamicConstraintsFaster_() {
   // Original FASTER: only constrain first control point per segment
   for (int segment = 0; segment < N_; ++segment) {
     for (int axis = 0; axis < 3; ++axis) {
-      dyn_cons_.push_back(
-          m_.addConstr(getVel(segment, 0, axis) <= v_max_,
-                       "MaxVel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
-      dyn_cons_.push_back(
-          m_.addConstr(getVel(segment, 0, axis) >= -v_max_,
-                       "MinVel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getVel(segment, 0, axis) <= v_max_,
+          "MaxVel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getVel(segment, 0, axis) >= -v_max_,
+          "MinVel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
 
-      dyn_cons_.push_back(
-          m_.addConstr(getAccel(segment, 0, axis) <= a_max_,
-                       "MaxAccel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
-      dyn_cons_.push_back(
-          m_.addConstr(getAccel(segment, 0, axis) >= -a_max_,
-                       "MinAccel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getAccel(segment, 0, axis) <= a_max_,
+          "MaxAccel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getAccel(segment, 0, axis) >= -a_max_,
+          "MinAccel_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
 
-      dyn_cons_.push_back(
-          m_.addConstr(getJerk(segment, 0, axis) <= j_max_,
-                       "MaxJerk_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
-      dyn_cons_.push_back(
-          m_.addConstr(getJerk(segment, 0, axis) >= -j_max_,
-                       "MinJerk_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getJerk(segment, 0, axis) <= j_max_,
+          "MaxJerk_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
+      dyn_cons_.push_back(m_.addConstr(
+          getJerk(segment, 0, axis) >= -j_max_,
+          "MinJerk_t" + std::to_string(segment) + "_axis_" + std::to_string(axis)));
     }
   }
 }
@@ -147,34 +147,34 @@ void SolverGurobi::setDynamicConstraintsSafeFaster_() {
       // --- Velocity constraints (3 control points) ---
       std::vector<GRBLinExpr> vel_cps = getVelCP(segment, axis);
       for (size_t i = 0; i < vel_cps.size(); ++i) {
-        dyn_cons_.push_back(m_.addConstr(vel_cps[i] <= v_max_,
-                                         "SafeMaxVel_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
-        dyn_cons_.push_back(m_.addConstr(vel_cps[i] >= -v_max_,
-                                         "SafeMinVel_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            vel_cps[i] <= v_max_, "SafeMaxVel_seg" + std::to_string(segment) + "_ax" +
+                                      std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            vel_cps[i] >= -v_max_, "SafeMinVel_seg" + std::to_string(segment) + "_ax" +
+                                       std::to_string(axis) + "_cp" + std::to_string(i)));
       }
 
       // --- Acceleration constraints (2 control points) ---
       std::vector<GRBLinExpr> accel_cps = getAccelCP(segment, axis);
       for (size_t i = 0; i < accel_cps.size(); ++i) {
-        dyn_cons_.push_back(m_.addConstr(accel_cps[i] <= a_max_,
-                                         "SafeMaxAccel_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
-        dyn_cons_.push_back(m_.addConstr(accel_cps[i] >= -a_max_,
-                                         "SafeMinAccel_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            accel_cps[i] <= a_max_, "SafeMaxAccel_seg" + std::to_string(segment) + "_ax" +
+                                        std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            accel_cps[i] >= -a_max_, "SafeMinAccel_seg" + std::to_string(segment) + "_ax" +
+                                         std::to_string(axis) + "_cp" + std::to_string(i)));
       }
 
       // --- Jerk constraints (1 control point) ---
       std::vector<GRBLinExpr> jerk_cps = getJerkCP(segment, axis);
       for (size_t i = 0; i < jerk_cps.size(); ++i) {
-        dyn_cons_.push_back(m_.addConstr(jerk_cps[i] <= j_max_,
-                                         "SafeMaxJerk_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
-        dyn_cons_.push_back(m_.addConstr(jerk_cps[i] >= -j_max_,
-                                         "SafeMinJerk_seg" + std::to_string(segment) + "_ax" +
-                                             std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            jerk_cps[i] <= j_max_, "SafeMaxJerk_seg" + std::to_string(segment) + "_ax" +
+                                       std::to_string(axis) + "_cp" + std::to_string(i)));
+        dyn_cons_.push_back(m_.addConstr(
+            jerk_cps[i] >= -j_max_, "SafeMinJerk_seg" + std::to_string(segment) + "_ax" +
+                                        std::to_string(axis) + "_cp" + std::to_string(i)));
       }
     }
   }
@@ -294,8 +294,8 @@ void SolverGurobi::setX() {
   }
 }
 
-void SolverGurobi::getInitialAndFinalConditions(double& P0, double& V0, double& A0, double& Pf,
-                                                double& Vf, double& Af, int axis) {
+void SolverGurobi::getInitialAndFinalConditions(
+    double& P0, double& V0, double& A0, double& Pf, double& Vf, double& Af, int axis) {
   // Get initial and final conditions
   P0 = x0_[axis];
   V0 = x0_[axis + 3];
@@ -3662,8 +3662,8 @@ void SolverGurobi::removeVars() {
 
 // Given the time in the whole trajectory, find the interval in which the time is located and the dt
 // within the interval
-void SolverGurobi::findIntervalIdxAndDt(double time_in_whole_traj, int& interval_idx,
-                                        double& dt_interval) {
+void SolverGurobi::findIntervalIdxAndDt(
+    double time_in_whole_traj, int& interval_idx, double& dt_interval) {
   // Find the interval and the time within the interval
   double dt_sum = 0.0;
   for (int interval = 0; interval < N_; interval++) {
@@ -3697,8 +3697,8 @@ void SolverGurobi::setObjective() {
   m_.setObjective(obj, GRB_MINIMIZE);
 }
 
-void SolverGurobi::findClosestIndexFromTime(const double t, int& index,
-                                            const std::vector<double>& time) {
+void SolverGurobi::findClosestIndexFromTime(
+    const double t, int& index, const std::vector<double>& time) {
   // Find the closest index from the time vector
   double min_diff = std::numeric_limits<double>::max();
   for (int i = 0; i < time.size(); i++) {
@@ -3812,16 +3812,18 @@ void SolverGurobi::fillGoalSetPoints() {
 
     RobotState s;
     s.setTimeStamp(t0_ + t);
-    s.setPos(getPosDouble(interval_idx, dt_interval, 0), getPosDouble(interval_idx, dt_interval, 1),
-             getPosDouble(interval_idx, dt_interval, 2));
-    s.setVel(getVelDouble(interval_idx, dt_interval, 0), getVelDouble(interval_idx, dt_interval, 1),
-             getVelDouble(interval_idx, dt_interval, 2));
-    s.setAccel(getAccelDouble(interval_idx, dt_interval, 0),
-               getAccelDouble(interval_idx, dt_interval, 1),
-               getAccelDouble(interval_idx, dt_interval, 2));
-    s.setJerk(getJerkDouble(interval_idx, dt_interval, 0),
-              getJerkDouble(interval_idx, dt_interval, 1),
-              getJerkDouble(interval_idx, dt_interval, 2));
+    s.setPos(
+        getPosDouble(interval_idx, dt_interval, 0), getPosDouble(interval_idx, dt_interval, 1),
+        getPosDouble(interval_idx, dt_interval, 2));
+    s.setVel(
+        getVelDouble(interval_idx, dt_interval, 0), getVelDouble(interval_idx, dt_interval, 1),
+        getVelDouble(interval_idx, dt_interval, 2));
+    s.setAccel(
+        getAccelDouble(interval_idx, dt_interval, 0), getAccelDouble(interval_idx, dt_interval, 1),
+        getAccelDouble(interval_idx, dt_interval, 2));
+    s.setJerk(
+        getJerkDouble(interval_idx, dt_interval, 0), getJerkDouble(interval_idx, dt_interval, 1),
+        getJerkDouble(interval_idx, dt_interval, 2));
 
     goal_setpoints_[i] = s;
   }
@@ -4066,22 +4068,22 @@ void SolverGurobi::createSafeCorridorConstraintsForPolytopeAtleastOne(int t) {
     std::vector<GRBLinExpr> Acp3 = MatrixMultiply(A1std, cp3);
 
     for (int i = 0; i < bb.rows(); i++) {
-      miqp_polytopes_cons_.push_back(
-          m_.addGenConstrIndicator(b_[t][p], 1, Acp0[i], GRB_LESS_EQUAL, bb[i],
-                                   "safe_corridor_t" + std::to_string(t) + "_p" +
-                                       std::to_string(p) + "_face" + std::to_string(i) + "_cp0"));
-      miqp_polytopes_cons_.push_back(
-          m_.addGenConstrIndicator(b_[t][p], 1, Acp1[i], GRB_LESS_EQUAL, bb[i],
-                                   "safe_corridor_t" + std::to_string(t) + "_p" +
-                                       std::to_string(p) + "_face" + std::to_string(i) + "_cp1"));
-      miqp_polytopes_cons_.push_back(
-          m_.addGenConstrIndicator(b_[t][p], 1, Acp2[i], GRB_LESS_EQUAL, bb[i],
-                                   "safe_corridor_t" + std::to_string(t) + "_p" +
-                                       std::to_string(p) + "_face" + std::to_string(i) + "_cp2"));
-      miqp_polytopes_cons_.push_back(
-          m_.addGenConstrIndicator(b_[t][p], 1, Acp3[i], GRB_LESS_EQUAL, bb[i],
-                                   "safe_corridor_t" + std::to_string(t) + "_p" +
-                                       std::to_string(p) + "_face" + std::to_string(i) + "_cp3"));
+      miqp_polytopes_cons_.push_back(m_.addGenConstrIndicator(
+          b_[t][p], 1, Acp0[i], GRB_LESS_EQUAL, bb[i],
+          "safe_corridor_t" + std::to_string(t) + "_p" + std::to_string(p) + "_face" +
+              std::to_string(i) + "_cp0"));
+      miqp_polytopes_cons_.push_back(m_.addGenConstrIndicator(
+          b_[t][p], 1, Acp1[i], GRB_LESS_EQUAL, bb[i],
+          "safe_corridor_t" + std::to_string(t) + "_p" + std::to_string(p) + "_face" +
+              std::to_string(i) + "_cp1"));
+      miqp_polytopes_cons_.push_back(m_.addGenConstrIndicator(
+          b_[t][p], 1, Acp2[i], GRB_LESS_EQUAL, bb[i],
+          "safe_corridor_t" + std::to_string(t) + "_p" + std::to_string(p) + "_face" +
+              std::to_string(i) + "_cp2"));
+      miqp_polytopes_cons_.push_back(m_.addGenConstrIndicator(
+          b_[t][p], 1, Acp3[i], GRB_LESS_EQUAL, bb[i],
+          "safe_corridor_t" + std::to_string(t) + "_p" + std::to_string(p) + "_face" +
+              std::to_string(i) + "_cp3"));
     }
   }
 }
@@ -4136,13 +4138,16 @@ void SolverGurobi::setConstraintsXf() {
   // Constraint xT==x_final
   for (int i = 0; i < 3; i++) {
     // Final position should be equal to the final position
-    final_cons_.push_back(m_.addConstr(getPos(N_ - 1, dt_.back(), i) - xf_[i] == 0,
-                                       "FinalPosAxis_" + std::to_string(i)));  // Final position
+    final_cons_.push_back(m_.addConstr(
+        getPos(N_ - 1, dt_.back(), i) - xf_[i] == 0,
+        "FinalPosAxis_" + std::to_string(i)));  // Final position
     // Final velocity and acceleration should be 0
-    final_cons_.push_back(m_.addConstr(getVel(N_ - 1, dt_.back(), i) - xf_[i + 3] == 0,
-                                       "FinalVelAxis_" + std::to_string(i)));  // Final velocity
-    final_cons_.push_back(m_.addConstr(getAccel(N_ - 1, dt_.back(), i) - xf_[i + 6] == 0,
-                                       "FinalAccel_" + std::to_string(i)));  // Final acceleration
+    final_cons_.push_back(m_.addConstr(
+        getVel(N_ - 1, dt_.back(), i) - xf_[i + 3] == 0,
+        "FinalVelAxis_" + std::to_string(i)));  // Final velocity
+    final_cons_.push_back(m_.addConstr(
+        getAccel(N_ - 1, dt_.back(), i) - xf_[i + 6] == 0,
+        "FinalAccel_" + std::to_string(i)));  // Final acceleration
   }
 }
 
@@ -4160,11 +4165,12 @@ void SolverGurobi::setConstraintsX0() {
     init_cons_.push_back(m_.addConstr(
         getPos(0, 0, i) == x0_[i],
         "InitialPosAxis_" + std::to_string(i)));  // Initial position
-    init_cons_.push_back(m_.addConstr(getVel(0, 0, i) == x0_[i + 3],
-                                      "InitialVelAxis_" + std::to_string(i)));  // Initial velocity
-    init_cons_.push_back(
-        m_.addConstr(getAccel(0, 0, i) == x0_[i + 6],
-                     "InitialAccelAxis_" + std::to_string(i)));  // Initial acceleration}
+    init_cons_.push_back(m_.addConstr(
+        getVel(0, 0, i) == x0_[i + 3],
+        "InitialVelAxis_" + std::to_string(i)));  // Initial velocity
+    init_cons_.push_back(m_.addConstr(
+        getAccel(0, 0, i) == x0_[i + 6],
+        "InitialAccelAxis_" + std::to_string(i)));  // Initial acceleration}
   }
 }
 
@@ -4208,12 +4214,12 @@ void SolverGurobi::setDynamicConstraints() {
         // --- Velocity constraints ---
         std::vector<GRBLinExpr> vel_cps = getVelCP(segment, axis);
         for (int i = 0; i < vel_cps.size(); i++) {
-          dyn_cons_.push_back(m_.addConstr(vel_cps[i] <= v_max_,
-                                           "max_vel_Linf_seg" + std::to_string(segment) + "_axis_" +
-                                               std::to_string(axis) + "_cp" + std::to_string(i)));
-          dyn_cons_.push_back(m_.addConstr(vel_cps[i] >= -v_max_,
-                                           "min_vel_Linf_seg" + std::to_string(segment) + "_axis_" +
-                                               std::to_string(axis) + "_cp" + std::to_string(i)));
+          dyn_cons_.push_back(m_.addConstr(
+              vel_cps[i] <= v_max_, "max_vel_Linf_seg" + std::to_string(segment) + "_axis_" +
+                                        std::to_string(axis) + "_cp" + std::to_string(i)));
+          dyn_cons_.push_back(m_.addConstr(
+              vel_cps[i] >= -v_max_, "min_vel_Linf_seg" + std::to_string(segment) + "_axis_" +
+                                         std::to_string(axis) + "_cp" + std::to_string(i)));
         }
 
         // --- Acceleration constraints ---
@@ -4361,27 +4367,27 @@ void SolverGurobi::setDynamicConstraints() {
         // L2 velocity norm
         GRBQuadExpr vel_norm_sq =
             vel_cps_x[i] * vel_cps_x[i] + vel_cps_y[i] * vel_cps_y[i] + vel_cps_z[i] * vel_cps_z[i];
-        dyn_qcons_.push_back(
-            m_.addQConstr(vel_norm_sq <= v_max_ * v_max_,
-                          "vel_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
+        dyn_qcons_.push_back(m_.addQConstr(
+            vel_norm_sq <= v_max_ * v_max_,
+            "vel_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
       }
 
       for (int i = 0; i < accel_cps_x.size(); i++) {
         // L2 acceleration norm
         GRBQuadExpr acc_norm_sq = accel_cps_x[i] * accel_cps_x[i] +
                                   accel_cps_y[i] * accel_cps_y[i] + accel_cps_z[i] * accel_cps_z[i];
-        dyn_qcons_.push_back(
-            m_.addQConstr(acc_norm_sq <= a_max_ * a_max_,
-                          "acc_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
+        dyn_qcons_.push_back(m_.addQConstr(
+            acc_norm_sq <= a_max_ * a_max_,
+            "acc_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
       }
 
       for (int i = 0; i < jerk_cps_x.size(); i++) {
         // L2 jerk norm
         GRBQuadExpr jerk_norm_sq = jerk_cps_x[i] * jerk_cps_x[i] + jerk_cps_y[i] * jerk_cps_y[i] +
                                    jerk_cps_z[i] * jerk_cps_z[i];
-        dyn_qcons_.push_back(
-            m_.addQConstr(jerk_norm_sq <= j_max_ * j_max_,
-                          "jerk_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
+        dyn_qcons_.push_back(m_.addQConstr(
+            jerk_norm_sq <= j_max_ * j_max_,
+            "jerk_L2_seg" + std::to_string(segment) + "_cp" + std::to_string(i)));
       }
     }  // end for segment
   }
@@ -4674,15 +4680,17 @@ bool SolverGurobi::controlPointDependsOnD3OrD4OrD5(ConstraintType type, int seg,
 
 double SolverGurobi::getFactorThatWorked() { return factor_that_worked_; }
 
-bool SolverGurobi::generateNewTrajectory(bool& gurobi_error_detected,
-                                         double& gurobi_computation_time, double factor,
-                                         bool use_single_thread) {
+bool SolverGurobi::generateNewTrajectory(
+    bool& gurobi_error_detected,
+    double& gurobi_computation_time,
+    double factor,
+    bool use_single_thread) {
   // Use sequential factor sweeping for FASTER
   if (use_single_thread) {
     double factor_used = factor;
     // ignore the provided `factor` and sweep internally
-    const bool ok = generateNewTrajectorySequentialFactors(gurobi_error_detected,
-                                                           gurobi_computation_time, factor_used);
+    const bool ok = generateNewTrajectorySequentialFactors(
+        gurobi_error_detected, gurobi_computation_time, factor_used);
     factor_that_worked_ = factor_used;  // store for reporting
     return ok;
   }
@@ -4758,9 +4766,8 @@ bool SolverGurobi::generateNewTrajectory(bool& gurobi_error_detected,
   return solved;
 }
 
-bool SolverGurobi::generateNewTrajectorySequentialFactors(bool& gurobi_error_detected,
-                                                          double& gurobi_computation_time_ms,
-                                                          double& factor_that_worked) {
+bool SolverGurobi::generateNewTrajectorySequentialFactors(
+    bool& gurobi_error_detected, double& gurobi_computation_time_ms, double& factor_that_worked) {
   bool solved = false;
   gurobi_error_detected = false;
   gurobi_computation_time_ms = 0.0;
@@ -4949,10 +4956,10 @@ void SolverGurobi::setContinuityConstraints() {
           getVel(t, dt_[t], i) == getVel(t + 1, 0, i),
           "ContVel_t" + std::to_string(t) + "_axis" + std::to_string(i)));  // Continuity in
                                                                             // velocity
-      continuity_cons_.push_back(
-          m_.addConstr(getAccel(t, dt_[t], i) == getAccel(t + 1, 0, i),
-                       "ContAccel_t" + std::to_string(t) + "_axis" +
-                           std::to_string(i)));  // Continuity in acceleration
+      continuity_cons_.push_back(m_.addConstr(
+          getAccel(t, dt_[t], i) == getAccel(t + 1, 0, i),
+          "ContAccel_t" + std::to_string(t) + "_axis" +
+              std::to_string(i)));  // Continuity in acceleration
     }
   }
 }
@@ -5027,7 +5034,6 @@ void SolverGurobi::getPieceWisePol(PieceWisePol& pwp) {
     pwp.coeff_z.push_back(coeff_z_i);
   }
 }
-
 
 void SolverGurobi::getMinvoControlPoints(std::vector<Eigen::Matrix<double, 3, 4>>& cps) {
   // Clear the control points
@@ -5144,8 +5150,8 @@ inline double SolverGurobi::getDnDouble(int interval, int axis) const {
 
 // Control Points (of the splines) getters
 inline std::vector<GRBLinExpr> SolverGurobi::getCP0(int interval) const {
-  std::vector<GRBLinExpr> cp = {getPos(interval, 0, 0), getPos(interval, 0, 1),
-                                getPos(interval, 0, 2)};
+  std::vector<GRBLinExpr> cp = {
+      getPos(interval, 0, 0), getPos(interval, 0, 1), getPos(interval, 0, 2)};
   return cp;
 }
 
@@ -5166,15 +5172,15 @@ inline std::vector<GRBLinExpr> SolverGurobi::getCP2(int interval) const {
 }
 
 inline std::vector<GRBLinExpr> SolverGurobi::getCP3(int interval) const {
-  std::vector<GRBLinExpr> cp = {getPos(interval, dt_[interval], 0),
-                                getPos(interval, dt_[interval], 1),
-                                getPos(interval, dt_[interval], 2)};
+  std::vector<GRBLinExpr> cp = {
+      getPos(interval, dt_[interval], 0), getPos(interval, dt_[interval], 1),
+      getPos(interval, dt_[interval], 2)};
   return cp;
 }
 
 inline std::vector<double> SolverGurobi::getCP0Double(int interval) const {
-  std::vector<double> cp = {getPosDouble(interval, 0, 0), getPosDouble(interval, 0, 1),
-                            getPosDouble(interval, 0, 2)};
+  std::vector<double> cp = {
+      getPosDouble(interval, 0, 0), getPosDouble(interval, 0, 1), getPosDouble(interval, 0, 2)};
   return cp;
 }
 
@@ -5198,9 +5204,9 @@ inline std::vector<double> SolverGurobi::getCP2Double(int interval) const {
 }
 
 inline std::vector<double> SolverGurobi::getCP3Double(int interval) const {
-  std::vector<double> cp = {getPosDouble(interval, dt_[interval], 0),
-                            getPosDouble(interval, dt_[interval], 1),
-                            getPosDouble(interval, dt_[interval], 2)};
+  std::vector<double> cp = {
+      getPosDouble(interval, dt_[interval], 0), getPosDouble(interval, dt_[interval], 1),
+      getPosDouble(interval, dt_[interval], 2)};
   return cp;
 }
 

@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2024, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,17 +7,16 @@
  * -------------------------------------------------------------------------- */
 
 #pragma once
+#include <fstream>
+#include <sstream>
 #include <Eigen/Dense>
 #include <decomp_rviz_plugins/data_ros_utils.hpp>
-#include <fstream>
 #include <sando/sando_type.hpp>
-#include <sstream>
-#include <type_traits>
-#include <unsupported/Eigen/Polynomials>
-
 #include "hgp/termcolor.hpp"
 #include "gurobi_c++.h"
 #include "timer.hpp"
+#include <type_traits>
+#include <unsupported/Eigen/Polynomials>
 
 using namespace termcolor;
 enum ConstraintType { POSITION, VELOCITY, ACCELERATION, JERK };
@@ -101,8 +100,11 @@ class SolverGurobi {
    *  @param use_single_thread If true, use sequential factor sweeping instead.
    *  @return True if the optimization found a feasible solution.
    */
-  bool generateNewTrajectory(bool& gurobi_error_detected, double& gurobi_computation_time,
-                             double factor, bool use_single_thread = false);
+  bool generateNewTrajectory(
+      bool& gurobi_error_detected,
+      double& gurobi_computation_time,
+      double factor,
+      bool use_single_thread = false);
 
   /** @brief Try generating a trajectory by sweeping factors from initial to final.
    *  @param gurobi_error_detected Set to true if a Gurobi exception occurs.
@@ -110,9 +112,8 @@ class SolverGurobi {
    *  @param factor_that_worked Set to the first factor value that produced a feasible solution.
    *  @return True if any factor in the sweep produced a feasible solution.
    */
-  bool generateNewTrajectorySequentialFactors(bool& gurobi_error_detected,
-                                              double& gurobi_computation_time_ms,
-                                              double& factor_that_worked);
+  bool generateNewTrajectorySequentialFactors(
+      bool& gurobi_error_detected, double& gurobi_computation_time_ms, double& factor_that_worked);
 
   /** @brief Run the Gurobi optimizer on the current model and check for optimality.
    *  @return True if the optimizer found an optimal solution.
@@ -136,7 +137,8 @@ class SolverGurobi {
   void setPolytopesTimeLayered(
       const std::vector<std::vector<LinearConstraint3D>>& polytopes_by_time);
 
-  /** @brief Add polytope containment constraints to the Gurobi model via MIQP indicator constraints. */
+  /** @brief Add polytope containment constraints to the Gurobi model via MIQP indicator
+   * constraints. */
   void setPolytopesConstraints();
 
   /** @brief Create binary variables and per-segment safe corridor constraints for all polytopes. */
@@ -161,13 +163,16 @@ class SolverGurobi {
   /** @brief Set the Gurobi objective to minimize the squared jerk norm. */
   void setObjective();
 
-  /** @brief Add final-state equality constraints (position, velocity, acceleration) to the model. */
+  /** @brief Add final-state equality constraints (position, velocity, acceleration) to the model.
+   */
   void setConstraintsXf();
 
-  /** @brief Add initial-state equality constraints (position, velocity, acceleration) to the model. */
+  /** @brief Add initial-state equality constraints (position, velocity, acceleration) to the model.
+   */
   void setConstraintsX0();
 
-  /** @brief Add position, velocity, and acceleration continuity constraints between adjacent segments. */
+  /** @brief Add position, velocity, and acceleration continuity constraints between adjacent
+   * segments. */
   void setContinuityConstraints();
 
   /** @brief Check whether the solved trajectory satisfies velocity, acceleration, and jerk limits.
@@ -185,13 +190,15 @@ class SolverGurobi {
    */
   void createSafeCorridorConstraintsForPolytopeAtleastOne(int t);
 
-  /** @brief Add velocity, acceleration, and jerk constraints using the configured norm type (Linf/L1/L2). */
+  /** @brief Add velocity, acceleration, and jerk constraints using the configured norm type
+   * (Linf/L1/L2). */
   void setDynamicConstraints();
 
   /** @brief Create the Gurobi decision variables (free control point parameters d3, d4, ...). */
   void createVars();
 
-  /** @brief Compute all polynomial coefficients as GRBLinExpr from free variables via variable elimination. */
+  /** @brief Compute all polynomial coefficients as GRBLinExpr from free variables via variable
+   * elimination. */
   void setX();
 
   /** @brief Remove all Gurobi variables from the model and clear coefficient storage. */
@@ -206,16 +213,19 @@ class SolverGurobi {
    *  @param Af Output final acceleration.
    *  @param axis Axis index (0=x, 1=y, 2=z).
    */
-  void getInitialAndFinalConditions(double& P0, double& V0, double& A0, double& Pf, double& Vf,
-                                    double& Af, int axis);
+  void getInitialAndFinalConditions(
+      double& P0, double& V0, double& A0, double& Pf, double& Vf, double& Af, int axis);
 
-  /** @brief Compute all polynomial coefficients symbolically for N=4 segments via variable elimination. */
+  /** @brief Compute all polynomial coefficients symbolically for N=4 segments via variable
+   * elimination. */
   void computeDependentCoefficientsN4();
 
-  /** @brief Compute all polynomial coefficients symbolically for N=5 segments via variable elimination. */
+  /** @brief Compute all polynomial coefficients symbolically for N=5 segments via variable
+   * elimination. */
   void computeDependentCoefficientsN5();
 
-  /** @brief Compute all polynomial coefficients symbolically for N=6 segments via variable elimination. */
+  /** @brief Compute all polynomial coefficients symbolically for N=6 segments via variable
+   * elimination. */
   void computeDependentCoefficientsN6();
 
   /** @brief Extract numeric polynomial coefficients after optimization for N=4 segments. */
@@ -317,13 +327,17 @@ class SolverGurobi {
   /** @brief Get the constant coefficient 'd' as a symbolic expression for a segment and axis. */
   inline GRBLinExpr getD(int t, int ii) const;
 
-  /** @brief Get the normalized cubic coefficient as a symbolic expression for a segment and axis. */
+  /** @brief Get the normalized cubic coefficient as a symbolic expression for a segment and axis.
+   */
   inline GRBLinExpr getAn(int t, int ii) const;
-  /** @brief Get the normalized quadratic coefficient as a symbolic expression for a segment and axis. */
+  /** @brief Get the normalized quadratic coefficient as a symbolic expression for a segment and
+   * axis. */
   inline GRBLinExpr getBn(int t, int ii) const;
-  /** @brief Get the normalized linear coefficient as a symbolic expression for a segment and axis. */
+  /** @brief Get the normalized linear coefficient as a symbolic expression for a segment and axis.
+   */
   inline GRBLinExpr getCn(int t, int ii) const;
-  /** @brief Get the normalized constant coefficient as a symbolic expression for a segment and axis. */
+  /** @brief Get the normalized constant coefficient as a symbolic expression for a segment and
+   * axis. */
   inline GRBLinExpr getDn(int t, int ii) const;
 
   /** @brief Get the cubic coefficient 'a' as a numeric value (post-optimization). */
@@ -389,32 +403,38 @@ class SolverGurobi {
    */
   inline std::vector<std::vector<GRBLinExpr>> getMinvoJerkControlPoints(int t) const;
 
-  /** @brief Get MINVO position control points as a 3x4 numeric matrix for segment t (post-optimization).
+  /** @brief Get MINVO position control points as a 3x4 numeric matrix for segment t
+   * (post-optimization).
    *  @return 3x4 matrix where each column is a control point.
    */
   inline Eigen::Matrix<double, 3, 4> getMinvoPosControlPointsDouble(int t) const;
 
-  /** @brief Get MINVO velocity control points as a 3x3 numeric matrix for segment t (post-optimization).
+  /** @brief Get MINVO velocity control points as a 3x3 numeric matrix for segment t
+   * (post-optimization).
    *  @return 3x3 matrix where each column is a control point.
    */
   inline Eigen::Matrix<double, 3, 3> getMinvoVelControlPointsDouble(int t) const;
 
-  /** @brief Get MINVO acceleration control points as a 3x2 numeric matrix for segment t (post-optimization).
+  /** @brief Get MINVO acceleration control points as a 3x2 numeric matrix for segment t
+   * (post-optimization).
    *  @return 3x2 matrix where each column is a control point.
    */
   inline Eigen::Matrix<double, 3, 2> getMinvoAccelControlPointsDouble(int t) const;
 
-  /** @brief Get MINVO jerk control points as a 3x1 numeric vector for segment t (post-optimization).
+  /** @brief Get MINVO jerk control points as a 3x1 numeric vector for segment t
+   * (post-optimization).
    *  @return 3x1 matrix (single control point).
    */
   inline Eigen::Matrix<double, 3, 1> getMinvoJerkControlPointsDouble(int t) const;
 
-  /** @brief Get Bezier position control points as a 3x4 numeric matrix for segment t (post-optimization).
+  /** @brief Get Bezier position control points as a 3x4 numeric matrix for segment t
+   * (post-optimization).
    *  @return 3x4 matrix where each column is a control point.
    */
   inline Eigen::Matrix<double, 3, 4> getPosControlPointsDouble(int t) const;
 
-  /** @brief Extract the solved trajectory as a piecewise polynomial with time knots and coefficients.
+  /** @brief Extract the solved trajectory as a piecewise polynomial with time knots and
+   * coefficients.
    *  @param pwp Output piecewise polynomial struct populated with times and per-axis coefficients.
    */
   void getPieceWisePol(PieceWisePol& pwp);

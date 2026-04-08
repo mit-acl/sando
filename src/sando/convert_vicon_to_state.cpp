@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -23,8 +23,8 @@ PoseTwistToStateNode::PoseTwistToStateNode() : Node("pose_twist_to_state_node") 
 
   // Time synchronizer setup
   pose_twist_sync_.reset(new Sync(MySyncPolicy(10), sub_pose_, sub_twist_));
-  pose_twist_sync_->registerCallback(std::bind(&PoseTwistToStateNode::callback, this,
-                                               std::placeholders::_1, std::placeholders::_2));
+  pose_twist_sync_->registerCallback(std::bind(
+      &PoseTwistToStateNode::callback, this, std::placeholders::_1, std::placeholders::_2));
 
   // Publisher setup
   pub_state_ = this->create_publisher<dynus_interfaces::msg::State>("state", 10);

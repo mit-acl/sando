@@ -12,10 +12,6 @@ source ~/.bashrc
 source ${SANDO_WS}/install/setup.bash
 source /usr/share/gazebo/setup.sh
 
-# Source livox driver if available
-[ -f ${SANDO_WS}/livox_ws/install/setup.bash ] && \
-    source ${SANDO_WS}/livox_ws/install/setup.bash
-
 cd ${SANDO_WS}
 
 MODE="${MODE:-demo}"

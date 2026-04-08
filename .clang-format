@@ -4,9 +4,11 @@ BasedOnStyle: Google
 ColumnLimit: 100
 DerivePointerAlignment: false
 PointerAlignment: Left
+BinPackParameters: false
+AlignAfterOpenBracket: AlwaysBreak
 
 # Include ordering: system → ROS → project
-IncludeBlocks: Regroup
+IncludeBlocks: Merge
 IncludeCategories:
   # C system headers
   - Regex: '^<(omp|stdio|stdlib|math|string|signal|unistd)\.h>'

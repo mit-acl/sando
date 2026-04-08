@@ -28,8 +28,9 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 **Paper:** [https://arxiv.org/abs/2511.10822](https://arxiv.org/abs/2511.10822)
 
 ```bibtex
-@article{kondo2026sando,
+@article{kondo2025sando,
       title={SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments},
+      year={2026},
 }
 ```
 
@@ -77,7 +78,7 @@ python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/set
 1. Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
 2. Clone and build:
    ```bash
-   git clone https://github.com/mit-acl/dynus.git sando
+   git clone --recursive https://github.com/mit-acl/sando.git
    cd sando/docker
    make build
    ```

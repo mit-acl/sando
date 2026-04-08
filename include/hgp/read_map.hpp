@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -11,15 +11,13 @@
 // This file is a mofified version of
 // https://github.com/sikang/motion_primitive_library/blob/master/test/read_map.hpp
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <yaml-cpp/yaml.h>
-
 #include <fstream>
 #include <iostream>
 #include <memory>
-
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include "hgp/data_utils.hpp"
+#include <yaml-cpp/yaml.h>
 
 /** @brief Reads a point cloud into a voxelized occupancy grid with obstacle inflation.
  *
@@ -40,8 +38,16 @@ class MapReader {
    *  @param z_max Maximum z value to include.
    *  @param inflation Obstacle inflation radius in meters.
    */
-  MapReader(pcl::PointCloud<pcl::PointXYZ>::Ptr pclptr, int cells_x, int cells_y, int cells_z,
-            double res, const Vec3f center_map, double z_min, double z_max, double inflation) {
+  MapReader(
+      pcl::PointCloud<pcl::PointXYZ>::Ptr pclptr,
+      int cells_x,
+      int cells_y,
+      int cells_z,
+      double res,
+      const Vec3f center_map,
+      double z_min,
+      double z_max,
+      double inflation) {
     // Box of the map: the box with which the map moves.
     // Center_map: The center of the box of the map, expressed in global float coordinates.
     // origin_: The corner of the box with minX, minY, minZ, expressed in global float coordinates.

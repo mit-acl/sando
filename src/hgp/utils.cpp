@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,9 +8,12 @@
 
 #include <hgp/utils.hpp>
 
-void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::MarkerArray* m_array,
-                                 std_msgs::msg::ColorRGBA color, int type,
-                                 std::vector<double> radii) {
+void vectorOfVectors2MarkerArray(
+    vec_Vecf<3> traj,
+    visualization_msgs::msg::MarkerArray* m_array,
+    std_msgs::msg::ColorRGBA color,
+    int type,
+    std::vector<double> radii) {
   if (traj.size() == 0) return;
   geometry_msgs::msg::Point p_last = eigen2point(traj[0]);
 
@@ -55,11 +58,15 @@ void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::Mark
   }
 }
 
-void pathLineDotsToMarkerArray(const vec_Vecf<3>& traj,
-                               visualization_msgs::msg::MarkerArray* m_array,
-                               const std_msgs::msg::ColorRGBA& color, double line_width,
-                               double dot_diameter, int base_id, const std::string& frame_id,
-                               double lifetime_sec) {
+void pathLineDotsToMarkerArray(
+    const vec_Vecf<3>& traj,
+    visualization_msgs::msg::MarkerArray* m_array,
+    const std_msgs::msg::ColorRGBA& color,
+    double line_width,
+    double dot_diameter,
+    int base_id,
+    const std::string& frame_id,
+    double lifetime_sec) {
   if (!m_array || traj.empty()) return;
 
   // ---------- LINE_STRIP ----------
@@ -286,8 +293,8 @@ double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b) {
 }
 
 // returns the points around B sampled in the sphere with radius r and center center.
-std::vector<Eigen::Vector3d> samplePointsSphere(Eigen::Vector3d& B, double r,
-                                                Eigen::Vector3d& center) {
+std::vector<Eigen::Vector3d> samplePointsSphere(
+    Eigen::Vector3d& B, double r, Eigen::Vector3d& center) {
   std::vector<Eigen::Vector3d> tmp;
 
   Eigen::Vector3d dir = B - center;
@@ -325,10 +332,12 @@ std::vector<Eigen::Vector3d> samplePointsSphere(Eigen::Vector3d& B, double r,
 // intelligently with the given path last_index_inside_sphere is the the index of the last point
 // that is inside the sphere (should be provided as a parameter to this function) B is the first
 // intersection of JPS with the sphere
-std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(Eigen::Vector3d& B, double r,
-                                                       Eigen::Vector3d& center_sent,
-                                                       vec_Vecf<3>& path_sent,
-                                                       int last_index_inside_sphere) {
+std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(
+    Eigen::Vector3d& B,
+    double r,
+    Eigen::Vector3d& center_sent,
+    vec_Vecf<3>& path_sent,
+    int last_index_inside_sphere) {
   printf("In samplePointsSphereWithJPS\n");
 
   vec_Vecf<3> path;
@@ -409,8 +418,9 @@ std::vector<Eigen::Vector3d> samplePointsSphereWithJPS(Eigen::Vector3d& B, doubl
 
   std::vector<Eigen::Vector3d> uniform_samples = samplePointsSphere(B, r, center);
 
-  samples.insert(samples.end(), uniform_samples.begin(),
-                 uniform_samples.end());  // concatenate samples and uniform samples
+  samples.insert(
+      samples.end(), uniform_samples.begin(),
+      uniform_samples.end());  // concatenate samples and uniform samples
 
   printf("**y despues samples vale:\n");
   for (int i = 0; i < samples.size(); i++) {
@@ -438,8 +448,9 @@ vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPt
   return pts;
 }
 
-vec_Vec3f pclptr_to_vec(const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud1,
-                        const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud2) {
+vec_Vec3f pclptr_to_vec(
+    const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud1,
+    const pcl::KdTreeFLANN<pcl::PointXYZ>::PointCloudConstPtr ptr_cloud2) {
   vec_Vec3f pts;
   pts.reserve(ptr_cloud1->points.size() + ptr_cloud2->points.size());
   for (unsigned int i = 0; i < ptr_cloud1->points.size(); i++) {
@@ -515,8 +526,11 @@ using vec_Vecf = vec_E<Vecf<N>>;
 // returns 1 if there is an intersection between the segment P1-P2 and the plane given by coeff=[A B
 // C D] (Ax+By+Cz+D==0)  returns 0 if there is no intersection. The intersection point is saved in
 // "intersection"
-bool getIntersectionWithPlane(const Eigen::Vector3d& P1, const Eigen::Vector3d& P2,
-                              const Eigen::Vector4d& coeff, Eigen::Vector3d& intersection) {
+bool getIntersectionWithPlane(
+    const Eigen::Vector3d& P1,
+    const Eigen::Vector3d& P2,
+    const Eigen::Vector4d& coeff,
+    Eigen::Vector3d& intersection) {
   double A = coeff[0];
   double B = coeff[1];
   double C = coeff[2];
@@ -565,8 +579,8 @@ void reduceJPSbyDistance(vec_Vecf<3>& path, double d) {
 
 // given 2 points (A inside and B outside the sphere) it computes the intersection of the lines
 // between that 2 points and the sphere
-Eigen::Vector3d getIntersectionWithSphere(Eigen::Vector3d& A, Eigen::Vector3d& B, double r,
-                                          Eigen::Vector3d& center) {
+Eigen::Vector3d getIntersectionWithSphere(
+    Eigen::Vector3d& A, Eigen::Vector3d& B, double r, Eigen::Vector3d& center) {
   // http://www.ambrsoft.com/TrigoCalc/Sphere/SpherLineIntersection_.htm
   float x1 = A[0];
   float y1 = A[1];
@@ -630,9 +644,12 @@ Eigen::Vector3d getIntersectionWithSphere(Eigen::Vector3d& A, Eigen::Vector3d& B
 // 3D-vectors (points), it returns its first intersection with a sphere of radius=r and
 // center=center the center is added as the first point of the path to ensure that the first element
 // of the path is inside the sphere (to avoid issues with the first point of JPS2)
-Eigen::Vector3d getFirstIntersectionWithSphere(vec_Vecf<3>& path, double r, Eigen::Vector3d& center,
-                                               int* last_index_inside_sphere,
-                                               bool* noPointsOutsideSphere) {
+Eigen::Vector3d getFirstIntersectionWithSphere(
+    vec_Vecf<3>& path,
+    double r,
+    Eigen::Vector3d& center,
+    int* last_index_inside_sphere,
+    bool* noPointsOutsideSphere) {
   if (noPointsOutsideSphere != NULL) {  // this argument has been provided
     *noPointsOutsideSphere = false;
   }
@@ -720,8 +737,8 @@ double getDistancePath(vec_Vecf<3>& path) {
 
 // Same as the previous one, but also returns dist = the distance form the last intersection to the
 // goal (following the path)
-Eigen::Vector3d getLastIntersectionWithSphere(vec_Vecf<3> path, double r, Eigen::Vector3d center,
-                                              double* Jdist) {
+Eigen::Vector3d getLastIntersectionWithSphere(
+    vec_Vecf<3> path, double r, Eigen::Vector3d center, double* Jdist) {
   int index = -1;
   for (int i = path.size() - 1; i >= 0; i--) {
     double dist = (path[i] - center).norm();
@@ -784,9 +801,8 @@ vec_Vecf<3> getPointsBw2Spheres(vec_Vecf<3> path, double ra, double rb, Eigen::V
   return tmp;
 }
 
-visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(const std::vector<RobotState>& data,
-                                                                    int type, double max_value,
-                                                                    const rclcpp::Time& stamp) {
+visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(
+    const std::vector<RobotState>& data, int type, double max_value, const rclcpp::Time& stamp) {
   visualization_msgs::msg::MarkerArray marker_array;
   if (data.empty()) return marker_array;
 
@@ -838,8 +854,13 @@ visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(const std::v
 }
 
 visualization_msgs::msg::MarkerArray stateVector2ColoredLineStripMarkerArray(
-    const std::vector<RobotState>& data, int id, const std::string& ns, double max_value,
-    const rclcpp::Time& stamp, double line_width, size_t max_points_vis) {
+    const std::vector<RobotState>& data,
+    int id,
+    const std::string& ns,
+    double max_value,
+    const rclcpp::Time& stamp,
+    double line_width,
+    size_t max_points_vis) {
   visualization_msgs::msg::MarkerArray marker_array;
   if (data.size() < 2) return marker_array;
 
@@ -893,7 +914,8 @@ visualization_msgs::msg::MarkerArray stateVector2ColoredLineStripMarkerArray(
 void deleteVertexes(vec_Vecf<3>& JPS_path, int max_value) {
   if (JPS_path.size() > max_value + 1)  // If I have more than (max_value + 1) vertexes
   {
-    JPS_path.erase(JPS_path.begin() + max_value + 1,
-                   JPS_path.end());  // Force JPS to have less than max_value elements
+    JPS_path.erase(
+        JPS_path.begin() + max_value + 1,
+        JPS_path.end());  // Force JPS to have less than max_value elements
   }
 }

@@ -1,36 +1,34 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
-#include <decomp_util/ellipsoid_decomp.h>
-#include <decomp_util/seed_decomp.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-
-#include <Eigen/Dense>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
-#include <decomp_rviz_plugins/data_ros_utils.hpp>  // DecompROS::polyhedron_array_to_ros
-#include <geometry_msgs/msg/point.hpp>
 #include <iomanip>
-#include <rclcpp/rclcpp.hpp>
 #include <sstream>
-#include <std_msgs/msg/color_rgba.hpp>
 #include <string>
 #include <vector>
+#include <Eigen/Dense>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <decomp_util/ellipsoid_decomp.h>
+#include <decomp_util/seed_decomp.h>
+#include <decomp_rviz_plugins/data_ros_utils.hpp>  // DecompROS::polyhedron_array_to_ros
+#include <geometry_msgs/msg/point.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
 #include "hgp/hgp_manager.hpp"
 #include "sando/gurobi_solver.hpp"
 #include "sando/sando_type.hpp"
 #include "sando/utils.hpp"
+#include <decomp_ros_msgs/msg/polyhedron_array.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 using namespace std::chrono_literals;
 using namespace sando;
@@ -76,10 +74,14 @@ static std_msgs::msg::ColorRGBA colorRGBA(float r, float g, float b, float a) {
   return c;
 }
 
-static visualization_msgs::msg::Marker makeSphere(const std::string& frame_id, int id,
-                                                  const Vec3f& p, double diameter,
-                                                  const std_msgs::msg::ColorRGBA& c,
-                                                  const std::string& ns, rclcpp::Time stamp) {
+static visualization_msgs::msg::Marker makeSphere(
+    const std::string& frame_id,
+    int id,
+    const Vec3f& p,
+    double diameter,
+    const std_msgs::msg::ColorRGBA& c,
+    const std::string& ns,
+    rclcpp::Time stamp) {
   visualization_msgs::msg::Marker m;
   m.header.frame_id = frame_id;
   m.header.stamp = stamp;
@@ -99,11 +101,14 @@ static visualization_msgs::msg::Marker makeSphere(const std::string& frame_id, i
   return m;
 }
 
-static visualization_msgs::msg::Marker makeLineStrip(const std::string& frame_id, int id,
-                                                     const std::vector<Vec3f>& pts,
-                                                     double line_width,
-                                                     const std_msgs::msg::ColorRGBA& c,
-                                                     const std::string& ns, rclcpp::Time stamp) {
+static visualization_msgs::msg::Marker makeLineStrip(
+    const std::string& frame_id,
+    int id,
+    const std::vector<Vec3f>& pts,
+    double line_width,
+    const std_msgs::msg::ColorRGBA& c,
+    const std::string& ns,
+    rclcpp::Time stamp) {
   visualization_msgs::msg::Marker m;
   m.header.frame_id = frame_id;
   m.header.stamp = stamp;
@@ -127,13 +132,16 @@ static visualization_msgs::msg::Marker makeLineStrip(const std::string& frame_id
   return m;
 }
 
-static void pathLineDotsToMarkerArray(const vec_Vecf<3>& traj,
-                                      visualization_msgs::msg::MarkerArray* m_array,
-                                      const std_msgs::msg::ColorRGBA& color,
-                                      double line_width = 0.03, double dot_diameter = 0.06,
-                                      int base_id = 50000, const std::string& frame_id = "map",
-                                      double lifetime_sec = 1.0,
-                                      const rclcpp::Time& stamp = rclcpp::Clock().now()) {
+static void pathLineDotsToMarkerArray(
+    const vec_Vecf<3>& traj,
+    visualization_msgs::msg::MarkerArray* m_array,
+    const std_msgs::msg::ColorRGBA& color,
+    double line_width = 0.03,
+    double dot_diameter = 0.06,
+    int base_id = 50000,
+    const std::string& frame_id = "map",
+    double lifetime_sec = 1.0,
+    const rclcpp::Time& stamp = rclcpp::Clock().now()) {
   if (!m_array || traj.empty()) return;
 
   // ---------- LINE_STRIP ----------
@@ -177,7 +185,10 @@ static void pathLineDotsToMarkerArray(const vec_Vecf<3>& traj,
 }
 
 static visualization_msgs::msg::MarkerArray stateVector2ColoredMarkerArray(
-    const std::vector<RobotState>& data, int type, double max_value, const rclcpp::Time& stamp,
+    const std::vector<RobotState>& data,
+    int type,
+    double max_value,
+    const rclcpp::Time& stamp,
     const std::string& frame_id = "map") {
   visualization_msgs::msg::MarkerArray marker_array;
   if (data.empty()) return marker_array;
@@ -234,8 +245,8 @@ static double maxViolationOnePoly(const LinearConstraint3D& lc, const Vec3f& p) 
 }
 
 // For a given time-layer n, evaluate corridor union violation: min_p max(A_p x - b_p)
-static double unionViolationAtLayer(const std::vector<LinearConstraint3D>& polys_at_n,
-                                    const Vec3f& p, int* best_poly = nullptr) {
+static double unionViolationAtLayer(
+    const std::vector<LinearConstraint3D>& polys_at_n, const Vec3f& p, int* best_poly = nullptr) {
   double best = std::numeric_limits<double>::infinity();
   int best_i = -1;
   for (int i = 0; i < (int)polys_at_n.size(); ++i) {
@@ -394,13 +405,13 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     par_.max_dist_vertexes = get_parameter("max_dist_vertexes").as_double();
 
     // Obstacles
-    obst_pos_ = vec3ListFromFlat(get_parameter("dynamic_obstacles_flat").as_double_array(),
-                                 "dynamic_obstacles_flat");
+    obst_pos_ = vec3ListFromFlat(
+        get_parameter("dynamic_obstacles_flat").as_double_array(), "dynamic_obstacles_flat");
     // Initialize bbox with default half-extents for each obstacle
     obst_bbox_.clear();
     obst_bbox_.resize(obst_pos_.size(), Vecf<3>(0.4, 0.4, 0.4));
-    base_uo_ = vec3ListFromFlat(get_parameter("static_obstacles_flat").as_double_array(),
-                                "static_obstacles_flat");
+    base_uo_ = vec3ListFromFlat(
+        get_parameter("static_obstacles_flat").as_double_array(), "static_obstacles_flat");
 
     wdx_ = get_parameter("wdx").as_double();
     wdy_ = get_parameter("wdy").as_double();
@@ -446,8 +457,9 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
 
     // ---------------- publish loop ----------------
     const double period = std::max(0.05, cycle_period_sec_);
-    timer_ = create_wall_timer(std::chrono::duration<double>(period),
-                               std::bind(&TemporalLayeredCorridorTestNode::publishOnce_, this));
+    timer_ = create_wall_timer(
+        std::chrono::duration<double>(period),
+        std::bind(&TemporalLayeredCorridorTestNode::publishOnce_, this));
   }
 
  private:
@@ -477,16 +489,18 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr empty_pclptr_unk(new pcl::PointCloud<pcl::PointXYZ>());
     vec_Vecf<3> empty_obst_bbox;  // Empty bbox vector (no dynamic obstacles in this test)
-    hgp_.updateMap(wdx_, wdy_, wdz_, map_center_, cloud, empty_pclptr_unk, obst_pos_,
-                   empty_obst_bbox, traj_max_time);
+    hgp_.updateMap(
+        wdx_, wdy_, wdz_, map_center_, cloud, empty_pclptr_unk, obst_pos_, empty_obst_bbox,
+        traj_max_time);
 
     // 4) Setup planner snapshot
-    hgp_.setupHGPPlanner(global_planner_, global_planner_verbose_, par_.res, par_.v_max, par_.a_max,
-                         par_.j_max, hgp_timeout_ms_,
-                         /*max_num_expansion*/ 10000,
-                         /*w_unknown*/ 0.0, /*w_align*/ 0.0, /*decay_len_cells*/ 100.0,
-                         /*w_side*/ 0.0,
-                         /*los_cells*/ 0, /*min_len*/ 0.5, /*min_turn*/ 0.0);
+    hgp_.setupHGPPlanner(
+        global_planner_, global_planner_verbose_, par_.res, par_.v_max, par_.a_max, par_.j_max,
+        hgp_timeout_ms_,
+        /*max_num_expansion*/ 10000,
+        /*w_unknown*/ 0.0, /*w_align*/ 0.0, /*decay_len_cells*/ 100.0,
+        /*w_side*/ 0.0,
+        /*los_cells*/ 0, /*min_len*/ 0.5, /*min_turn*/ 0.0);
 
     // 5) Direction hint (same pattern as your corridor_generator_node)
     Vec3f dir = goal_ - start_;
@@ -526,10 +540,10 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     EllipsoidDecomp3D ellip;
 
     // Generate [N][P] corridor constraints + polyhedra
-    const bool ok = hgp_.cvxEllipsoidDecompTimeLayered(ellip, global_path_, base_uo_, obst_pos_,
-                                                       obst_bbox_, time_end_times_,
-                                                       l_constraints_by_time_,  // [N][P]
-                                                       poly_out_by_time_        // [N][P]
+    const bool ok = hgp_.cvxEllipsoidDecompTimeLayered(
+        ellip, global_path_, base_uo_, obst_pos_, obst_bbox_, time_end_times_,
+        l_constraints_by_time_,  // [N][P]
+        poly_out_by_time_        // [N][P]
     );
 
     if (!ok) throw std::runtime_error("cvxEllipsoidDecompTimeLayered failed.");
@@ -546,8 +560,9 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     // Boundary conditions
     const RobotState x0 = makeStateFromPos(start_);
     RobotState xf;
-    xf.setPos(global_path_[(size_t)P_global_ - 1].x(), global_path_[(size_t)P_global_ - 1].y(),
-              global_path_[(size_t)P_global_ - 1].z());
+    xf.setPos(
+        global_path_[(size_t)P_global_ - 1].x(), global_path_[(size_t)P_global_ - 1].y(),
+        global_path_[(size_t)P_global_ - 1].z());
     solver_->setX0(x0);
     solver_->setXf(xf);
 
@@ -631,12 +646,13 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
       }
     }
 
-    RCLCPP_INFO(get_logger(),
-                "Post-check (sampled @dc=%.3f): worst union violation = %.6f at t=%.3f (layer "
-                "n=%d, best_poly=%d) p=(%.3f,%.3f,%.3f). "
-                "Interpretation: <=0 means inside corridor union for that layer.",
-                dc_, worst, t_at_worst, n_at_worst, best_poly, p_at_worst.x(), p_at_worst.y(),
-                p_at_worst.z());
+    RCLCPP_INFO(
+        get_logger(),
+        "Post-check (sampled @dc=%.3f): worst union violation = %.6f at t=%.3f (layer "
+        "n=%d, best_poly=%d) p=(%.3f,%.3f,%.3f). "
+        "Interpretation: <=0 means inside corridor union for that layer.",
+        dc_, worst, t_at_worst, n_at_worst, best_poly, p_at_worst.x(), p_at_worst.y(),
+        p_at_worst.z());
   }
 
   void publishOnce_() {
@@ -660,10 +676,10 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     ma.markers.reserve(8 + obst_pos_.size());
 
     // Start / goal
-    ma.markers.push_back(makeSphere(frame_id_, 1, start_, 0.20, colorRGBA(0.0f, 1.0f, 0.0f, 1.0f),
-                                    "start_goal", stamp));
-    ma.markers.push_back(makeSphere(frame_id_, 2, goal_, 0.20, colorRGBA(1.0f, 0.0f, 0.0f, 1.0f),
-                                    "start_goal", stamp));
+    ma.markers.push_back(makeSphere(
+        frame_id_, 1, start_, 0.20, colorRGBA(0.0f, 1.0f, 0.0f, 1.0f), "start_goal", stamp));
+    ma.markers.push_back(makeSphere(
+        frame_id_, 2, goal_, 0.20, colorRGBA(1.0f, 0.0f, 0.0f, 1.0f), "start_goal", stamp));
 
     // Reachable set spheres for dynamic obstacles at time layer n_show
     // r = obst_max_vel * t_end[n]
@@ -673,14 +689,15 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
 
     for (size_t i = 0; i < obst_pos_.size(); ++i) {
       // Draw center (small)
-      ma.markers.push_back(makeSphere(frame_id_, 1000 + (int)i, obst_pos_[i], 0.16,
-                                      colorRGBA(1.0f, 0.6f, 0.0f, 1.0f), "dyn_obst_center", stamp));
+      ma.markers.push_back(makeSphere(
+          frame_id_, 1000 + (int)i, obst_pos_[i], 0.16, colorRGBA(1.0f, 0.6f, 0.0f, 1.0f),
+          "dyn_obst_center", stamp));
 
       // Draw reachable sphere (translucent)
       if (r > 1e-6) {
-        ma.markers.push_back(makeSphere(frame_id_, 2000 + (int)i, obst_pos_[i], diameter,
-                                        colorRGBA(1.0f, 0.6f, 0.0f, 0.12f), "dyn_obst_reachable",
-                                        stamp));
+        ma.markers.push_back(makeSphere(
+            frame_id_, 2000 + (int)i, obst_pos_[i], diameter, colorRGBA(1.0f, 0.6f, 0.0f, 0.12f),
+            "dyn_obst_reachable", stamp));
       }
     }
 
@@ -710,18 +727,20 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
 
     // Publish committed trajectory as colored LINE_LIST to /NX01/traj_committed_colored
 
-    auto traj_ma = stateVector2ColoredMarkerArray(goal_setpoints_,
-                                                  /*type*/ 0,
-                                                  /*max_value*/ par_.v_max, stamp, frame_id_);
+    auto traj_ma = stateVector2ColoredMarkerArray(
+        goal_setpoints_,
+        /*type*/ 0,
+        /*max_value*/ par_.v_max, stamp, frame_id_);
     pub_traj_colored_->publish(traj_ma);
 
     // Publish global path to /NX01/hgp_path_marker as thin line + dots
     visualization_msgs::msg::MarkerArray hgp_ma;
-    pathLineDotsToMarkerArray(global_path_, &hgp_ma, colorRGBA(0.0f, 1.0f, 0.0f, 1.0f),
-                              /*line_width*/ 0.03,
-                              /*dot_diameter*/ 0.06,
-                              /*base_id*/ 50000, frame_id_,
-                              /*lifetime_sec*/ 1.0, stamp);
+    pathLineDotsToMarkerArray(
+        global_path_, &hgp_ma, colorRGBA(0.0f, 1.0f, 0.0f, 1.0f),
+        /*line_width*/ 0.03,
+        /*dot_diameter*/ 0.06,
+        /*base_id*/ 50000, frame_id_,
+        /*lifetime_sec*/ 1.0, stamp);
 
     pub_hgp_path_->publish(hgp_ma);
   }

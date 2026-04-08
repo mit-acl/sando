@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -7,27 +7,25 @@
  * -------------------------------------------------------------------------- */
 
 #include <math.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-
-#include <Eigen/StdVector>
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <chrono>
 #include <mutex>
 #include <thread>
-
+#include <Eigen/StdVector>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include "rclcpp/callback_group.hpp"
+#include "rclcpp/executors/multi_threaded_executor.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "dynus_interfaces/msg/goal.hpp"
 #include "dynus_interfaces/msg/state.hpp"
 #include "gazebo_msgs/msg/entity_state.hpp"
 #include "gazebo_msgs/srv/set_entity_state.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "rclcpp/callback_group.hpp"
-#include "rclcpp/executors/multi_threaded_executor.hpp"
-#include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "visualization_msgs/msg/marker.hpp"
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 using namespace std::chrono_literals;
 
@@ -67,8 +65,8 @@ class FakeSim : public rclcpp::Node {
     base_frame_id_param_ = this->get_parameter("base_frame_id").as_string();
 
     // Print parameters
-    RCLCPP_INFO(this->get_logger(), "Start position: %f, %f, %f", start_pos[0], start_pos[1],
-                start_pos[2]);
+    RCLCPP_INFO(
+        this->get_logger(), "Start position: %f, %f, %f", start_pos[0], start_pos[1], start_pos[2]);
     RCLCPP_INFO(this->get_logger(), "Start yaw: %f", yaw);
     RCLCPP_INFO(this->get_logger(), "Send state to Gazebo: %d", send_state_to_gazebo_);
     RCLCPP_INFO(this->get_logger(), "Default goal z: %f", default_goal_z_);
@@ -123,8 +121,8 @@ class FakeSim : public rclcpp::Node {
     if (publish_odom_) {
       pub_odom_ = this->create_publisher<nav_msgs::msg::Odometry>(
           odom_topic_, rclcpp::QoS(10).reliable().durability_volatile());
-      RCLCPP_INFO(this->get_logger(), "Odometry publisher created on topic '%s'",
-                  odom_topic_.c_str());
+      RCLCPP_INFO(
+          this->get_logger(), "Odometry publisher created on topic '%s'", odom_topic_.c_str());
     }
 
     // Subscribers
@@ -134,17 +132,15 @@ class FakeSim : public rclcpp::Node {
     // Timer to simulate TF broadcast
     timer_ = this->create_wall_timer(10ms, std::bind(&FakeSim::pubCallback, this), cb_group_me_1_);
 
-    // Gazebo service client
-    gazebo_client_ =
-        this->create_client<gazebo_msgs::srv::SetEntityState>("/plug/set_entity_state");
+    // Gazebo service client (only when needed — actual sending starts in pubCallback
+    // after the initial sleep, giving spawn_entity.py time to create the entity)
     if (send_state_to_gazebo_) {
+      gazebo_client_ =
+          this->create_client<gazebo_msgs::srv::SetEntityState>("/plug/set_entity_state");
       while (!gazebo_client_->wait_for_service(10s)) {
         RCLCPP_INFO(this->get_logger(), "Gazebo service not available, waiting again...");
       }
     }
-
-    // Delay before sending the initial state to Gazebo
-    if (send_state_to_gazebo_) std::thread(&FakeSim::sendGazeboState, this).detach();
 
     // Flag to publish drone marker
     publish_marker_drone_ = (visual_level > 0);

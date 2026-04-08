@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,41 +8,22 @@
 
 #pragma once
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/time_synchronizer.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-
-#include <Eigen/Dense>
-#include <dynus_interfaces/msg/dyn_traj.hpp>
-#include <dynus_interfaces/msg/dyn_traj_array.hpp>
-#include <fstream>  // for flie operations
+// C++ standard library
+#include <algorithm>
+#include <fstream>
+#include <memory>
 #include <mutex>
-#include <sando/utils.hpp>
-#include <std_msgs/msg/empty.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <visualization_msgs/msg/marker.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
+#include <execution>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"  // for getting the package path
-#include "hgp/utils.hpp"
-#include "dynus_interfaces/msg/computation_times.hpp"
-#include "dynus_interfaces/msg/goal.hpp"
-#include "dynus_interfaces/msg/pn_adaptation.hpp"
-#include "dynus_interfaces/msg/state.hpp"
-#include "dynus_interfaces/msg/yaw_output.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "sando/sando.hpp"
-#include "sando/sando_type.hpp"
+// Eigen
+#include <Eigen/Dense>
 
+// PCL
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored \
-    "-Wdeprecated-declarations"  // pcl::SAC_SAMPLE_SIZE is protected since PCL 1.8.0 // NOLINT
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"  // pcl::SAC_SAMPLE_SIZE // NOLINT
 #include <pcl/sample_consensus/model_types.h>
 #pragma GCC diagnostic pop
 #include <pcl/filters/extract_indices.h>
@@ -50,34 +31,52 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
-#include <algorithm>
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <execution>
-#include <memory>
+// Third-party (TF2, message_filters, PCL conversions)
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/create_timer_ros.h>
+#include <tf2_ros/message_filter.h>
+#include <tf2_ros/transform_listener.h>
+
+// ROS 2 messages
+#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-#include <string>
+#include <std_msgs/msg/color_rgba.hpp>
+#include <std_msgs/msg/empty.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
-#include "message_filters/subscriber.h"
-#include "nav_msgs/msg/occupancy_grid.hpp"
-#include "pcl_conversions/pcl_conversions.h"
+// ROS 2 core
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "pcl_ros/transforms.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
-#include "std_msgs/msg/color_rgba.hpp"
 #include "std_srvs/srv/empty.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/create_timer_ros.h"
-#include "tf2_ros/message_filter.h"
-#include "tf2_ros/transform_listener.h"
-#include "visualization_msgs/msg/marker_array.hpp"
 
-// prefix
-using namespace std::chrono_literals;
+// Interface messages
+#include "dynus_interfaces/msg/computation_times.hpp"
+#include "dynus_interfaces/msg/dyn_traj.hpp"
+#include "dynus_interfaces/msg/dyn_traj_array.hpp"
+#include "dynus_interfaces/msg/goal.hpp"
+#include "dynus_interfaces/msg/pn_adaptation.hpp"
+#include "dynus_interfaces/msg/state.hpp"
+#include "dynus_interfaces/msg/yaw_output.hpp"
 
-// Define the synchronization policy
-typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::PointCloud2,
-                                                        sensor_msgs::msg::PointCloud2>
-    MySyncPolicy;
-typedef message_filters::Synchronizer<MySyncPolicy> Sync;
+// Project headers
+#include "hgp/utils.hpp"
+#include "sando/sando.hpp"
+#include "sando/sando_type.hpp"
+#include "sando/utils.hpp"
+
+// Synchronization policy for dual point cloud subscriptions
+using MySyncPolicy = message_filters::sync_policies::
+    ApproximateTime<sensor_msgs::msg::PointCloud2, sensor_msgs::msg::PointCloud2>;
+using Sync = message_filters::Synchronizer<MySyncPolicy>;
 
 // ROS2 component (run-time composition)
 // common practice is to use namespace for components
@@ -101,62 +100,111 @@ class SANDO_NODE : public rclcpp::Node {
 
  private:
   // Callbacks
+  /** @brief Runs the replanning pipeline on a timer and publishes results. */
   void replanCallback();
+  /** @brief Handles incoming dynamic trajectory messages from other agents. */
   void trajCallback(const dynus_interfaces::msg::DynTraj::SharedPtr msg);
+  /** @brief Handles incoming state messages and initializes the planner on first reception. */
   void stateCallback(const dynus_interfaces::msg::State::SharedPtr msg);
+  /** @brief Handles incoming terminal goal messages from the user or goal sender. */
   void terminalGoalCallback(const geometry_msgs::msg::PoseStamped& msg);
-  void mapCallback(const sensor_msgs::msg::PointCloud2::ConstPtr& pcl2ptr_map_ros,
-                   const sensor_msgs::msg::PointCloud2::ConstPtr& pcl2ptr_unk_ros);
+  /** @brief Handles synchronized occupied and unknown point cloud map updates. */
+  void mapCallback(
+      const sensor_msgs::msg::PointCloud2::ConstPtr& pcl2ptr_map_ros,
+      const sensor_msgs::msg::PointCloud2::ConstPtr& pcl2ptr_unk_ros);
+  /** @brief Handles occupancy map updates from the fake simulator. */
   void occupancyMapCallback(const sensor_msgs::msg::PointCloud2::ConstPtr& map_msg);
+  /** @brief Checks whether the robot has reached the terminal goal and publishes the event. */
   void goalReachedCheckCallback();
-  void convertDynTrajMsg2DynTraj(const dynus_interfaces::msg::DynTraj& msg,
-                                 std::shared_ptr<DynTraj>& traj, double current_time);
+  /** @brief Converts a DynTraj ROS message into an internal DynTraj representation. */
+  void convertDynTrajMsg2DynTraj(
+      const dynus_interfaces::msg::DynTraj& msg,
+      std::shared_ptr<DynTraj>& traj,
+      double current_time);
+  /** @brief Removes expired dynamic obstacle trajectories that are no longer relevant. */
   void cleanUpOldTrajsCallback();
+  /** @brief Retrieves the initial pose from TF on hardware startup. */
   void getInitialPoseHwCallback();
 
   // Others
+  /** @brief Declares all ROS 2 parameters with default values. */
   void declareParameters();
+  /** @brief Reads declared ROS 2 parameters and applies them to the internal config. */
   void setParameters();
+  /** @brief Logs all current parameter values for debugging. */
   void printParameters();
-  void createMarkerArrayFromVec_Vec3f(const vec_Vec3f& occupied_cells,
-                                      const std_msgs::msg::ColorRGBA& color, int namespace_id,
-                                      double scale,
-                                      visualization_msgs::msg::MarkerArray* marker_array);
+  /** @brief Creates a marker array from a vector of 3D points for RViz visualization. */
+  void createMarkerArrayFromVec_Vec3f(
+      const vec_Vec3f& occupied_cells,
+      const std_msgs::msg::ColorRGBA& color,
+      int namespace_id,
+      double scale,
+      visualization_msgs::msg::MarkerArray* marker_array);
+  /** @brief Clears a marker array by publishing delete-all markers. */
   void clearMarkerArray(
       visualization_msgs::msg::MarkerArray& path_marker,
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher);
+  /** @brief Runs the fake simulation loop for testing without Gazebo. */
   void runSim();
+  /** @brief Prints computation times for the latest replan cycle to the console. */
   void printComputationTime(bool result);
+  /** @brief Publishes computation times as a ROS message for external monitoring. */
   void publishComputationTimes(bool result);
+  /** @brief Records benchmark data for the current replan cycle. */
   void recordData(bool result);
+  /** @brief Writes accumulated benchmark data to a log file. */
   void logData();
+  /** @brief Resets all computation time accumulators to zero. */
   void setComputationTimesToZero();
+  /** @brief Constructs the field-of-view visualization marker from sensor parameters. */
   void constructFOVMarker();
+  /** @brief Retrieves planning results from the SANDO planner after a replan. */
   void retrieveData();
+  /** @brief Retrieves data needed for visualization and topic publishing after a replan. */
   void retrieveDataForVisualizationAndTopics();
 
   // Functions to publish
+  /** @brief Publishes the global path as a marker array for RViz. */
   void publishGlobalPath();
+  /** @brief Publishes the free (obstacle-cleared) portion of the global path. */
   void publishFreeGlobalPath();
+  /** @brief Publishes the convex decomposition polyhedra for corridor visualization. */
   void publishPoly();
+  /** @brief Publishes the committed and sub-optimal local trajectories. */
   void publishTraj();
+  /** @brief Publishes the robot's own trajectory for multi-agent coordination. */
   void publishOwnTraj();
+  /** @brief Publishes the actual trajectory history as a colored line strip. */
   void publishActualTraj();
-  void publishGoal();          // Publish the goal (trajectory points)
-  void publishPointG() const;  // Publish the point G (projected terminal goal)
-  void publishPointE() const;  // Publish the point E (Local trajectory's goal)
-  void publishPointA() const;  // Publish the point A (starting point)
+  /** @brief Publishes the goal setpoints along the planned trajectory. */
+  void publishGoal();
+  /** @brief Publishes point G, the projected terminal goal on the planning horizon. */
+  void publishPointG() const;
+  /** @brief Publishes point E, the local trajectory endpoint. */
+  void publishPointE() const;
+  /** @brief Publishes point A, the starting point for the current replan. */
+  void publishPointA() const;
+  /** @brief Publishes the current robot state as a point marker. */
   void publishCurrentState(const RobotState& state) const;
+  /** @brief Publishes a robot state as a PointStamped message on the given publisher. */
   void publishState(
       const RobotState& data,
       const rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr& publisher) const;
+  /** @brief Publishes the field-of-view visualization marker. */
   void publishFOV();
+  /** @brief Publishes the local trajectory control points for debugging. */
   void publisCps();
+  /** @brief Publishes static push point markers used for path deformation. */
   void publishStaticPushPoints();
+  /** @brief Publishes the local portion of the global path used for trajectory optimization. */
   void publishLocalGlobalPath();
+  /** @brief Publishes a text marker showing the current velocity at the robot's position. */
   void publishVelocityInText(const Eigen::Vector3d& position, double velocity);
+  /** @brief Publishes the dynamic obstacle heat map as a colored point cloud. */
   void publishDynamicHeatCloud();
+  /** @brief Publishes the occupied voxel map as a point cloud. */
   void publishOccupiedCloud();
+  /** @brief Publishes visualization markers for the hover avoidance maneuver. */
   void publishHoverAvoidanceViz();
 
   // Timers for callback
@@ -271,22 +319,23 @@ class SANDO_NODE : public rclcpp::Node {
   std::shared_ptr<SANDO> sando_ptr_;
 
   // Global Path Benchmarking
-  std::string file_path_;         // only for benchmarking
-  std::vector<std::tuple<bool,    // Result
-                         double,  // Cost
-                         double,  // Total replanning time
-                         double,  // Global planning time
-                         double,  // CVX decomposition time
-                         double,  // Local trajectory time
-                         double,  // Safe paths time
-                         double,  // Safety Check time
-                         double,  // Yaw sequence time
-                         double,  // Yaw fitting time
-                         double,  // Static JPS time in HGP
-                         double,  // Check path time in HGP
-                         double,  // Dynamic A* time in HGP
-                         double   // Recover path time in HGP
-                         >>
+  std::string file_path_;  // only for benchmarking
+  std::vector<std::tuple<
+      bool,    // Result
+      double,  // Cost
+      double,  // Total replanning time
+      double,  // Global planning time
+      double,  // CVX decomposition time
+      double,  // Local trajectory time
+      double,  // Safe paths time
+      double,  // Safety Check time
+      double,  // Yaw sequence time
+      double,  // Yaw fitting time
+      double,  // Static JPS time in HGP
+      double,  // Check path time in HGP
+      double,  // Dynamic A* time in HGP
+      double   // Recover path time in HGP
+      >>
       global_path_benchmark_;  // only for benchmarking
 
   // debug

@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2025, Kota Kondo, Aerospace Controls Laboratory
+ * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
  * Massachusetts Institute of Technology
  * All Rights Reserved
  * Authors: Kota Kondo, et al.
@@ -8,18 +8,18 @@
 
 #pragma once
 
-#include <Eigen/Dense>
 #include <cmath>
+#include <Eigen/Dense>
 #include <sando/sando.hpp>
-
+#include "rclcpp/rclcpp.hpp"
 #include "dynus_interfaces/msg/goal.hpp"
 #include "dynus_interfaces/msg/state.hpp"
 #include "geometry_msgs/msg/twist.hpp"
-#include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
 
-/** @brief ROS 2 node that converts SANDO goal setpoints into cmd_vel Twist messages for ground robots. */
+/** @brief ROS 2 node that converts SANDO goal setpoints into cmd_vel Twist messages for ground
+ * robots. */
 class GoalToCmdVel : public rclcpp::Node {
  public:
   /** @brief Construct the node, load control gains, and set up ROS interfaces. */
