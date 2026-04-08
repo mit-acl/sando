@@ -32,7 +32,7 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 **ResearchGate Paper:** [https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments](https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments)
 
 ```bibtex
-@article{kondo2025sando,
+@article{kondo2026sando,
       title={SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments},
       year={2026},
 }
@@ -42,8 +42,13 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 
 ```bash
 git clone --recursive https://github.com/mit-acl/sando.git && cd sando/docker
+# Place your Gurobi WLS license at docker/gurobi.lic before building.
+# Must be a WLS (Web License Service) license — other license types (named-user,
+# compute server) do not work inside Docker containers.
+# Free WLS Academic licenses: https://portal.gurobi.com/iam/licenses/request
+cp /path/to/your/gurobi.lic ./gurobi.lic
 make build                         # ~15 min first time
-make run-interactive               # click goals in RViz!
+make run-interactive               # click goals in RViz! (click "2D Nav Goal" in RViz toolbar and click in the map or you can hit "g" and click in the map)
 ```
 
 ## What You Can Do
@@ -78,13 +83,15 @@ python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/set
 ### Docker (Recommended)
 
 1. Install [Docker](https://docs.docker.com/engine/install/ubuntu/)
-2. Clone and build:
+2. Obtain a Gurobi **WLS** license (free [WLS Academic](https://portal.gurobi.com/iam/licenses/request) for academics). Other license types (named-user, compute server) do not work inside Docker.
+3. Clone and build:
    ```bash
    git clone --recursive https://github.com/mit-acl/sando.git
    cd sando/docker
+   cp /path/to/your/gurobi.lic ./gurobi.lic   # required - change the path to your WLS license file
    make build
    ```
-3. Run any simulation mode above
+4. Run any simulation mode above
 
 <details>
 <summary><b>Docker tips</b></summary>
