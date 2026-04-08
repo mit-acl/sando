@@ -25,7 +25,9 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 
 **Full video:** [https://youtu.be/_T10DJiLQXg](https://youtu.be/_T10DJiLQXg)
 
-**Paper:** []()
+**arXiv Paper:** Coming soon!
+
+**ResearchGate Paper:** [https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments](https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments)
 
 ```bibtex
 @article{kondo2025sando,
