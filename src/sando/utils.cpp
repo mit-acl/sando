@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -10,8 +10,8 @@
 
 namespace sando_utils {
 
-dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
-  dynus_interfaces::msg::PWPTraj pwp_msg;
+sando_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
+  sando_interfaces::msg::PWPTraj pwp_msg;
 
   for (int i = 0; i < pwp.times.size(); i++) {
     pwp_msg.times.push_back(pwp.times[i]);
@@ -19,7 +19,7 @@ dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
 
   // push x
   for (auto coeff_x_i : pwp.coeff_x) {
-    dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+    sando_interfaces::msg::CoeffPoly3 coeff_poly3;
     coeff_poly3.a = coeff_x_i(0);
     coeff_poly3.b = coeff_x_i(1);
     coeff_poly3.c = coeff_x_i(2);
@@ -29,7 +29,7 @@ dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
 
   // push y
   for (auto coeff_y_i : pwp.coeff_y) {
-    dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+    sando_interfaces::msg::CoeffPoly3 coeff_poly3;
     coeff_poly3.a = coeff_y_i(0);
     coeff_poly3.b = coeff_y_i(1);
     coeff_poly3.c = coeff_y_i(2);
@@ -39,7 +39,7 @@ dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
 
   // push z
   for (auto coeff_z_i : pwp.coeff_z) {
-    dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+    sando_interfaces::msg::CoeffPoly3 coeff_poly3;
     coeff_poly3.a = coeff_z_i(0);
     coeff_poly3.b = coeff_z_i(1);
     coeff_poly3.c = coeff_z_i(2);
@@ -50,7 +50,7 @@ dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp) {
   return pwp_msg;
 }
 
-PieceWisePol convertPwpMsg2Pwp(const dynus_interfaces::msg::PWPTraj& pwp_msg) {
+PieceWisePol convertPwpMsg2Pwp(const sando_interfaces::msg::PWPTraj& pwp_msg) {
   PieceWisePol pwp;
 
   if (pwp_msg.coeff_x.size() != pwp_msg.coeff_y.size() ||

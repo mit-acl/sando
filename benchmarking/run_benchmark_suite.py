@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -55,19 +55,19 @@ def get_benchmark_configs(
     ve_comparison=False,
     only_sando=False,
     only_sando_single=False,
-    safe_faster_only=False,
+    safe_baseline_only=False,
 ):
     """Get benchmark configurations based on mode
 
     Returns list of tuples: (use_single_threaded, planner_name, num_N_list, description, use_var_elim)
     """
-    if safe_faster_only:
+    if safe_baseline_only:
         return [
             (
                 True,
-                "safe_faster",
+                "safe_baseline",
                 [4, 5, 6],
-                "Safe FASTER single-threaded (N=4,5,6)",
+                "Safe BASELINE single-threaded (N=4,5,6)",
                 False,
             ),
         ]
@@ -115,9 +115,9 @@ def get_benchmark_configs(
             (True, "sando", [4, 5, 6], "SANDO2 single-threaded (N=4,5,6)", True),
             (
                 True,
-                "original_faster",
+                "original_baseline",
                 [4, 5, 6],
-                "FASTER (original) single-threaded (N=4,5,6)",
+                "BASELINE (original) single-threaded (N=4,5,6)",
                 False,
             ),
         ]
@@ -183,7 +183,7 @@ def run_benchmark(
     print("=" * 80)
 
     # Determine if this planner uses dynamic k-factor
-    use_dynamic_factor = planner_name in ("sando", "faster_star")
+    use_dynamic_factor = planner_name in ("sando", "baseline_star")
 
     # Choose factor ranges based on mode
     if factor_determination:
@@ -394,9 +394,9 @@ def main():
         help="Run only SANDO2 single-threaded benchmark",
     )
     parser.add_argument(
-        "--safe-faster-only",
+        "--safe-baseline-only",
         action="store_true",
-        help="Run only Safe FASTER single-threaded benchmark",
+        help="Run only Safe BASELINE single-threaded benchmark",
     )
     args = parser.parse_args()
 
@@ -407,7 +407,7 @@ def main():
             args.ve_comparison,
             args.only_sando,
             args.only_sando_single,
-            args.safe_faster_only,
+            args.safe_baseline_only,
         ]
     )
     if mode_count > 1:
@@ -424,8 +424,8 @@ def main():
         print("MODE: SANDO2 Only")
     elif args.only_sando_single:
         print("MODE: SANDO2 Single-Threaded Only")
-    elif args.safe_faster_only:
-        print("MODE: Safe FASTER Only")
+    elif args.safe_baseline_only:
+        print("MODE: Safe BASELINE Only")
     print("=" * 80)
     print(f"\nWorkspace: {WORKSPACE_DIR}")
 
@@ -434,7 +434,7 @@ def main():
         args.ve_comparison,
         args.only_sando,
         args.only_sando_single,
-        args.safe_faster_only,
+        args.safe_baseline_only,
     )
     print(f"Total configurations: {len(configs)}")
 

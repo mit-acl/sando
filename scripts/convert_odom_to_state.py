@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 # /* ----------------------------------------------------------------------------
-#  * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-#  * Massachusetts Institute of Technology
+#  * Copyright (c) Anonymous Author
+#  * Anonymous Institution
 #  * All Rights Reserved
-#  * Authors: Kota Kondo, et al.
+#  * Authors: Anonymous
 #  * See LICENSE file for the license information
 #  * -------------------------------------------------------------------------- */
 
@@ -13,7 +13,7 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header
 from geometry_msgs.msg import Vector3, Quaternion
-from dynus_interfaces.msg import State
+from sando_interfaces.msg import State
 
 
 class OdometryToStateNode(Node):
@@ -25,7 +25,7 @@ class OdometryToStateNode(Node):
             Odometry, "odom", self.callback, 10
         )
 
-        # Publisher for dynus_interfaces/State
+        # Publisher for sando_interfaces/State
         self.state_publisher = self.create_publisher(State, "state", 10)
 
     def callback(self, odom_msg):

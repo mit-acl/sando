@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -27,14 +27,14 @@ PoseTwistToStateNode::PoseTwistToStateNode() : Node("pose_twist_to_state_node") 
       &PoseTwistToStateNode::callback, this, std::placeholders::_1, std::placeholders::_2));
 
   // Publisher setup
-  pub_state_ = this->create_publisher<dynus_interfaces::msg::State>("state", 10);
+  pub_state_ = this->create_publisher<sando_interfaces::msg::State>("state", 10);
 }
 
 void PoseTwistToStateNode::callback(
     const std::shared_ptr<const geometry_msgs::msg::PoseStamped>& pose_msg,
     const std::shared_ptr<const geometry_msgs::msg::TwistStamped>& twist_msg) {
   // Construct the State message
-  auto state_msg = dynus_interfaces::msg::State();
+  auto state_msg = sando_interfaces::msg::State();
   state_msg.header.stamp = this->get_clock()->now();
   state_msg.header.frame_id = pose_msg->header.frame_id;
 

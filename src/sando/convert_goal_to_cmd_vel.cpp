@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -70,9 +70,9 @@ GoalToCmdVel::GoalToCmdVel()
 
   // Publishers and Subscribers
   pub_cmd_vel_ = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_name, 10);
-  sub_goal_ = this->create_subscription<dynus_interfaces::msg::Goal>(
+  sub_goal_ = this->create_subscription<sando_interfaces::msg::Goal>(
       "goal", 10, std::bind(&GoalToCmdVel::goalCallback, this, std::placeholders::_1));
-  sub_state_ = this->create_subscription<dynus_interfaces::msg::State>(
+  sub_state_ = this->create_subscription<sando_interfaces::msg::State>(
       "state", 10, std::bind(&GoalToCmdVel::stateCallback, this, std::placeholders::_1));
 
   // Timers
@@ -80,7 +80,7 @@ GoalToCmdVel::GoalToCmdVel()
       std::chrono::milliseconds(10), std::bind(&GoalToCmdVel::cmdVelCallback, this));
 }
 
-void GoalToCmdVel::stateCallback(const dynus_interfaces::msg::State::SharedPtr msg) {
+void GoalToCmdVel::stateCallback(const sando_interfaces::msg::State::SharedPtr msg) {
   state_ = *msg;
 
   tf2::Quaternion quat(state_.quat.x, state_.quat.y, state_.quat.z, state_.quat.w);
@@ -89,7 +89,7 @@ void GoalToCmdVel::stateCallback(const dynus_interfaces::msg::State::SharedPtr m
   state_initialized_ = true;
 }
 
-void GoalToCmdVel::goalCallback(const dynus_interfaces::msg::Goal::SharedPtr msg) {
+void GoalToCmdVel::goalCallback(const sando_interfaces::msg::Goal::SharedPtr msg) {
   goal_ = *msg;
   goal_initialized_ = true;
 }

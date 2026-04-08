@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -59,13 +59,13 @@
 #include "std_srvs/srv/empty.hpp"
 
 // Interface messages
-#include "dynus_interfaces/msg/computation_times.hpp"
-#include "dynus_interfaces/msg/dyn_traj.hpp"
-#include "dynus_interfaces/msg/dyn_traj_array.hpp"
-#include "dynus_interfaces/msg/goal.hpp"
-#include "dynus_interfaces/msg/pn_adaptation.hpp"
-#include "dynus_interfaces/msg/state.hpp"
-#include "dynus_interfaces/msg/yaw_output.hpp"
+#include "sando_interfaces/msg/computation_times.hpp"
+#include "sando_interfaces/msg/dyn_traj.hpp"
+#include "sando_interfaces/msg/dyn_traj_array.hpp"
+#include "sando_interfaces/msg/goal.hpp"
+#include "sando_interfaces/msg/pn_adaptation.hpp"
+#include "sando_interfaces/msg/state.hpp"
+#include "sando_interfaces/msg/yaw_output.hpp"
 
 // Project headers
 #include "hgp/utils.hpp"
@@ -103,9 +103,9 @@ class SANDO_NODE : public rclcpp::Node {
   /** @brief Runs the replanning pipeline on a timer and publishes results. */
   void replanCallback();
   /** @brief Handles incoming dynamic trajectory messages from other agents. */
-  void trajCallback(const dynus_interfaces::msg::DynTraj::SharedPtr msg);
+  void trajCallback(const sando_interfaces::msg::DynTraj::SharedPtr msg);
   /** @brief Handles incoming state messages and initializes the planner on first reception. */
-  void stateCallback(const dynus_interfaces::msg::State::SharedPtr msg);
+  void stateCallback(const sando_interfaces::msg::State::SharedPtr msg);
   /** @brief Handles incoming terminal goal messages from the user or goal sender. */
   void terminalGoalCallback(const geometry_msgs::msg::PoseStamped& msg);
   /** @brief Handles synchronized occupied and unknown point cloud map updates. */
@@ -118,7 +118,7 @@ class SANDO_NODE : public rclcpp::Node {
   void goalReachedCheckCallback();
   /** @brief Converts a DynTraj ROS message into an internal DynTraj representation. */
   void convertDynTrajMsg2DynTraj(
-      const dynus_interfaces::msg::DynTraj& msg,
+      const sando_interfaces::msg::DynTraj& msg,
       std::shared_ptr<DynTraj>& traj,
       double current_time);
   /** @brief Removes expired dynamic obstacle trajectories that are no longer relevant. */
@@ -259,8 +259,8 @@ class SANDO_NODE : public rclcpp::Node {
   rclcpp::Publisher<decomp_ros_msgs::msg::PolyhedronArray>::SharedPtr pub_poly_safe_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_traj_committed_colored_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_traj_subopt_colored_;
-  rclcpp::Publisher<dynus_interfaces::msg::DynTraj>::SharedPtr pub_own_traj_;
-  rclcpp::Publisher<dynus_interfaces::msg::Goal>::SharedPtr pub_goal_;
+  rclcpp::Publisher<sando_interfaces::msg::DynTraj>::SharedPtr pub_own_traj_;
+  rclcpp::Publisher<sando_interfaces::msg::Goal>::SharedPtr pub_goal_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pub_point_G_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pub_point_E_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pub_point_G_term_;
@@ -269,7 +269,7 @@ class SANDO_NODE : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pub_goal_reached_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pub_setpoint_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_actual_traj_;
-  rclcpp::Publisher<dynus_interfaces::msg::YawOutput>::SharedPtr pub_yaw_output_;
+  rclcpp::Publisher<sando_interfaces::msg::YawOutput>::SharedPtr pub_yaw_output_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_fov_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_cp_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_static_push_points_;
@@ -278,12 +278,12 @@ class SANDO_NODE : public rclcpp::Node {
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_dynamic_heat_cloud_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_occupied_cloud_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_hover_avoidance_viz_;
-  rclcpp::Publisher<dynus_interfaces::msg::ComputationTimes>::SharedPtr pub_computation_times_;
+  rclcpp::Publisher<sando_interfaces::msg::ComputationTimes>::SharedPtr pub_computation_times_;
 
   // Subscribers
-  rclcpp::Subscription<dynus_interfaces::msg::DynTraj>::SharedPtr sub_traj_;
-  rclcpp::Subscription<dynus_interfaces::msg::DynTraj>::SharedPtr sub_predicted_traj_;
-  rclcpp::Subscription<dynus_interfaces::msg::State>::SharedPtr sub_state_;
+  rclcpp::Subscription<sando_interfaces::msg::DynTraj>::SharedPtr sub_traj_;
+  rclcpp::Subscription<sando_interfaces::msg::DynTraj>::SharedPtr sub_predicted_traj_;
+  rclcpp::Subscription<sando_interfaces::msg::State>::SharedPtr sub_state_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_terminal_goal_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_fake_sim_occupancy_map_;
 

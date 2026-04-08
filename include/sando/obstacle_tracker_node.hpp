@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -19,7 +19,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-#include <dynus_interfaces/msg/dyn_traj.hpp>
+#include <sando_interfaces/msg/dyn_traj.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <sando/sando_type.hpp>
@@ -126,7 +126,7 @@ class ObstacleTrackerNode : public rclcpp::Node {
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_pointcloud_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_bboxes_;
-  rclcpp::Publisher<dynus_interfaces::msg::DynTraj>::SharedPtr pub_predicted_traj_;
+  rclcpp::Publisher<sando_interfaces::msg::DynTraj>::SharedPtr pub_predicted_traj_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_unc_sphere_;
 
   // EKF states for multiple objects

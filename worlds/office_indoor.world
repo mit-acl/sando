@@ -96,7 +96,7 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <model name='ACL_office_centered'>
+    <model name='office_indoor_centered'>
       <pose>8.45773 -9.64315 0 0 -0 0</pose>
       <link name='Wall_0'>
         <pose>-15.6747 10.5251 0 0 -0 1.5708</pose>
@@ -22574,7 +22574,7 @@
       <real_time>67 423507813</real_time>
       <wall_time>1670750966 132648552</wall_time>
       <iterations>67279</iterations>
-      <model name='ACL_office_centered'>
+      <model name='office_indoor_centered'>
         <pose>8.45773 -9.64315 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='Wall_0'>

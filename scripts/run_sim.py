@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -11,7 +11,7 @@ SANDO Simulation Launcher
 
 This script provides a unified interface to launch SANDO simulations in three modes:
 1. Multi-agent simulation with fake sensing (multiagent)
-2. Single-agent simulation with Gazebo and ACL mapper (gazebo)
+2. Single-agent simulation with Gazebo and anonymized mapper (gazebo)
 3. Single-agent RViz-only simulation with dynamic obstacles (rviz-only) - LIGHTWEIGHT!
 
 Usage:
@@ -429,7 +429,7 @@ def generate_gazebo_dynamic_yaml(
 ) -> str:
     """Generate YAML for Gazebo + dynamic obstacles (unknown environment).
 
-    Static obstacles come from the Gazebo world file (pointcloud via ACL mapper).
+    Static obstacles come from the Gazebo world file (pointcloud via anonymized mapper).
 
     When ground truth is disabled (publish_trajs=False):
       - A WorldPlugin spawns + moves ALL obstacles in Gazebo from a single plugin
@@ -548,7 +548,7 @@ def generate_gazebo_dynamic_yaml(
     # Common panes for both modes
     panes.extend(
         [
-            # ACL mapper
+            # anonymized mapper
             {
                 "shell_command": [
                     "sleep 10",
@@ -866,7 +866,7 @@ def generate_gazebo_yaml(
         }
     ]
 
-    # ACL mapper (optional)
+    # anonymized mapper (optional)
     if use_mapper:
         static_envs = {"easy_forest", "medium_forest", "hard_forest"}
         param_file = (
@@ -1487,7 +1487,7 @@ def main():
     )
 
     parser.add_argument(
-        "--no-mapper", action="store_true", help="Disable ACL mapper in gazebo mode"
+        "--no-mapper", action="store_true", help="Disable anonymized mapper in gazebo mode"
     )
 
     parser.add_argument(
@@ -1813,7 +1813,7 @@ def main():
         num_stat = args.num_obstacles - num_dyn
         print("[INFO] Mode: Gazebo + dynamic obstacles (unknown environment)")
         print(f"[INFO] Depth sensor: {'D435' if args.d435 else 'mid360 lidar'}")
-        print(f"[INFO] Static world: {args.env} (pointcloud + ACL mapper)")
+        print(f"[INFO] Static world: {args.env} (pointcloud + anonymized mapper)")
         print(
             f"[INFO] Obstacles: {args.num_obstacles} total ({num_dyn} dynamic, {num_stat} static)"
         )

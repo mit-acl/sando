@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -1411,7 +1411,7 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             double poll_success_ms = 0.0;
             bool poll_first_logged = false;
 
-            if (planner_name_ == "sando" || planner_name_ == "faster_star") {
+            if (planner_name_ == "sando" || planner_name_ == "baseline_star") {
               // Iterate futures sequentially (lowest factor first).
               // On first success, stop all other solvers, then drain remaining futures.
               // This matches the sando.cpp live-planner pattern.

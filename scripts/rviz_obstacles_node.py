@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
-RViz-only Dynamic Obstacles Node (inspired by MADER's dynamic_corridor.py)
+RViz-only Dynamic Obstacles Node (inspired by [prior work]'s dynamic_corridor.py)
 
 This node creates dynamic and static obstacles that:
 1. Publish trajectory information to /trajs (for planner collision avoidance)
@@ -29,7 +29,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 import random
 import math
 
-from dynus_interfaces.msg import DynTraj
+from sando_interfaces.msg import DynTraj
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA

@@ -447,7 +447,7 @@ class SpatioTemporalSFC(ThreeDScene):
             run_time=0.6,
             rate_func=smooth,
         )
-        # Faster rotation
+        # Baseline rotation
         self.begin_ambient_camera_rotation(rate=0.15)
 
         # Re-add "Temporal View" after 3D transition is complete

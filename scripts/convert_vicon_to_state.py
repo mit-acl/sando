@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 # /* ----------------------------------------------------------------------------
-#  * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-#  * Massachusetts Institute of Technology
+#  * Copyright (c) Anonymous Author
+#  * Anonymous Institution
 #  * All Rights Reserved
-#  * Authors: Kota Kondo, et al.
+#  * Authors: Anonymous
 #  * See LICENSE file for the license information
 #  * -------------------------------------------------------------------------- */
 
@@ -12,7 +12,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, TwistStamped, Vector3, Quaternion
 from std_msgs.msg import Header
-from dynus_interfaces.msg import State
+from sando_interfaces.msg import State
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 

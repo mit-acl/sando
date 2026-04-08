@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -357,8 +357,8 @@ def process_bag(bag_path, args):
     comp_topic = f"{ns}/computation_times"
 
     topic_type_pairs = [
-        (goal_topic, "dynus_interfaces/msg/Goal"),
-        (comp_topic, "dynus_interfaces/msg/ComputationTimes"),
+        (goal_topic, "sando_interfaces/msg/Goal"),
+        (comp_topic, "sando_interfaces/msg/ComputationTimes"),
     ]
 
     data = read_bag_topics(bag_path, topic_type_pairs)
@@ -481,7 +481,7 @@ def load_comp_stats_from_csv(csv_path):
 def compute_comp_stats_from_bag(bag_path, ns):
     """Read computation_times from bag and compute stats."""
     comp_topic = f"{ns}/computation_times"
-    topic_type_pairs = [(comp_topic, "dynus_interfaces/msg/ComputationTimes")]
+    topic_type_pairs = [(comp_topic, "sando_interfaces/msg/ComputationTimes")]
     data = read_bag_topics(bag_path, topic_type_pairs)
     comp_msgs = data[comp_topic]
     if comp_msgs:
@@ -578,7 +578,7 @@ def save_table(table_str, table_output):
 def extract_goal_arrays(bag_path, ns):
     """Extract time, position, velocity, acceleration, jerk arrays from goal messages."""
     goal_topic = f"{ns}/goal"
-    topic_type_pairs = [(goal_topic, "dynus_interfaces/msg/Goal")]
+    topic_type_pairs = [(goal_topic, "sando_interfaces/msg/Goal")]
     data = read_bag_topics(bag_path, topic_type_pairs)
     goal_msgs = data[goal_topic]
 

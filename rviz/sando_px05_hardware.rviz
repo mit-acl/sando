@@ -8,7 +8,7 @@ Panels:
         - /Common1
         - /Common1/TF1/Frames1
         - /PX051
-        - /PX051/Planning1/PX05 DGP path1/Topic1
+        - /PX051/Planning1/PX05 Global path1/Topic1
         - /PX051/Mapping1
         - /PX051/Mapping1/PX05 Static Grid1/Topic1
         - /PX051/Others1
@@ -90,7 +90,7 @@ Visualization Manager:
           Displays:
             - Class: rviz_default_plugins/MarkerArray
               Enabled: false
-              Name: PX05 DGP path
+              Name: PX05 Global path
               Namespaces:
                 {}
               Topic:
@@ -102,7 +102,7 @@ Visualization Manager:
               Value: false
             - Class: rviz_default_plugins/MarkerArray
               Enabled: true
-              Name: PX05 DGP Free Path
+              Name: PX05 Global Free Path
               Namespaces:
                 {}
               Topic:

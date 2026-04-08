@@ -183,7 +183,7 @@ Visualization Manager:
           Displays:
             - Class: rviz_default_plugins/MarkerArray
               Enabled: true
-              Name: PX01 DGP path
+              Name: PX01 Global path
               Namespaces:
                 {}
               Topic:
@@ -195,7 +195,7 @@ Visualization Manager:
               Value: true
             - Class: rviz_default_plugins/MarkerArray
               Enabled: true
-              Name: PX01 DGP Free Path
+              Name: PX01 Global Free Path
               Namespaces:
                 {}
               Topic:

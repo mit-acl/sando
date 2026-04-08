@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -50,7 +50,7 @@ class SolverGurobi {
   SolverGurobi();
   ~SolverGurobi();
 
-  /** @brief Set the planner name to select the formulation (e.g., "SANDO" or "FASTER").
+  /** @brief Set the planner name to select the formulation (e.g., "SANDO" or "BASELINE").
    *  @param name Planner identifier string.
    */
   void setPlannerName(const std::string& name);
@@ -512,14 +512,14 @@ class SolverGurobi {
   MyCallback cb_;
 
  protected:
-  std::string planner_name_{"SANDO"};               // "SANDO" or "FASTER"
-  std::vector<std::vector<GRBVar>> x_faster_vars_;  // [axis][4*N] coefficient vars for FASTER
-  bool usingFaster_() const;
-  void createVarsFaster_();
-  void setXFaster_();
-  void getCoefficientsDoubleFaster_();
-  void setDynamicConstraintsFaster_();
-  void setDynamicConstraintsSafeFaster_();
+  std::string planner_name_{"SANDO"};               // "SANDO" or "BASELINE"
+  std::vector<std::vector<GRBVar>> x_baseline_vars_;  // [axis][4*N] coefficient vars for BASELINE
+  bool usingBaseline_() const;
+  void createVarsBaseline_();
+  void setXBaseline_();
+  void getCoefficientsDoubleBaseline_();
+  void setDynamicConstraintsBaseline_();
+  void setDynamicConstraintsSafeBaseline_();
   const LinearConstraint3D& polyAt_(int t, int p) const;
   bool hasPolytopes_() const;
   int numSpatialPolys_() const;

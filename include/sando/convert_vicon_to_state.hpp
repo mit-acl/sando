@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -10,7 +10,7 @@
 
 #include <sando/sando.hpp>
 #include "rclcpp/rclcpp.hpp"
-#include "dynus_interfaces/msg/state.hpp"
+#include "sando_interfaces/msg/state.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
@@ -31,7 +31,7 @@ typedef message_filters::sync_policies::
 typedef message_filters::Synchronizer<MySyncPolicy> Sync;
 
 /** @brief ROS 2 node that fuses time-synchronized PoseStamped and TwistStamped into a
- * dynus_interfaces/State. */
+ * sando_interfaces/State. */
 class PoseTwistToStateNode : public rclcpp::Node {
  public:
   /** @brief Construct the node with synchronized pose/twist subscribers and a state publisher. */
@@ -50,5 +50,5 @@ class PoseTwistToStateNode : public rclcpp::Node {
   std::shared_ptr<Sync> pose_twist_sync_;
 
   // Publisher
-  rclcpp::Publisher<dynus_interfaces::msg::State>::SharedPtr pub_state_;
+  rclcpp::Publisher<sando_interfaces::msg::State>::SharedPtr pub_state_;
 };

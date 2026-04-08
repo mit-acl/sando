@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -13,13 +13,13 @@ OdometryToStateNode::OdometryToStateNode() : Node("odometry_to_state_node") {
   odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "odom", 10, std::bind(&OdometryToStateNode::callback, this, std::placeholders::_1));
 
-  // Publisher for dynus_interfaces/State
-  state_publisher_ = this->create_publisher<dynus_interfaces::msg::State>("state", 10);
+  // Publisher for sando_interfaces/State
+  state_publisher_ = this->create_publisher<sando_interfaces::msg::State>("state", 10);
 }
 
 void OdometryToStateNode::callback(const nav_msgs::msg::Odometry::SharedPtr odom_msg) {
   // Construct the State message
-  auto state_msg = dynus_interfaces::msg::State();
+  auto state_msg = sando_interfaces::msg::State();
   state_msg.header.stamp = odom_msg->header.stamp;
   state_msg.header.frame_id = odom_msg->header.frame_id;
 

@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -113,7 +113,7 @@ ObstacleTrackerNode::ObstacleTrackerNode() : Node("obstacle_tracker_node") {
 
   // Publish predicted trajectory
   pub_predicted_traj_ =
-      this->create_publisher<dynus_interfaces::msg::DynTraj>("predicted_trajs", 10);
+      this->create_publisher<sando_interfaces::msg::DynTraj>("predicted_trajs", 10);
 
   // Initialize the tf2 buffer and listener
   tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -593,7 +593,7 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster>& cluster
     Eigen::VectorXd beta_z_quintic = polyfit(t_values, z_values, degree_for_poly_);
 
     // Publish DynTraj message with the predicted trajectory
-    dynus_interfaces::msg::DynTraj msg;
+    sando_interfaces::msg::DynTraj msg;
     msg.header.stamp = this->now();
     msg.header.frame_id = frame_id_;
     msg.id = clusters[i].ekf_state.id;

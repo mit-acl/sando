@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -123,25 +123,25 @@ SANDO_NODE::SANDO_NODE() : Node("sando_node") {
   pub_hover_avoidance_viz_ =
       this->create_publisher<visualization_msgs::msg::MarkerArray>("hover_avoidance_viz", 10);
   pub_computation_times_ =
-      this->create_publisher<dynus_interfaces::msg::ComputationTimes>("computation_times", 10);
+      this->create_publisher<sando_interfaces::msg::ComputationTimes>("computation_times", 10);
 
   // Debug publishers
-  pub_yaw_output_ = this->create_publisher<dynus_interfaces::msg::YawOutput>("yaw_output", 10);
+  pub_yaw_output_ = this->create_publisher<sando_interfaces::msg::YawOutput>("yaw_output", 10);
 
   // Essential publishers
-  pub_own_traj_ = this->create_publisher<dynus_interfaces::msg::DynTraj>("/trajs", critical_qos);
-  pub_goal_ = this->create_publisher<dynus_interfaces::msg::Goal>("goal", critical_qos);
+  pub_own_traj_ = this->create_publisher<sando_interfaces::msg::DynTraj>("/trajs", critical_qos);
+  pub_goal_ = this->create_publisher<sando_interfaces::msg::Goal>("goal", critical_qos);
   pub_goal_reached_ = this->create_publisher<std_msgs::msg::Empty>("goal_reached", critical_qos);
 
   // Subscribers
   if (!par_.ignore_other_trajs)
-    sub_traj_ = this->create_subscription<dynus_interfaces::msg::DynTraj>(
+    sub_traj_ = this->create_subscription<sando_interfaces::msg::DynTraj>(
         "/trajs", critical_qos, std::bind(&SANDO_NODE::trajCallback, this, std::placeholders::_1),
         options_re_1);
-  sub_predicted_traj_ = this->create_subscription<dynus_interfaces::msg::DynTraj>(
+  sub_predicted_traj_ = this->create_subscription<sando_interfaces::msg::DynTraj>(
       "predicted_trajs", critical_qos,
       std::bind(&SANDO_NODE::trajCallback, this, std::placeholders::_1), options_re_1);
-  sub_state_ = this->create_subscription<dynus_interfaces::msg::State>(
+  sub_state_ = this->create_subscription<sando_interfaces::msg::State>(
       "state", critical_qos, std::bind(&SANDO_NODE::stateCallback, this, std::placeholders::_1),
       options_re_1);
   sub_terminal_goal_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
@@ -787,7 +787,7 @@ void SANDO_NODE::cleanUpOldTrajsCallback() {
 
 // ----------------------------------------------------------------------------
 
-void SANDO_NODE::trajCallback(const dynus_interfaces::msg::DynTraj::SharedPtr msg) {
+void SANDO_NODE::trajCallback(const sando_interfaces::msg::DynTraj::SharedPtr msg) {
   // Filter out its own traj
   if (msg->id == id_) return;
 
@@ -804,7 +804,7 @@ void SANDO_NODE::trajCallback(const dynus_interfaces::msg::DynTraj::SharedPtr ms
 
 // ----------------------------------------------------------------------------
 
-void SANDO_NODE::stateCallback(const dynus_interfaces::msg::State::SharedPtr msg) {
+void SANDO_NODE::stateCallback(const sando_interfaces::msg::State::SharedPtr msg) {
   if (par_.use_state_update) {
     RobotState current_state;
     current_state.setPos(msg->pos.x, msg->pos.y, msg->pos.z);
@@ -1026,7 +1026,7 @@ void SANDO_NODE::getInitialPoseHwCallback() {
 // ----------------------------------------------------------------------------
 
 void SANDO_NODE::convertDynTrajMsg2DynTraj(
-    const dynus_interfaces::msg::DynTraj& msg,
+    const sando_interfaces::msg::DynTraj& msg,
     std::shared_ptr<DynTraj>& traj,
     double current_time) {
   // Inflate bbox using drone_bbox
@@ -1276,7 +1276,7 @@ void SANDO_NODE::printComputationTime(bool result) {
 // ----------------------------------------------------------------------------
 
 void SANDO_NODE::publishComputationTimes(bool result) {
-  dynus_interfaces::msg::ComputationTimes msg;
+  sando_interfaces::msg::ComputationTimes msg;
   msg.header.stamp = this->now();
   msg.result = result;
   msg.successful_factor = successful_factor_;
@@ -1393,7 +1393,7 @@ void SANDO_NODE::publishOwnTraj() {
   sando_ptr_->getPieceWisePol(pwp_to_share_);
 
   // Create the message
-  dynus_interfaces::msg::DynTraj msg;
+  sando_interfaces::msg::DynTraj msg;
   msg.header.stamp = this->now();
   msg.header.frame_id = viz_frame_;
   msg.bbox.push_back(par_.drone_bbox[0]);
@@ -1524,7 +1524,7 @@ void SANDO_NODE::publishGoal() {
   // Get the next goal
   if (sando_ptr_->getNextGoal(next_goal) && par_.use_state_update) {
     // Publish the goal (actual setpoint)
-    dynus_interfaces::msg::Goal quadGoal;
+    sando_interfaces::msg::Goal quadGoal;
     quadGoal.header.stamp = this->now();
     quadGoal.header.frame_id = viz_frame_;
     quadGoal.p = eigen2rosvector(next_goal.pos);

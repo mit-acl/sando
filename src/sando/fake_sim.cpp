@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -16,8 +16,8 @@
 #include "rclcpp/callback_group.hpp"
 #include "rclcpp/executors/multi_threaded_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "dynus_interfaces/msg/goal.hpp"
-#include "dynus_interfaces/msg/state.hpp"
+#include "sando_interfaces/msg/goal.hpp"
+#include "sando_interfaces/msg/state.hpp"
 #include "gazebo_msgs/msg/entity_state.hpp"
 #include "gazebo_msgs/srv/set_entity_state.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -77,7 +77,7 @@ class FakeSim : public rclcpp::Node {
     RCLCPP_INFO(this->get_logger(), "Base frame param: %s", base_frame_id_param_.c_str());
 
     // Initialize state
-    state_ = dynus_interfaces::msg::State();
+    state_ = sando_interfaces::msg::State();
     state_.header.frame_id = "map";
     state_.pos.x = start_pos[0];
     state_.pos.y = start_pos[1];
@@ -111,7 +111,7 @@ class FakeSim : public rclcpp::Node {
     t_.child_frame_id = target_frame_;
 
     // Publishers
-    pub_state_ = this->create_publisher<dynus_interfaces::msg::State>(
+    pub_state_ = this->create_publisher<sando_interfaces::msg::State>(
         "state", rclcpp::QoS(10).reliable().durability_volatile());
 
     pub_marker_drone_ = this->create_publisher<visualization_msgs::msg::Marker>(
@@ -126,7 +126,7 @@ class FakeSim : public rclcpp::Node {
     }
 
     // Subscribers
-    sub_goal_ = this->create_subscription<dynus_interfaces::msg::Goal>(
+    sub_goal_ = this->create_subscription<sando_interfaces::msg::Goal>(
         "goal", 10, std::bind(&FakeSim::goalCallback, this, std::placeholders::_1));
 
     // Timer to simulate TF broadcast
@@ -169,15 +169,15 @@ class FakeSim : public rclcpp::Node {
   rclcpp::CallbackGroup::SharedPtr cb_group_me_1_;
   rclcpp::CallbackGroup::SharedPtr cb_group_re_1_;
 
-  rclcpp::Publisher<dynus_interfaces::msg::State>::SharedPtr pub_state_;
+  rclcpp::Publisher<sando_interfaces::msg::State>::SharedPtr pub_state_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_marker_drone_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
 
-  rclcpp::Subscription<dynus_interfaces::msg::Goal>::SharedPtr sub_goal_;
+  rclcpp::Subscription<sando_interfaces::msg::Goal>::SharedPtr sub_goal_;
   rclcpp::Client<gazebo_msgs::srv::SetEntityState>::SharedPtr gazebo_client_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  dynus_interfaces::msg::State state_;
+  sando_interfaces::msg::State state_;
   bool publish_marker_drone_{false};
   bool send_state_to_gazebo_{true};
 
@@ -231,7 +231,7 @@ class FakeSim : public rclcpp::Node {
     }
   }
 
-  void goalCallback(const dynus_interfaces::msg::Goal::SharedPtr data) {
+  void goalCallback(const sando_interfaces::msg::Goal::SharedPtr data) {
     // Hopf fibration approach
     Eigen::Vector3d thrust;
     thrust << data->a.x, data->a.y, data->a.z + 9.81;
@@ -347,7 +347,7 @@ class FakeSim : public rclcpp::Node {
     odom.pose.pose.orientation.z = state_.quat.z;
     odom.pose.pose.orientation.w = state_.quat.w;
 
-    // Twist from state_ (if your dynus_interfaces::msg::State vel is in map/world frame,
+    // Twist from state_ (if your sando_interfaces::msg::State vel is in map/world frame,
     // then this is consistent with header.frame_id = odom_frame_id_. If it's body-frame,
     // you may want to rotate it.)
     odom.twist.twist.linear.x = state_.vel.x;

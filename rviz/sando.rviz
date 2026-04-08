@@ -231,7 +231,7 @@ Visualization Manager:
               Value: true
             - Class: rviz_default_plugins/MarkerArray
               Enabled: true
-              Name: NX01 DGP path
+              Name: NX01 Global path
               Namespaces:
                 {}
               Topic:
@@ -456,7 +456,7 @@ Visualization Manager:
               Max Intensity: 4096
               Min Color: 0; 0; 0
               Min Intensity: 0
-              Name: NX01 ACL Map Occupied
+              Name: NX01 Map Occupied
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3
@@ -490,7 +490,7 @@ Visualization Manager:
               Max Intensity: 4096
               Min Color: 0; 0; 0
               Min Intensity: 0
-              Name: NX01 ACL Map Free
+              Name: NX01 Map Free
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3
@@ -524,7 +524,7 @@ Visualization Manager:
               Max Intensity: 4096
               Min Color: 0; 0; 0
               Min Intensity: 0
-              Name: NX01 ACL Map Unknown
+              Name: NX01 Map Unknown
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3
@@ -558,7 +558,7 @@ Visualization Manager:
               Max Intensity: 4096
               Min Color: 0; 0; 0
               Min Intensity: 0
-              Name: NX01 ACL Map Dynamic
+              Name: NX01 Map Dynamic
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3

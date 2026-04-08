@@ -1,6 +1,6 @@
 FROM ros:humble
 
-LABEL Maintainer="Kota Kondo <kkondo@mit.edu>" \
+LABEL Maintainer="Anonymous" \
       Description="Ubuntu 22.04, ROS2 Humble for SANDO"
 
 ENV ROS_DISTRO=humble
@@ -47,7 +47,7 @@ ENV LIVOX_WS=/root/livox_ws
 RUN mkdir -p ${SANDO_WS}/src
 WORKDIR ${SANDO_WS}/src
 ARG DUMMY=unknown
-RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
+RUN DUMMY=${DUMMY} git clone --recursive <ANONYMIZED_REPO_URL>
 
 # Symlink deps for colcon package discovery (skip Livox-SDK2 and livox_ros_driver2 — built separately)
 WORKDIR ${SANDO_WS}/src

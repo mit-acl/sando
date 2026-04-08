@@ -1,14 +1,14 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
 #pragma once
 
-#include <dynus_interfaces/msg/state.hpp>
+#include <sando_interfaces/msg/state.hpp>
 #include "sando/sando.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
@@ -16,7 +16,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "std_msgs/msg/header.hpp"
 
-/** @brief ROS 2 node that converts nav_msgs/Odometry messages into dynus_interfaces/State messages.
+/** @brief ROS 2 node that converts nav_msgs/Odometry messages into sando_interfaces/State messages.
  */
 class OdometryToStateNode : public rclcpp::Node {
  public:
@@ -27,5 +27,5 @@ class OdometryToStateNode : public rclcpp::Node {
   void callback(const nav_msgs::msg::Odometry::SharedPtr odom_msg);
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
-  rclcpp::Publisher<dynus_interfaces::msg::State>::SharedPtr state_publisher_;
+  rclcpp::Publisher<sando_interfaces::msg::State>::SharedPtr state_publisher_;
 };

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -302,7 +302,7 @@ def recompute_metrics_from_bag(
     reader = SequentialReader()
     reader.open(storage_options, converter_options)
 
-    goal_msg_type = get_message("dynus_interfaces/msg/Goal")
+    goal_msg_type = get_message("sando_interfaces/msg/Goal")
 
     timestamps = []
     positions = []
@@ -432,7 +432,7 @@ def recompute_violations_from_bag(
     reader = SequentialReader()
     reader.open(storage_options, converter_options)
 
-    goal_msg_type = get_message("dynus_interfaces/msg/Goal")
+    goal_msg_type = get_message("sando_interfaces/msg/Goal")
 
     vel_violation_count = 0
     acc_violation_count = 0
@@ -522,7 +522,7 @@ def analyze_collision_from_bag(
     obstacle_trajectories = {}  # {obs_id: [(time, x, y, z), ...]}
 
     # Message types
-    goal_msg_type = get_message("dynus_interfaces/msg/Goal")
+    goal_msg_type = get_message("sando_interfaces/msg/Goal")
     tf_msg_type = get_message("tf2_msgs/msg/TFMessage")
 
     while reader.has_next():
@@ -744,8 +744,8 @@ def analyze_collision_from_trajs_bag(
     obstacle_trajectories = {}  # {obs_id: {'times': [], 'positions': [], 'half_extents': (hx,hy,hz)}}
 
     # Message types
-    goal_msg_type = get_message("dynus_interfaces/msg/Goal")
-    dyntraj_msg_type = get_message("dynus_interfaces/msg/DynTraj")
+    goal_msg_type = get_message("sando_interfaces/msg/Goal")
+    dyntraj_msg_type = get_message("sando_interfaces/msg/DynTraj")
 
     while reader.has_next():
         (topic, data, t) = reader.read_next()
@@ -933,7 +933,7 @@ def analyze_collision_from_static_obstacles(
     reader = SequentialReader()
     reader.open(storage_options, converter_options)
 
-    goal_msg_type = get_message("dynus_interfaces/msg/Goal")
+    goal_msg_type = get_message("sando_interfaces/msg/Goal")
     agent_trajectory = []
 
     while reader.has_next():
@@ -1528,7 +1528,7 @@ def _generate_new_static_table(case_name: str, sando_row: str, data_values: str)
             latex.append("      \\midrule")
             latex.append("")
 
-        # 5 rows per env: EGO-Swarm2, SUPER (L2), SUPER (Linf), FASTER, SANDO
+        # 5 rows per env: EGO-Swarm2, SUPER (L2), SUPER (Linf), BASELINE, SANDO
         latex.append(
             f"      \\multirow{{5}}{{*}}{{{case}}} & EGO-Swarm2 & Soft & $L_\\infty$ & {dashes}"
         )
@@ -1536,7 +1536,7 @@ def _generate_new_static_table(case_name: str, sando_row: str, data_values: str)
             f"       & \\multirow{{2}}{{*}}{{SUPER}} & Soft & $L_2$ & {dashes}"
         )
         latex.append(f"       & & Soft & $L_\\infty$ & {dashes}")
-        latex.append(f"       & FASTER & Hard & $L_\\infty$ & {dashes}")
+        latex.append(f"       & BASELINE & Hard & $L_\\infty$ & {dashes}")
 
         # SANDO row — fill with data if this is the matching case, otherwise placeholder
         if case == case_name:

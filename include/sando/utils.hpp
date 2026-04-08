@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -16,9 +16,9 @@
 #include <hgp/utils.hpp>
 #include <sando/sando_type.hpp>
 #include "rclcpp/rclcpp.hpp"
-#include "dynus_interfaces/msg/coeff_poly3.hpp"
-#include "dynus_interfaces/msg/dyn_traj.hpp"
-#include "dynus_interfaces/msg/pwp_traj.hpp"
+#include "sando_interfaces/msg/coeff_poly3.hpp"
+#include "sando_interfaces/msg/dyn_traj.hpp"
+#include "sando_interfaces/msg/pwp_traj.hpp"
 #include "std_msgs/msg/color_rgba.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -43,13 +43,13 @@ static constexpr int green_trans_trans = 13;
  *  @param pwp_msg ROS message to convert.
  *  @return Equivalent PieceWisePol.
  */
-PieceWisePol convertPwpMsg2Pwp(const dynus_interfaces::msg::PWPTraj& pwp_msg);
+PieceWisePol convertPwpMsg2Pwp(const sando_interfaces::msg::PWPTraj& pwp_msg);
 
 /** @brief Convert a PieceWisePol struct to a PWPTraj ROS message.
  *  @param pwp PieceWisePol to convert.
  *  @return Equivalent ROS message.
  */
-dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp);
+sando_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol& pwp);
 
 /** @brief Convert a PieceWisePol trajectory to a colored marker array for visualization.
  *  @param pwp Piecewise polynomial trajectory.

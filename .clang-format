@@ -26,7 +26,7 @@ IncludeCategories:
   - Regex: '^<(decomp_util|tf2_eigen|tf2_ros|message_filters|pcl_conversions|gazebo|gazebo_ros|ignition)/'
     Priority: 5
   # ROS 2 message/service headers (angle brackets)
-  - Regex: '^<(std_msgs|geometry_msgs|sensor_msgs|nav_msgs|visualization_msgs|dynus_interfaces|decomp_rviz_plugins)/'
+  - Regex: '^<(std_msgs|geometry_msgs|sensor_msgs|nav_msgs|visualization_msgs|sando_interfaces|decomp_rviz_plugins)/'
     Priority: 6
   # Project headers with angle brackets
   - Regex: '^<(sando|hgp|sim)/'

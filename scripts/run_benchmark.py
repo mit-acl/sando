@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -49,7 +49,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 
 from geometry_msgs.msg import PointStamped, PoseStamped
 from std_msgs.msg import Empty
-from dynus_interfaces.msg import DynTraj, Goal
+from sando_interfaces.msg import DynTraj, Goal
 
 
 def update_num_p_in_yaml(yaml_path: str, num_p: int):

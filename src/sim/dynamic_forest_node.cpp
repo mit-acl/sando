@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <array>
-#include <dynus_interfaces/msg/dyn_traj.hpp>
+#include <sando_interfaces/msg/dyn_traj.hpp>
 #include <gazebo_msgs/msg/model_state.hpp>
 #include <gazebo_msgs/msg/model_states.hpp>
 #include <geometry_msgs/msg/point.hpp>
@@ -26,7 +26,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 using json = nlohmann::json;
-using dynus_interfaces::msg::DynTraj;
+using sando_interfaces::msg::DynTraj;
 
 struct ObstacleSpec {
   std::string model_name;

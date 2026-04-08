@@ -4,7 +4,7 @@
   <name>sando</name>
   <version>1.0.0</version>
   <description>SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments</description>
-  <maintainer email="kkondo@mit.edu">Kota Kondo</maintainer>
+  <maintainer email="anonymous@anonymous.invalid">Anonymous</maintainer>
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -14,7 +14,7 @@
   <depend>rclpy</depend>
   <depend>rclcpp_components</depend>
   <depend>example_interfaces</depend>
-  <depend>dynus_interfaces</depend>
+  <depend>sando_interfaces</depend>
   <depend>visualization_msgs</depend>
   <depend>decomp_ros_msgs</depend>
   <depend>gazebo_msgs</depend>

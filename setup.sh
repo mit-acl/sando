@@ -4,7 +4,7 @@
 # Installs ROS 2 Humble, Gurobi, and all dependencies, then builds the workspace.
 #
 # Usage:
-#   git clone --recursive https://github.com/mit-acl/sando.git
+#   git clone --recursive <ANONYMIZED_REPO_URL>
 #   cd sando && ./setup.sh
 # --------------------------------------------------------------------------
 set -e

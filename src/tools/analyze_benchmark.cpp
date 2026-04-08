@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  *
  * C++ port of analyze_dynamic_benchmark.py
@@ -32,8 +32,8 @@
 #include <rosbag2_cpp/readers/sequential_reader.hpp>
 
 // Message types
-#include "dynus_interfaces/msg/dyn_traj.hpp"
-#include "dynus_interfaces/msg/goal.hpp"
+#include "sando_interfaces/msg/dyn_traj.hpp"
+#include "sando_interfaces/msg/goal.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 
 namespace fs = std::filesystem;
@@ -499,8 +499,8 @@ static BagData read_bag_single_pass(const fs::path& bag_path, const std::string&
     return data;
   }
 
-  rclcpp::Serialization<dynus_interfaces::msg::Goal> goal_ser;
-  rclcpp::Serialization<dynus_interfaces::msg::DynTraj> dyntraj_ser;
+  rclcpp::Serialization<sando_interfaces::msg::Goal> goal_ser;
+  rclcpp::Serialization<sando_interfaces::msg::DynTraj> dyntraj_ser;
   rclcpp::Serialization<tf2_msgs::msg::TFMessage> tf_ser;
 
   while (reader.has_next()) {
@@ -509,7 +509,7 @@ static BagData read_bag_single_pass(const fs::path& bag_path, const std::string&
       double timestamp = msg->time_stamp / 1e9;
 
       if (msg->topic_name == "/NX01/goal") {
-        dynus_interfaces::msg::Goal goal_msg;
+        sando_interfaces::msg::Goal goal_msg;
         rclcpp::SerializedMessage serialized(*msg->serialized_data);
         goal_ser.deserialize_message(&serialized, &goal_msg);
 
@@ -521,7 +521,7 @@ static BagData read_bag_single_pass(const fs::path& bag_path, const std::string&
         snap.jerk = {goal_msg.j.x, goal_msg.j.y, goal_msg.j.z};
         data.agent.push_back(snap);
       } else if (!trajs_topic.empty() && msg->topic_name == trajs_topic) {
-        dynus_interfaces::msg::DynTraj dyntraj_msg;
+        sando_interfaces::msg::DynTraj dyntraj_msg;
         rclcpp::SerializedMessage serialized(*msg->serialized_data);
         dyntraj_ser.deserialize_message(&serialized, &dyntraj_msg);
 
@@ -1257,7 +1257,7 @@ static std::string generate_new_static_table(const std::string& case_name,
         << dashes << "\n";
     oss << "       & \\multirow{2}{*}{SUPER} & Soft & $L_2$ & " << dashes << "\n";
     oss << "       & & Soft & $L_\\infty$ & " << dashes << "\n";
-    oss << "       & FASTER & Hard & $L_\\infty$ & " << dashes << "\n";
+    oss << "       & BASELINE & Hard & $L_\\infty$ & " << dashes << "\n";
 
     if (cases[i] == case_name) {
       oss << "       & SANDO & Hard & $L_\\infty$ & " << data_values << "\n";

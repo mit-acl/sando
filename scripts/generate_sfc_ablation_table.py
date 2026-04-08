@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """Generate SFC ablation LaTeX table from benchmark data.
@@ -53,7 +53,7 @@ ANALYZE_BIN = os.path.expanduser(
     "~/code/sando_ws/install/sando/lib/sando/analyze_benchmark"
 )
 
-OUTPUT_TEX = os.path.expanduser("~/paper_writing/SANDO_v3/tables/sfc_ablation.tex")
+OUTPUT_TEX = os.path.expanduser("~/paper_output/tables/sfc_ablation.tex")
 
 
 def run_analysis(data_dir):

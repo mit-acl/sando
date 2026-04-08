@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -12,7 +12,7 @@
 #include <Eigen/Geometry>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-#include <dynus_interfaces/msg/state.hpp>
+#include <sando_interfaces/msg/state.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -29,7 +29,7 @@ class OdomToGlobalState : public rclcpp::Node {
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     // Publishers
-    state_pub_ = this->create_publisher<dynus_interfaces::msg::State>("state", 10);
+    state_pub_ = this->create_publisher<sando_interfaces::msg::State>("state", 10);
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("global_pose", 10);
 
     // Subscriber
@@ -105,7 +105,7 @@ class OdomToGlobalState : public rclcpp::Node {
 
     // Publish State
     {
-      auto state_msg = dynus_interfaces::msg::State();
+      auto state_msg = sando_interfaces::msg::State();
       state_msg.header.stamp = stamp;
       state_msg.header.frame_id = "world";
       state_msg.pos.x = global_pos.x();
@@ -154,7 +154,7 @@ class OdomToGlobalState : public rclcpp::Node {
 
   // ROS interfaces
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-  rclcpp::Publisher<dynus_interfaces::msg::State>::SharedPtr state_pub_;
+  rclcpp::Publisher<sando_interfaces::msg::State>::SharedPtr state_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
 };
 

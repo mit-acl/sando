@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -45,69 +45,69 @@ SolverGurobi::SolverGurobi() {
 
 SolverGurobi::~SolverGurobi() {}
 
-bool SolverGurobi::usingFaster_() const {
+bool SolverGurobi::usingBaseline_() const {
   return (
-      planner_name_ == "FASTER" || planner_name_ == "original_faster" ||
-      planner_name_ == "safe_faster");
+      planner_name_ == "BASELINE" || planner_name_ == "original_baseline" ||
+      planner_name_ == "safe_baseline");
 }
 
 void SolverGurobi::setPlannerName(const std::string& name) { planner_name_ = name; }
 
 void SolverGurobi::setGurobiThreads(int num_threads) { m_.set(GRB_IntParam_Threads, num_threads); }
 
-void SolverGurobi::createVarsFaster_() {
+void SolverGurobi::createVarsBaseline_() {
   // Create cubic coefficients per interval, per axis: a,b,c,d for each interval
   // Stored in the same flattened layout your getPos/getVel/getAccel expect:
   // x_[axis][4*interval + 0..3]
-  x_faster_vars_.clear();
-  x_faster_vars_.resize(3);
+  x_baseline_vars_.clear();
+  x_baseline_vars_.resize(3);
 
   for (int axis = 0; axis < 3; ++axis) {
-    x_faster_vars_[axis].reserve(4 * N_);
+    x_baseline_vars_[axis].reserve(4 * N_);
     for (int interval = 0; interval < N_; ++interval) {
       const std::string s = "_ax" + std::to_string(axis) + "_k" + std::to_string(interval);
-      x_faster_vars_[axis].push_back(
+      x_baseline_vars_[axis].push_back(
           m_.addVar(-GRB_INFINITY, GRB_INFINITY, 0, GRB_CONTINUOUS, "a" + s));
-      x_faster_vars_[axis].push_back(
+      x_baseline_vars_[axis].push_back(
           m_.addVar(-GRB_INFINITY, GRB_INFINITY, 0, GRB_CONTINUOUS, "b" + s));
-      x_faster_vars_[axis].push_back(
+      x_baseline_vars_[axis].push_back(
           m_.addVar(-GRB_INFINITY, GRB_INFINITY, 0, GRB_CONTINUOUS, "c" + s));
-      x_faster_vars_[axis].push_back(
+      x_baseline_vars_[axis].push_back(
           m_.addVar(-GRB_INFINITY, GRB_INFINITY, 0, GRB_CONTINUOUS, "d" + s));
     }
   }
 }
 
-void SolverGurobi::setXFaster_() {
+void SolverGurobi::setXBaseline_() {
   // Ensure x_ is a GRBLinExpr view into the vars
   x_.clear();
   x_.resize(3);
 
   for (int axis = 0; axis < 3; ++axis) {
     x_[axis].reserve(4 * N_);
-    for (int i = 0; i < 4 * N_; ++i) x_[axis].push_back(GRBLinExpr(x_faster_vars_[axis][i]));
+    for (int i = 0; i < 4 * N_; ++i) x_[axis].push_back(GRBLinExpr(x_baseline_vars_[axis][i]));
   }
 }
 
-void SolverGurobi::getCoefficientsDoubleFaster_() {
+void SolverGurobi::getCoefficientsDoubleBaseline_() {
   x_double_.clear();
   x_double_.resize(3);
 
   for (int axis = 0; axis < 3; ++axis) {
     x_double_[axis].resize(4 * N_);
     for (int i = 0; i < 4 * N_; ++i)
-      x_double_[axis][i] = x_faster_vars_[axis][i].get(GRB_DoubleAttr_X);
+      x_double_[axis][i] = x_baseline_vars_[axis][i].get(GRB_DoubleAttr_X);
   }
 }
 
-void SolverGurobi::setDynamicConstraintsFaster_() {
+void SolverGurobi::setDynamicConstraintsBaseline_() {
   // Remove previous dynamic constraints (reuse same dyn_cons_ vector)
   if (!dyn_cons_.empty()) {
     for (auto& c : dyn_cons_) m_.remove(c);
     dyn_cons_.clear();
   }
 
-  // Original FASTER: only constrain first control point per segment
+  // Original BASELINE: only constrain first control point per segment
   for (int segment = 0; segment < N_; ++segment) {
     for (int axis = 0; axis < 3; ++axis) {
       dyn_cons_.push_back(m_.addConstr(
@@ -134,14 +134,14 @@ void SolverGurobi::setDynamicConstraintsFaster_() {
   }
 }
 
-void SolverGurobi::setDynamicConstraintsSafeFaster_() {
+void SolverGurobi::setDynamicConstraintsSafeBaseline_() {
   // Remove previous dynamic constraints
   if (!dyn_cons_.empty()) {
     for (auto& c : dyn_cons_) m_.remove(c);
     dyn_cons_.clear();
   }
 
-  // Safe FASTER: constrain ALL control points per segment (like SANDO Linf)
+  // Safe BASELINE: constrain ALL control points per segment (like SANDO Linf)
   for (int segment = 0; segment < N_; ++segment) {
     for (int axis = 0; axis < 3; ++axis) {
       // --- Velocity constraints (3 control points) ---
@@ -205,9 +205,9 @@ void SolverGurobi::initializeSolver(const Parameters& par) {
   // Time limit
   m_.set(GRB_DoubleParam_TimeLimit, par.max_gurobi_comp_time_sec);
 
-  if (usingFaster_() || !using_variable_elimination_) {
-    createVarsFaster_();
-    using_variable_elimination_ = false;  // FASTER does not use variable elimination
+  if (usingBaseline_() || !using_variable_elimination_) {
+    createVarsBaseline_();
+    using_variable_elimination_ = false;  // BASELINE does not use variable elimination
   } else {
     createVars();  // your current variable-elimination free vars (d3/d4/...)
   }
@@ -4184,11 +4184,11 @@ void SolverGurobi::initializeGoalSetpoints() {
 }
 
 void SolverGurobi::setDynamicConstraints() {
-  if (usingFaster_()) {
-    if (planner_name_ == "safe_faster")
-      setDynamicConstraintsSafeFaster_();
+  if (usingBaseline_()) {
+    if (planner_name_ == "safe_baseline")
+      setDynamicConstraintsSafeBaseline_();
     else
-      setDynamicConstraintsFaster_();
+      setDynamicConstraintsBaseline_();
     return;
   }
 
@@ -4685,7 +4685,7 @@ bool SolverGurobi::generateNewTrajectory(
     double& gurobi_computation_time,
     double factor,
     bool use_single_thread) {
-  // Use sequential factor sweeping for FASTER
+  // Use sequential factor sweeping for BASELINE
   if (use_single_thread) {
     double factor_used = factor;
     // ignore the provided `factor` and sweep internally
@@ -4709,8 +4709,8 @@ bool SolverGurobi::generateNewTrajectory(
     auto t1 = clk::now();
     last_solve_timing_.findDT_ms = 1e3 * dur(t1 - t0).count();
 
-    if (usingFaster_() || !using_variable_elimination_) {
-      setXFaster_();
+    if (usingBaseline_() || !using_variable_elimination_) {
+      setXBaseline_();
       setConstraintsX0();
       setConstraintsXf();
       setContinuityConstraints();
@@ -4746,8 +4746,8 @@ bool SolverGurobi::generateNewTrajectory(
       gurobi_computation_time = m_.get(GRB_DoubleAttr_Runtime) * 1000;
       initializeGoalSetpoints();
 
-      if (usingFaster_() || !using_variable_elimination_) {
-        getCoefficientsDoubleFaster_();
+      if (usingBaseline_() || !using_variable_elimination_) {
+        getCoefficientsDoubleBaseline_();
       } else {
         if (N_ == 4)
           getDependentCoefficientsN4Double();
@@ -4797,18 +4797,18 @@ bool SolverGurobi::generateNewTrajectorySequentialFactors(
     try {
       findDT(f);
 
-      if (usingFaster_() || !using_variable_elimination_) {
-        setXFaster_();
+      if (usingBaseline_() || !using_variable_elimination_) {
+        setXBaseline_();
       } else {
         setX();
       }
 
-      // FASTER formulation requires explicit constraints (no elimination)
+      // BASELINE formulation requires explicit constraints (no elimination)
       setConstraintsX0();
       setConstraintsXf();
-      setContinuityConstraints();  // if your FASTER formulation needs it
+      setContinuityConstraints();  // if your BASELINE formulation needs it
       setPolytopesConstraints();
-      setDynamicConstraints();  // in FASTER mode this must constrain all CPs
+      setDynamicConstraints();  // in BASELINE mode this must constrain all CPs
       setObjective();
       setMapSizeConstraints();
       solved = callOptimizer();
@@ -4817,8 +4817,8 @@ bool SolverGurobi::generateNewTrajectorySequentialFactors(
         factor_that_worked = f;
         gurobi_computation_time_ms = m_.get(GRB_DoubleAttr_Runtime) * 1000.0;
 
-        if (usingFaster_() || !using_variable_elimination_) {
-          getCoefficientsDoubleFaster_();
+        if (usingBaseline_() || !using_variable_elimination_) {
+          getCoefficientsDoubleBaseline_();
         } else {
           if (N_ == 4)
             getDependentCoefficientsN4Double();
@@ -4845,7 +4845,7 @@ void SolverGurobi::findDT(double factor) {
   // Clear the previous dt
   dt_.clear();
 
-  // FASTER's approach
+  // BASELINE's approach
   for (int i = 0; i < N_; i++) dt_.push_back(factor * std::max(initial_dt_, 2 * dc_));
 
   // Compute total_traj_time_, which is used to fill goal_setpoints_

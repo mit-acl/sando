@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 # /* ----------------------------------------------------------------------------
-#  * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-#  * Massachusetts Institute of Technology
+#  * Copyright (c) Anonymous Author
+#  * Anonymous Institution
 #  * All Rights Reserved
-#  * Authors: Kota Kondo, et al.
+#  * Authors: Anonymous
 #  * See LICENSE file for the license information
 #  * -------------------------------------------------------------------------- */
 

@@ -1,8 +1,8 @@
 /* ----------------------------------------------------------------------------
- * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
- * Massachusetts Institute of Technology
+ * Copyright (c) Anonymous Author
+ * Anonymous Institution
  * All Rights Reserved
- * Authors: Kota Kondo, et al.
+ * Authors: Anonymous
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 
@@ -587,19 +587,19 @@ static inline std::string prettyPlannerName(const std::string& planner_key) {
   if (planner_key == "sando_N5" || planner_key == "sando_N5") return "SANDO2(N=5)";
   if (planner_key == "sando_N6" || planner_key == "sando_N6") return "SANDO2(N=6)";
 
-  // Orig. FASTER
-  if (planner_key == "original_faster_N4") return "Orig.FASTER(N=4)";
-  if (planner_key == "original_faster_N5") return "Orig.FASTER(N=5)";
-  if (planner_key == "original_faster_N6") return "Orig.FASTER(N=6)";
+  // Orig. BASELINE
+  if (planner_key == "original_baseline_N4") return "Orig.BASELINE(N=4)";
+  if (planner_key == "original_baseline_N5") return "Orig.BASELINE(N=5)";
+  if (planner_key == "original_baseline_N6") return "Orig.BASELINE(N=6)";
 
   // SUPER
   if (planner_key == "super_l2") return "SUPER(L2)";
   if (planner_key == "super_linf") return "SUPER";
 
-  // CP FASTER
-  if (planner_key == "safe_faster_N4") return "CP-FASTER(N=4)";
-  if (planner_key == "safe_faster_N5") return "CP-FASTER(N=5)";
-  if (planner_key == "safe_faster_N6") return "CP-FASTER(N=6)";
+  // CP BASELINE
+  if (planner_key == "safe_baseline_N4") return "CP-BASELINE(N=4)";
+  if (planner_key == "safe_baseline_N5") return "CP-BASELINE(N=5)";
+  if (planner_key == "safe_baseline_N6") return "CP-BASELINE(N=6)";
 
   return planner_key;
 }

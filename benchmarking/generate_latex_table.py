@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 """
@@ -30,14 +30,14 @@ VE_OUTPUT_FILE = None  # Must be set via --ve-output CLI arg
 # Data files to load
 DATA_FILES = {
     # (mode, planner, N) -> filename
-    # FASTER original (only first control point constrained)
-    ("single", "faster_orig", 4): "single_thread/original_faster_4_benchmark.csv",
-    ("single", "faster_orig", 5): "single_thread/original_faster_5_benchmark.csv",
-    ("single", "faster_orig", 6): "single_thread/original_faster_6_benchmark.csv",
-    # FASTER-CP (all control points constrained)
-    ("single", "safe_faster", 4): "single_thread/safe_faster_4_benchmark.csv",
-    ("single", "safe_faster", 5): "single_thread/safe_faster_5_benchmark.csv",
-    ("single", "safe_faster", 6): "single_thread/safe_faster_6_benchmark.csv",
+    # BASELINE original (only first control point constrained)
+    ("single", "baseline_orig", 4): "single_thread/original_baseline_4_benchmark.csv",
+    ("single", "baseline_orig", 5): "single_thread/original_baseline_5_benchmark.csv",
+    ("single", "baseline_orig", 6): "single_thread/original_baseline_6_benchmark.csv",
+    # BASELINE-CP (all control points constrained)
+    ("single", "safe_baseline", 4): "single_thread/safe_baseline_4_benchmark.csv",
+    ("single", "safe_baseline", 5): "single_thread/safe_baseline_5_benchmark.csv",
+    ("single", "safe_baseline", 6): "single_thread/safe_baseline_6_benchmark.csv",
     # SANDO2 single
     ("single", "sando", 4): "single_thread/sando_4_benchmark.csv",
     ("single", "sando", 5): "single_thread/sando_5_benchmark.csv",
@@ -215,11 +215,11 @@ def load_and_process_data():
             )
 
         # Determine algorithm name
-        if planner == "faster_orig":
-            alg_name = "FASTER"
+        if planner == "baseline_orig":
+            alg_name = "BASELINE"
             alg_variant = "(orig.)"
-        elif planner == "safe_faster":
-            alg_name = "FASTER"
+        elif planner == "safe_baseline":
+            alg_name = "BASELINE"
             alg_variant = "(CP)"
         else:  # sando
             alg_name = "SANDO"
@@ -495,11 +495,11 @@ def generate_latex_table(df):
     for N_val in sorted(df_rest["N"].unique()):
         df_n = df_rest[df_rest["N"] == N_val].copy()
 
-        # Sort by: FASTER (orig.), FASTER (CP), SANDO single, SANDO multi
+        # Sort by: BASELINE (orig.), BASELINE (CP), SANDO single, SANDO multi
         def sort_key(row):
-            if row["Algorithm"] == "FASTER" and row["Variant"] == "(orig.)":
+            if row["Algorithm"] == "BASELINE" and row["Variant"] == "(orig.)":
                 return (0, 0)
-            elif row["Algorithm"] == "FASTER" and row["Variant"] == "(CP)":
+            elif row["Algorithm"] == "BASELINE" and row["Variant"] == "(CP)":
                 return (0, 1)
             elif row["Algorithm"] == "SANDO" and row["Thread"] == "single":
                 return (1, 0)
@@ -511,14 +511,14 @@ def generate_latex_table(df):
         df_n["sort_key"] = df_n.apply(sort_key, axis=1)
         df_n = df_n.sort_values("sort_key").drop(columns=["sort_key"])
 
-        # Count FASTER and SANDO rows for multirow
-        faster_rows = df_n[df_n["Algorithm"] == "FASTER"]
-        n_faster = len(faster_rows)
+        # Count BASELINE and SANDO rows for multirow
+        baseline_rows = df_n[df_n["Algorithm"] == "BASELINE"]
+        n_baseline = len(baseline_rows)
         sando_rows = df_n[df_n["Algorithm"] == "SANDO"]
         n_sando = len(sando_rows)
 
         first_in_group = True
-        first_faster = True
+        first_baseline = True
         first_sando = True
         for _, row in df_n.iterrows():
             # Algorithm name
@@ -526,16 +526,16 @@ def generate_latex_table(df):
             variant = row["Variant"]
             thread = row["Thread"]
 
-            # FASTER uses col1=FASTER (multirow), col2=variant, thread=multirow — like SUPER
-            if alg == "FASTER":
-                if first_faster and n_faster > 1:
-                    alg_col1 = f"\\multirow{{{n_faster}}}{{*}}{{FASTER}}"
-                    thread_cell = f"\\multirow{{{n_faster}}}{{*}}{{{thread}}}"
-                    first_faster = False
-                elif first_faster:
-                    alg_col1 = "FASTER"
+            # BASELINE uses col1=BASELINE (multirow), col2=variant, thread=multirow — like SUPER
+            if alg == "BASELINE":
+                if first_baseline and n_baseline > 1:
+                    alg_col1 = f"\\multirow{{{n_baseline}}}{{*}}{{BASELINE}}"
+                    thread_cell = f"\\multirow{{{n_baseline}}}{{*}}{{{thread}}}"
+                    first_baseline = False
+                elif first_baseline:
+                    alg_col1 = "BASELINE"
                     thread_cell = thread
-                    first_faster = False
+                    first_baseline = False
                 else:
                     alg_col1 = ""
                     thread_cell = ""
@@ -559,8 +559,8 @@ def generate_latex_table(df):
             else:
                 n_cell = ""
 
-            # For non-FASTER rows, thread_cell is just the thread value
-            if alg != "FASTER":
+            # For non-BASELINE rows, thread_cell is just the thread value
+            if alg != "BASELINE":
                 thread_cell = thread
 
             # Build row

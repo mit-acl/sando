@@ -142,7 +142,7 @@ def _spawn_static_block(context):
     offset_range = [0.0, 3.0]  # [offset_min, offset_max]
     slower_range = [slower_min, slower_max]
 
-    # Sizes for obstacles (like in MADER)
+    # Sizes for obstacles (like in [prior work])
     bbox_dynamic = [0.8, 0.8, 0.8]  # Small cubes
     bbox_static_vert = [0.4, 0.4, 4.0]  # Narrow vertical pillars
     bbox_static_horiz = [0.4, 4.0, 0.4]  # Narrow horizontal walls

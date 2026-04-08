@@ -9,7 +9,7 @@ Panels:
         - /Common1/TF1/Frames1
         - /PX031
         - /PX031/Planning1
-        - /PX031/Planning1/PX03 DGP path1/Topic1
+        - /PX031/Planning1/PX03 Global path1/Topic1
         - /PX031/Planning1/PX03 Poly for Safe Trajs1/Topic1
         - /PX031/Mapping1
         - /PX031/Mapping1/PX03 Lidar PointCloud1
@@ -139,7 +139,7 @@ Visualization Manager:
           Displays:
             - Class: rviz_default_plugins/MarkerArray
               Enabled: true
-              Name: PX03 DGP path
+              Name: PX03 Global path
               Namespaces:
                 {}
               Topic:
@@ -151,7 +151,7 @@ Visualization Manager:
               Value: true
             - Class: rviz_default_plugins/MarkerArray
               Enabled: false
-              Name: PX03 DGP Free Path
+              Name: PX03 Global Free Path
               Namespaces:
                 {}
               Topic:

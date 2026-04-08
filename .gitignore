@@ -19,7 +19,7 @@ benchmark_data/
 # Large media (host externally)
 mp4/
 paper_imgs/
-videos/dynus2_animation/media/
+videos/animation/media/
 *.gif
 
 # IDE & editor

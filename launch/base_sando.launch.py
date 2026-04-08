@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # /* ----------------------------------------------------------------------------
-#  * Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-#  * Massachusetts Institute of Technology
+#  * Copyright (c) Anonymous Author
+#  * Anonymous Institution
 #  * All Rights Reserved
-#  * Authors: Kota Kondo, et al.
+#  * Authors: Anonymous
 #  * See LICENSE file for the license information
 #  * -------------------------------------------------------------------------- */
 
@@ -75,7 +75,7 @@ def generate_launch_description():
             "static_uncertainty_test2": "static_uncertainty_test2.world",
             "static_uncertainty_test3": "static_uncertainty_test3.world",
             "static_uncertainty_test4": "static_uncertainty_test4.world",
-            "office_faster": "office.world",
+            "office_baseline": "office.world",
             "office": "office.world",
             "cave_start": "simple_tunnel.world",
             "cave_vertical": "simple_tunnel.world",
@@ -85,8 +85,8 @@ def generate_launch_description():
             "global_planner": "forest3.world",
             "multiagent_performance": "forest3.world",
             "path_push": "forest3.world",
-            "ACL_office": "ACL_office.world",
-            "ground_robot": "ACL_office.world",
+            "office_indoor": "office_indoor.world",
+            "ground_robot": "office_indoor.world",
             "multiagent_testing": "empty.world",
             "empty_wo_ground": "empty_wo_ground.world",
             "empty": "empty.world",

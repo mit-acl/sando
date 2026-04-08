@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ----------------------------------------------------------------------------
-# Copyright 2026, Kota Kondo, Aerospace Controls Laboratory
-# Massachusetts Institute of Technology
+# Copyright (c) Anonymous Author
+# Anonymous Institution
 # All Rights Reserved
-# Authors: Kota Kondo, et al.
+# Authors: Anonymous
 # See LICENSE file for the license information
 # ----------------------------------------------------------------------------
 import csv
@@ -133,7 +133,7 @@ def main():
             )
         )
         print(
-            "Example: python3 collision_checker.py /path/to/hard_forest_obstacle_parameters.csv /path/to/bags/sando 0.1 /NX01/goal dynus_interfaces/msg/Goal"
+            "Example: python3 collision_checker.py /path/to/hard_forest_obstacle_parameters.csv /path/to/bags/sando 0.1 /NX01/goal sando_interfaces/msg/Goal"
         )
         sys.exit(1)
 

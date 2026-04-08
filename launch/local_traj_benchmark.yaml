@@ -11,7 +11,7 @@ windows:
       - shell_command:
         - ros2 launch sando simulator.launch.py
 
-      # run benchmark (sando, faster)
+      # run benchmark (sando, baseline)
       - shell_command:
         - sleep 5
         - ros2 launch sando local_traj_benchmark.launch.py
