@@ -111,6 +111,12 @@ RUN echo "alias tks='tmux kill-server'" >> ~/.bashrc && \
     echo "alias cbd='cd ${SANDO_WS} && colcon build --packages-select sando && ss'" >> ~/.bashrc && \
     echo "alias cbps='cd ${SANDO_WS} && colcon build --packages-select'" >> ~/.bashrc
 
+# macOS visualization support via Xpra (browser-based RViz streaming)
+# Used by `make run-mac-interactive` — dormant on Linux builds
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xpra xvfb libgl1-mesa-glx libgl1-mesa-dri psmisc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Entry point
 COPY sando.sh /
 RUN chmod +x /sando.sh

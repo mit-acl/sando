@@ -12,6 +12,25 @@ source ~/.bashrc
 source ${SANDO_WS}/install/setup.bash
 source /usr/share/gazebo/setup.sh
 
+# If USE_XPRA is set, start Xpra server for remote window forwarding (Mac workflow).
+# RViz runs against a virtual display and is streamed to http://localhost:8080.
+if [ "${USE_XPRA}" = "true" ]; then
+    unset LIBGL_ALWAYS_INDIRECT
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export GALLIUM_DRIVER=llvmpipe
+    xpra start :100 \
+        --bind-tcp=0.0.0.0:8080 \
+        --html=on \
+        --encoding=jpeg \
+        --quality=85 \
+        --speed=70 \
+        --min-speed=50
+    sleep 5
+    export DISPLAY=:100
+    echo "[SANDO] Xpra server running on port 8080"
+    echo "[SANDO] Open in browser: http://localhost:8080"
+fi
+
 cd ${SANDO_WS}
 
 MODE="${MODE:-demo}"

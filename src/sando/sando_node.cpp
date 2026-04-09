@@ -840,7 +840,16 @@ void SANDO_NODE::stateCallback(const dynus_interfaces::msg::State::SharedPtr msg
     timer_goal_->reset();
   }
 
-  if (par_.visual_level >= 1) publishActualTraj();
+  // Throttle actual trajectory publish to ~20 Hz. stateCallback runs at the state
+  // publish rate (100 Hz+) and the actual_traj MarkerArray grows over time, so
+  // publishing every state message floods RViz and causes "some messages were lost".
+  if (par_.visual_level >= 1) {
+    const double t_now_at = this->now().seconds();
+    if (t_now_at - last_actual_traj_viz_publish_t_ >= 0.05) {  // 50 ms throttle = 20 Hz
+      publishActualTraj();
+      last_actual_traj_viz_publish_t_ = t_now_at;
+    }
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -868,14 +877,27 @@ void SANDO_NODE::replanCallback() {
   // To share trajectory with other agents
   if (replanning_result) publishOwnTraj();
 
+  // Throttle the entire visualization block to ~20 Hz (every 50 ms). The replan loop
+  // runs at 100 Hz which is fine for control but floods RViz with multi-KB MarkerArrays
+  // (hgp_path_marker, traj_committed_colored, poly_whole, ...) and causes it to drop
+  // messages with "some messages were lost" warnings. 20 Hz is plenty smooth visually.
+  bool do_viz = false;
+  if (par_.visual_level >= 1) {
+    const double t_now_viz = this->now().seconds();
+    if (t_now_viz - last_replan_viz_publish_t_ >= 0.05) {  // 50 ms throttle = 20 Hz
+      do_viz = true;
+      last_replan_viz_publish_t_ = t_now_viz;
+    }
+  }
+
   // For visualization of global path
-  if (hgp_result && par_.visual_level >= 1) publishGlobalPath();
+  if (do_viz && hgp_result) publishGlobalPath();
 
   // For visualization of free global path
-  if (hgp_result && par_.visual_level >= 1) publishFreeGlobalPath();
+  if (do_viz && hgp_result) publishFreeGlobalPath();
 
   // For visualization of local_global_path and local_global_path_after_push_
-  if (hgp_result && par_.visual_level >= 1) publishLocalGlobalPath();
+  if (do_viz && hgp_result) publishLocalGlobalPath();
 
   if (hgp_result && par_.visual_level >= 2) {
     publishDynamicHeatCloud();
@@ -883,23 +905,23 @@ void SANDO_NODE::replanCallback() {
   }
 
   // For visualization of the local trajectory
-  if (replanning_result && par_.visual_level >= 1) publishTraj();
+  if (do_viz && replanning_result) publishTraj();
 
   // For visualization of the safe corridor
-  if (hgp_result && par_.visual_level >= 1) publishPoly();
+  if (do_viz && hgp_result) publishPoly();
 
   // For visualization of point G and point A
-  if (replanning_result && par_.visual_level >= 1) {
+  if (do_viz && replanning_result) {
     publishPointG();
     publishPointE();
     publishPointA();
   }
 
   // For visualization of control points
-  if (replanning_result && par_.visual_level >= 1) publisCps();
+  if (do_viz && replanning_result) publisCps();
 
   // For visualization of static push points and P points
-  if (replanning_result && par_.visual_level >= 1) {
+  if (do_viz && replanning_result) {
     sando_ptr_->getStaticPushPoints(static_push_points_);
     publishStaticPushPoints();
   }
