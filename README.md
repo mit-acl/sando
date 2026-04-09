@@ -82,8 +82,12 @@ python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/set
 
 4. **Build the image** (~15 min first time):
    ```bash
-   make build
+   make build                 # defaults to BUILD_JOBS=2 (safe for ~8 GB RAM)
+   make build BUILD_JOBS=4    # faster if you have 16+ GB RAM
+   make build BUILD_JOBS=1    # if you hit "killed cc1plus" or OOM errors
    ```
+
+   > **Note on memory:** Template-heavy files like `gazebo_ros_camera.cpp` can consume 3-4 GB RAM per compiler process. If the build fails with `cannot allocate memory` or `killed cc1plus`, either lower `BUILD_JOBS` or increase Docker's memory limit (Docker Desktop → Settings → Resources → Memory; at least 8 GB recommended).
 
 5. **Run a simulation:**
    ```bash
