@@ -98,6 +98,33 @@ python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/set
    See the [What You Can Do](#what-you-can-do) section above for the full list of modes.
 
 <details>
+<summary><b>Running on macOS (Apple Silicon or Intel)</b></summary>
+
+macOS Docker Desktop does not support X11 passthrough, so SANDO runs RViz inside the container via **Xpra** and streams it to your browser.
+
+**One-time setup:**
+1. Install [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/).
+2. On Apple Silicon: enable **Settings → General → Use Rosetta for x86_64/amd64 emulation**.
+3. Set Docker memory to **at least 8 GB** (Settings → Resources → Memory). 16 GB recommended.
+
+**Build and run:**
+```bash
+cd sando/docker
+cp /path/to/your/gurobi.lic ./gurobi.lic
+make build BUILD_JOBS=2            # slower than Linux because of amd64 emulation
+make run-mac-interactive
+```
+
+Then open **http://localhost:8080** in your browser. RViz will appear; use "2D Nav Goal" (or hit `g`) to send goals.
+
+**Notes & limitations:**
+- Only `run-mac-interactive` is supported. Gazebo-based demos (`run-static-*`, `run-unknown-*`) are Linux-only because Gazebo under amd64 emulation is very slow.
+- First build takes 30–60 min on Apple Silicon (vs ~15 min on Linux) due to emulation.
+- If the browser shows a blank page, wait 10–20 s for Xpra to finish starting.
+- Software rendering is used (no GPU); this is fine for RViz but would be too slow for Gazebo.
+</details>
+
+<details>
 <summary><b>Docker tips</b></summary>
 
 ```bash

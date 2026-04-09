@@ -85,7 +85,7 @@ sando_node:
         dynamic_factor_k_radius: 0.4                    # [-] Factor search half-width around previous success
 
         # --- Safety Corridors ---
-        sfc_size: [3.0, 3.0, 3.0]                 # [m] Local planning window (smaller = faster, larger = smoother)
+        sfc_size: [3.0, 3.0, 3.0]                       # [m] Local planning window (smaller = faster, larger = smoother)
         dyn_base_inflation_m: 0.1                       # [m] Base inflation for dynamic obstacle bounding boxes in temporal SFC
         inflate_unknown_boundary: true                  # [-] Inflate unknown voxel boundaries in SFC generation
         traj_lifetime: 7.0                              # [s] Discard obstacle trajectories older than this
@@ -137,7 +137,7 @@ sando_node:
         free_start_factor: 2.0                          # [-] Radius factor for start freeing
         use_free_goal: false                            # [-] Free the goal voxel if occupied
         free_goal_factor: 2.0                           # [-] Radius factor for goal freeing
-        global_planner_heuristic_weight: 2.0             # [-] A* heuristic weight (higher = greedier)
+        global_planner_heuristic_weight: 2.0            # [-] A* heuristic weight (higher = greedier)
         heat_weight: 10.0                               # [-] Overall heat map weight in A* cost
         max_dist_vertexes: 1.0                          # [m] Max distance between path vertices
         w_unknown: 0.0                                  # [-] Cost weight for unknown cells
@@ -149,7 +149,7 @@ sando_node:
         use_heat_map: true                              # [-] Master toggle for heat map
         dynamic_heat_enabled: true                      # [-] Enable dynamic obstacle heat
         dynamic_as_occupied_current: true               # [-] Mark obstacle's current cell as hard-occupied
-        dynamic_as_occupied_future: false                # [-] Mark obstacle's future cells as hard-occupied
+        dynamic_as_occupied_future: false               # [-] Mark obstacle's future cells as hard-occupied
         heat_p: 2                                       # [-] Reachability blob falloff power
         heat_q: 2                                       # [-] Trajectory tube falloff power
         heat_tau_ratio: 0.5                             # [-] Time decay ratio for heat
@@ -227,7 +227,7 @@ sando_node:
         time_to_delete_old_obstacles: 5.0               # [s] Remove obstacles not seen for this long
         cluster_bbox_cutoff_size: 2.0                   # [m] Max cluster bounding box size
         acceleration_threshold: 2.0                     # [m/s^2] Acceleration threshold for dynamic classification
-        use_life_time_for_box_visualization: true        # [-] Use lifetime for box visualization
+        use_life_time_for_box_visualization: true       # [-] Use lifetime for box visualization
         box_visualization_duration: 1.0                 # [s] Box visualization duration
         use_only_curr_pos_for_dynamic_obst: false       # [-] Use only current position (no prediction) for comparison
 
@@ -240,7 +240,7 @@ sando_node:
         # --- Paper Visualization (development only) ---
         use_state_update: true                          # [-] Use state update (false = freeze agent for viz)
         use_random_color_for_global_path: false         # [-] Random color for global path
-        use_path_push_for_visualization: false           # [-] Only do global planning (paper viz mode)
+        use_path_push_for_visualization: false          # [-] Only do global planning (paper viz mode)
 
         # --- Benchmarking ---
         use_benchmark: true                             # [-] Enable benchmarking data logging

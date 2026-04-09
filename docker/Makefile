@@ -1,4 +1,13 @@
-.PHONY: build build-no-cache run-demo run-interactive shell
+.PHONY: build build-no-cache run-demo run-interactive run-mac-interactive shell
+
+# Platform detection: Mac needs amd64 emulation and Xpra-based visualization
+# instead of X11 socket sharing.
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  PLATFORM_FLAG = --platform linux/amd64
+else
+  PLATFORM_FLAG =
+endif
 
 # GPU support toggle: make run-demo GPU=false to disable
 GPU ?= true
@@ -24,10 +33,10 @@ DOCKER_FLAGS = xhost + && docker run -it \
 BUILD_JOBS ?= 2
 
 build:
-	docker build -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
+	docker build $(PLATFORM_FLAG) -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
 
 build-no-cache:
-	docker build --no-cache -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
+	docker build $(PLATFORM_FLAG) --no-cache -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
 
 # ---- Demo mode: pre-configured scenarios with automatic goal ----
 # Usage: make run-demo SCENARIO=static_easy
@@ -69,6 +78,22 @@ DYNAMIC_RATIO ?= 0.65
 
 run-interactive:
 	$(DOCKER_FLAGS) -e MODE=interactive -e NUM_OBSTACLES=$(NUM_OBSTACLES) -e DYNAMIC_RATIO=$(DYNAMIC_RATIO) sando
+
+# ---- Mac interactive mode: browser-based RViz via Xpra ----
+# Usage: make run-mac-interactive
+#        make run-mac-interactive NUM_OBSTACLES=100 DYNAMIC_RATIO=0.8
+# Then open http://localhost:8080 in your browser.
+# Uses Xpra instead of X11 passthrough (which doesn't work on macOS Docker Desktop).
+run-mac-interactive:
+	docker run $(PLATFORM_FLAG) -it \
+		--privileged \
+		--env="QT_X11_NO_MITSHM=1" \
+		-e USE_XPRA=true \
+		-e MODE=interactive \
+		-e NUM_OBSTACLES=$(NUM_OBSTACLES) \
+		-e DYNAMIC_RATIO=$(DYNAMIC_RATIO) \
+		-p 8080:8080 \
+		--rm sando
 
 # ---- Debug shell ----
 shell:

@@ -341,6 +341,19 @@ class SANDO_NODE : public rclcpp::Node {
   // debug
   double replan_last_time_called_ = 0.0;
 
+  // Wall-clock seconds of the last visualization publish in replanCallback.
+  // The replan loop runs at 100 Hz which is fine for control but floods RViz
+  // (especially for traj_committed_colored, hgp_path_marker, and the other
+  // multi-KB MarkerArrays). RViz drops messages when the publish rate exceeds
+  // its processing capacity, showing "some messages were lost" warnings.
+  // We throttle the entire viz block to ~20 Hz (every 50 ms) — plenty smooth
+  // visually, ~5x cheaper to render, no message loss.
+  double last_replan_viz_publish_t_ = 0.0;
+
+  // Same rationale for publishActualTraj(), which is called from stateCallback
+  // (100 Hz+ state updates). Throttled independently to ~20 Hz.
+  double last_actual_traj_viz_publish_t_ = 0.0;
+
   // Record computation time
   double global_planning_time_ = 0.0;
   double hgp_static_jps_time_ = 0.0;
