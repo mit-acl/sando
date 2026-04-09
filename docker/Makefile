@@ -32,11 +32,23 @@ DOCKER_FLAGS = xhost + && docker run -it \
 # Decrease to 1 if you hit "cannot allocate memory" or "killed cc1plus" errors.
 BUILD_JOBS ?= 2
 
+# SANDO_TAG selects which GitHub tag/branch the Dockerfile clones. Defaults to
+# the Dockerfile's own default (`main`). Override with `make build SANDO_TAG=v1.0.0`
+# once a release tag is cut. Passing an empty value preserves the Dockerfile default.
+SANDO_TAG ?= v0.0.1
+ifneq ($(SANDO_TAG),)
+TAG_ARG = --build-arg SANDO_TAG=$(SANDO_TAG)
+else
+TAG_ARG =
+endif
+
 build:
-	docker build $(PLATFORM_FLAG) -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
+	docker build $(PLATFORM_FLAG) -t sando \
+		--build-arg BUILD_JOBS=$(BUILD_JOBS) $(TAG_ARG) .
 
 build-no-cache:
-	docker build $(PLATFORM_FLAG) --no-cache -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
+	docker build $(PLATFORM_FLAG) --no-cache -t sando \
+		--build-arg BUILD_JOBS=$(BUILD_JOBS) $(TAG_ARG) .
 
 # ---- Demo mode: pre-configured scenarios with automatic goal ----
 # Usage: make run-demo SCENARIO=static_easy
