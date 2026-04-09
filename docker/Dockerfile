@@ -41,13 +41,17 @@ ENV PATH="${PATH}:${GUROBI_HOME}/bin"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
 COPY gurobi.lic /opt/gurobi1103/
 
-# Clone SANDO with all submodules
+# Clone SANDO from GitHub at a pinned tag (override with `make build SANDO_TAG=<tag>`).
+# The default tracks `main`; tag a release and update SANDO_TAG here when publishing.
 ENV SANDO_WS=/root/sando_ws
 ENV LIVOX_WS=/root/livox_ws
 RUN mkdir -p ${SANDO_WS}/src
 WORKDIR ${SANDO_WS}/src
 ARG DUMMY=unknown
-RUN DUMMY=${DUMMY} git clone --recursive https://github.com/mit-acl/sando.git
+ARG SANDO_TAG=v0.0.1
+RUN DUMMY=${DUMMY} git clone --branch ${SANDO_TAG} --depth 1 https://github.com/mit-acl/sando.git && \
+    cd sando && \
+    git submodule update --init --recursive
 
 # Symlink deps for colcon package discovery (skip Livox-SDK2 and livox_ros_driver2 — built separately)
 WORKDIR ${SANDO_WS}/src
