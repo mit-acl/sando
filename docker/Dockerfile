@@ -76,17 +76,26 @@ RUN source /opt/ros/humble/setup.bash && \
                               -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble
 
 # Build all colcon packages (three passes: decomp_util, main, ros2_livox_simulation)
+# Parallelism is limited to avoid OOM kills on template-heavy files like
+# gazebo_ros_camera.cpp (which can use 3-4 GB RAM per compilation unit).
+# Override with --build-arg BUILD_JOBS=N if you have more RAM available.
+ARG BUILD_JOBS=2
+ENV MAKEFLAGS="-j${BUILD_JOBS}"
 WORKDIR ${SANDO_WS}
 RUN source /opt/ros/humble/setup.bash && \
-    colcon build --packages-select decomp_util --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --packages-select decomp_util \
+                 --parallel-workers ${BUILD_JOBS} \
+                 --cmake-args -DCMAKE_BUILD_TYPE=Release
 RUN source /opt/ros/humble/setup.bash && \
     source ${SANDO_WS}/install/setup.bash && \
     colcon build --packages-ignore ros2_livox_simulation \
+                 --parallel-workers ${BUILD_JOBS} \
                  --cmake-args -DCMAKE_BUILD_TYPE=Release
 RUN source /opt/ros/humble/setup.bash && \
     source ${SANDO_WS}/install/setup.bash && \
     source ${LIVOX_WS}/install/setup.bash && \
     colcon build --packages-select ros2_livox_simulation \
+                 --parallel-workers ${BUILD_JOBS} \
                  --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # Gazebo audio fix

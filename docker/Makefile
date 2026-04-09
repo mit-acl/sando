@@ -17,12 +17,17 @@ DOCKER_FLAGS = xhost + && docker run -it \
 	--rm
 
 # ---- Build ----
+# BUILD_JOBS controls build parallelism. Default 2 works on machines with ~8 GB RAM.
+# Increase it (e.g. BUILD_JOBS=4) if you have more RAM — each parallel compiler
+# process can consume up to 4 GB on template-heavy files like gazebo_ros_camera.
+# Decrease to 1 if you hit "cannot allocate memory" or "killed cc1plus" errors.
+BUILD_JOBS ?= 2
 
 build:
-	docker build -t sando .
+	docker build -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
 
 build-no-cache:
-	docker build --no-cache -t sando .
+	docker build --no-cache -t sando --build-arg BUILD_JOBS=$(BUILD_JOBS) .
 
 # ---- Demo mode: pre-configured scenarios with automatic goal ----
 # Usage: make run-demo SCENARIO=static_easy
