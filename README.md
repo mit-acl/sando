@@ -65,112 +65,231 @@ python3 src/sando/scripts/run_sim.py -m dynamic -d hard -s install/setup.bash
 python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/setup.bash
 ```
 
-## Setup
+## Installation
 
-### Docker (Recommended)
+SANDO has been tested on Ubuntu 22.04 with ROS 2 Humble. Three installation methods are available:
 
-1. **Install [Docker](https://docs.docker.com/engine/install/ubuntu/).**
+| Method | Platform | Notes |
+|--------|----------|-------|
+| [Docker (Linux)](#docker-installation-linux) | Linux | Recommended for most users |
+| [Docker (Mac)](#docker-installation-mac) | macOS (Apple Silicon / Intel) | Uses Xpra for browser-based visualization |
+| [Native (Linux)](#native-installation-linux) | Ubuntu 22.04 | Best for development and hardware deployment |
 
-2. **Obtain a Gurobi WLS license.** Free [WLS Academic](https://portal.gurobi.com/iam/licenses/request) for academics. Other license types (named-user, compute server) do not work inside Docker.
+---
 
-3. **Clone the repo and place the license:**
-   ```bash
-   git clone --recursive https://github.com/mit-acl/sando.git
-   cd sando/docker
-   cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
-   ```
+### Docker Installation (Linux)
 
-4. **Build the image** (~15 min first time):
-   ```bash
-   make build                 # defaults to BUILD_JOBS=2 (safe for ~8 GB RAM)
-   make build BUILD_JOBS=4    # faster if you have 16+ GB RAM
-   make build BUILD_JOBS=1    # if you hit "killed cc1plus" or OOM errors
-   ```
+**1. Install Docker Engine**
 
-   > **Note on memory:** Template-heavy files like `gazebo_ros_camera.cpp` can consume 3-4 GB RAM per compiler process. If the build fails with `cannot allocate memory` or `killed cc1plus`, either lower `BUILD_JOBS` or increase Docker's memory limit (Docker Desktop → Settings → Resources → Memory; at least 8 GB recommended).
+> **Important:** You must install **Docker Engine** (the CLI version), **not** Docker Desktop. Docker Desktop for Linux runs containers inside a VM, which breaks X11 display passthrough and GPU access. If you have Docker Desktop installed, [uninstall it](https://docs.docker.com/desktop/uninstall/) first.
 
-5. **Run a simulation:**
-   ```bash
-   make run-interactive               # click goals in RViz (use "2D Nav Goal" or hit "g")
-   make run-demo SCENARIO=static_easy # auto-goal demo
-   ```
+Install Docker Engine using the [official apt repository](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository):
 
-   See the [What You Can Do](#what-you-can-do) section above for the full list of modes.
+```bash
+# Set up Docker's apt repository
+sudo apt update
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+
+# Install Docker Engine
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Add your user to the docker group (so you don't need sudo for docker commands)
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verify
+sudo docker run hello-world
+```
+
+**2. Obtain a Gurobi WLS License**
+
+Get a free [WLS Academic license](https://portal.gurobi.com/iam/licenses/request). Other license types (named-user, compute server) do not work inside Docker.
+
+**3. Clone the Repository**
+
+```bash
+git clone --recursive https://github.com/mit-acl/sando.git
+cd sando/docker
+cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
+```
+
+**4. Build the Docker Image**
+
+```bash
+make build                 # defaults to BUILD_JOBS=2 (safe for ~8 GB RAM)
+make build BUILD_JOBS=4    # faster if you have 16+ GB RAM
+make build BUILD_JOBS=1    # if you hit "killed cc1plus" or OOM errors
+```
+
+> **Note on memory:** Template-heavy files like `gazebo_ros_camera.cpp` can consume 3-4 GB RAM per compiler process. If the build fails with `cannot allocate memory` or `killed cc1plus`, either lower `BUILD_JOBS` or increase Docker's memory limit.
+
+**5. Run Simulations**
+
+```bash
+# Interactive simulation (click goals in RViz with "2D Nav Goal" or hit "g")
+make run-interactive
+
+# Auto-goal demo
+make run-demo SCENARIO=static_easy
+
+# Interactive shell (for debugging)
+make shell
+```
+
+See the [What You Can Do](#what-you-can-do) section above for the full list of modes.
 
 <details>
-<summary><b>Running on macOS (Apple Silicon or Intel)</b></summary>
+<summary><b>Docker Make Targets Reference</b></summary>
 
-macOS Docker Desktop does not support X11 passthrough, so SANDO runs RViz inside the container via **Xpra** and streams it to your browser.
+| Target | Description |
+|--------|-------------|
+| `make build` | Build the Docker image |
+| `make build-no-cache` | Build without cache (forces fresh build) |
+| `make run-interactive` | Interactive mode — click goals in RViz |
+| `make run-demo SCENARIO=...` | Auto-goal demo (see scenarios below) |
+| `make run-mac-interactive` | Mac interactive mode (Xpra, browser at localhost:8080) |
+| `make shell` | Open interactive shell for debugging |
 
-**One-time setup:**
-1. Install [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/).
-2. On Apple Silicon: enable **Settings → General → Use Rosetta for x86_64/amd64 emulation**.
-3. Set Docker memory to **at least 8 GB** (Settings → Resources → Memory). 16 GB recommended.
+**Scenarios:** `static_easy`, `static_medium`, `static_hard`, `dynamic_easy`, `dynamic_medium`, `dynamic_hard`, `unknown_dynamic_easy`, `unknown_dynamic_medium`, `unknown_dynamic_hard`
 
-**Build and run:**
+**Convenience aliases:** `make run-static-easy`, `make run-dynamic-hard`, `make run-unknown-medium`, etc.
+
+</details>
+
+<details>
+<summary><b>Useful Docker Commands</b></summary>
+
+- **Remove all caches:**
+  ```bash
+  docker builder prune
+  ```
+
+- **Remove all containers:**
+  ```bash
+  docker rm $(docker ps -a -q)
+  ```
+
+- **Remove all images:**
+  ```bash
+  docker rmi $(docker images -q)
+  ```
+
+</details>
+
+---
+
+### Docker Installation (Mac)
+
+SANDO runs on macOS via Docker with [Xpra](https://xpra.org/) for browser-based visualization. Xpra is installed inside the Docker image automatically — you do **not** need to install Xpra, X11, or XQuartz on your Mac.
+
+#### Prerequisites
+
+**1. Install Docker Desktop**
+
+Download and install [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/).
+
+**2. Obtain a Gurobi WLS License**
+
+Get a free [WLS Academic license](https://portal.gurobi.com/iam/licenses/request). Other license types (named-user, compute server) do not work inside Docker.
+
+**3. Configure Docker Desktop**
+
+Open Docker Desktop and go to **Settings** (gear icon):
+
+- **General** > Enable **"Use Rosetta for x86_64/amd64 emulation on Apple Silicon"** (Apple Silicon Macs only)
+- **Resources** > Set **Memory** to at least **8 GB** (16 GB recommended)
+
+#### Building
+
+```bash
+git clone --recursive https://github.com/mit-acl/sando.git
+cd sando/docker
+cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
+make build BUILD_JOBS=2
+```
+
+> The first build takes 30-60 min on Apple Silicon (vs ~15 min on Linux) due to amd64 emulation. Subsequent builds use Docker layer caching and are much faster. Use `make build-no-cache` to force a fresh build.
+
+#### Running Simulations
+
 ```bash
 cd sando/docker
-cp /path/to/your/gurobi.lic ./gurobi.lic
-make build BUILD_JOBS=2            # slower than Linux because of amd64 emulation
 make run-mac-interactive
 ```
 
 Then open **http://localhost:8080** in your browser. RViz will appear; use "2D Nav Goal" (or hit `g`) to send goals.
 
-**Notes & limitations:**
-- Only `run-mac-interactive` is supported. Gazebo-based demos (`run-static-*`, `run-unknown-*`) are Linux-only because Gazebo under amd64 emulation is very slow.
-- First build takes 30–60 min on Apple Silicon (vs ~15 min on Linux) due to emulation.
-- If the browser shows a blank page, wait 10–20 s for Xpra to finish starting.
+<details>
+<summary><b>Troubleshooting</b></summary>
+
+- **Build fails with out-of-memory error**: Increase Docker Desktop memory allocation (Settings > Resources > Memory). 8 GB minimum, 16 GB recommended.
+- **Build is very slow**: Make sure Rosetta emulation is enabled in Docker Desktop settings (General > Virtual Machine Options).
+- **Browser shows nothing at localhost:8080**: Wait 10-20 seconds after launching — Xpra takes a moment to start.
+- **Port 8080 already in use**: Stop the other service, or modify the `-p 8080:8080` in the Makefile to use a different port (e.g., `-p 9090:8080`).
+- **Only `run-mac-interactive` is supported.** Gazebo-based demos are Linux-only because Gazebo under amd64 emulation is very slow.
 - Software rendering is used (no GPU); this is fine for RViz but would be too slow for Gazebo.
+
 </details>
 
-<details>
-<summary><b>Docker tips</b></summary>
+---
+
+### Native Installation (Linux)
+
+**1. Clone the Repository**
 
 ```bash
-make shell                         # debug shell inside container
-make run-demo SCENARIO=static_easy GPU=false  # without GPU
-
-# Convenience aliases for all scenarios
-make run-static-easy
-make run-static-medium
-make run-static-hard
-make run-dynamic-easy
-make run-dynamic-medium
-make run-dynamic-hard
-make run-unknown-easy
-make run-unknown-medium
-make run-unknown-hard
-
-# Cleanup
-docker builder prune               # remove build caches
-docker rm $(docker ps -a -q)       # remove all containers
-docker rmi $(docker images -q)     # remove all images
+mkdir -p ~/code/sando_ws/src && cd ~/code/sando_ws/src
+git clone --recursive https://github.com/mit-acl/sando.git
+cd sando
 ```
 
-</details>
+**2. Run the Setup Script**
 
-### Native Installation
+```bash
+./setup.sh
+```
 
-1. Clone and run setup:
-   ```bash
-   mkdir -p ~/code/sando_ws/src && cd ~/code/sando_ws/src
-   git clone --recursive https://github.com/mit-acl/sando.git
-   cd sando && ./setup.sh
-   ```
-2. Source and run:
-   ```bash
-   cd ~/code/sando_ws
-   source install/setup.bash
-   python3 src/sando/scripts/run_sim.py -m interactive -s install/setup.bash
-   ```
+This automated script will:
+- Install ROS 2 Humble (if not already installed)
+- Install all system dependencies and Gurobi
+- Build Livox-SDK2 and livox_ros_driver2
+- Build SANDO and all ROS dependencies
+- Configure your `~/.bashrc` for future use
 
-### System Requirements
+**Notes:**
+- You'll be prompted for sudo password once at the start
+- Safe to re-run if something fails (skips already-installed components)
+- Use `./setup.sh -j 4` to increase build parallelism (default: all CPUs)
+- After completion, run `source ~/.bashrc` to use SANDO immediately
+- Place your Gurobi license at `~/gurobi.lic` (free [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/))
 
-- **OS:** Ubuntu 22.04 (Docker works on any Linux/macOS)
-- **ROS:** ROS 2 Humble
-- **Optimizer:** [Gurobi](https://www.gurobi.com/) (free academic license available)
-- **Hardware:** 4+ CPU cores recommended; GPU optional (Gazebo rendering only)
+**3. Run Simulations**
+
+```bash
+cd ~/code/sando_ws
+
+# Single-agent interactive simulation (click goals in RViz2 with "2D Goal Pose")
+python3 src/sando/scripts/run_sim.py -m interactive -s install/setup.bash
+
+# Demo modes
+python3 src/sando/scripts/run_sim.py -m static -d easy -s install/setup.bash
+python3 src/sando/scripts/run_sim.py -m dynamic -d hard -s install/setup.bash
+python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/setup.bash
+```
 
 ## Configuration
 
