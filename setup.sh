@@ -4,7 +4,7 @@
 # Installs ROS 2 Humble, Gurobi, and all dependencies, then builds the workspace.
 #
 # Usage:
-#   git clone --branch v0.0.2 --recursive https://github.com/mit-acl/sando.git
+#   git clone --branch v0.0.3 --recursive https://github.com/mit-acl/sando.git
 #   cd sando && ./setup.sh [-j N]
 #
 #   -j N  Number of parallel jobs for building (default: all CPUs)
@@ -170,7 +170,7 @@ if [ ! -d "$SANDO_WS/src/sando" ]; then
     cd "$SANDO_WS/src"
     git clone https://github.com/mit-acl/sando.git
     cd sando
-    git checkout v0.0.2
+    git checkout v0.0.3
 else
     echo "SANDO already exists, updating..."
     cd "$SANDO_WS/src/sando"

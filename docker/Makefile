@@ -35,7 +35,7 @@ BUILD_JOBS ?= 2
 # SANDO_TAG selects which GitHub tag/branch the Dockerfile clones. Defaults to
 # the Dockerfile's own default (`main`). Override with `make build SANDO_TAG=v1.0.0`
 # once a release tag is cut. Passing an empty value preserves the Dockerfile default.
-SANDO_TAG ?= v0.0.2
+SANDO_TAG ?= v0.0.3
 ifneq ($(SANDO_TAG),)
 TAG_ARG = --build-arg SANDO_TAG=$(SANDO_TAG)
 else

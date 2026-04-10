@@ -273,6 +273,7 @@ grbgetkey YOUR_LICENSE_KEY   # saves license to ~/gurobi.lic
 
 ```bash
 cd ~/code/sando_ws
+source install/setup.bash
 
 # Single-agent interactive simulation (click goals in RViz2 with "2D Goal Pose")
 python3 src/sando/scripts/run_sim.py -m interactive -s install/setup.bash
