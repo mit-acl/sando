@@ -4,7 +4,7 @@
 # Installs ROS 2 Humble, Gurobi, and all dependencies, then builds the workspace.
 #
 # Usage:
-#   git clone --branch v0.0.1 --recursive https://github.com/mit-acl/sando.git
+#   git clone --branch v0.0.2 --recursive https://github.com/mit-acl/sando.git
 #   cd sando && ./setup.sh [-j N]
 #
 #   -j N  Number of parallel jobs for building (default: all CPUs)
@@ -29,6 +29,7 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SANDO_WS="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)" || SANDO_WS="$HOME/code/sando_ws"
+CODE_DIR="$(cd "$SANDO_WS/.." && pwd)"
 
 echo "============================================="
 echo "SANDO Complete Setup Script"
@@ -153,13 +154,29 @@ export PATH="${PATH}:${GUROBI_HOME}/bin"
 export LD_LIBRARY_PATH="${GUROBI_HOME}/lib:${LD_LIBRARY_PATH}"
 
 # ============================================================
-# 6. Initialize submodules (if not already done)
+# 6. Clone/Checkout SANDO and initialize submodules
 # ============================================================
 echo ""
 echo "============================================="
-echo "STEP 6: Initializing Submodules"
+echo "STEP 6: Setting Up SANDO Repository"
 echo "============================================="
-cd "$SCRIPT_DIR"
+
+mkdir -p "$SANDO_WS/src"
+
+if [ ! -d "$SANDO_WS/src/sando" ]; then
+    echo "Cloning SANDO..."
+    cd "$SANDO_WS/src"
+    git clone https://github.com/mit-acl/sando.git
+    cd sando
+    git checkout v0.0.2
+else
+    echo "SANDO already exists, updating..."
+    cd "$SANDO_WS/src/sando"
+    git fetch
+fi
+
+echo "Initializing submodules..."
+cd "$SANDO_WS/src/sando"
 git submodule update --init --recursive
 
 # ============================================================
@@ -205,7 +222,7 @@ echo "============================================="
 echo "STEP 9: Building livox_ros_driver2"
 echo "============================================="
 LIVOX_DRIVER="$SCRIPT_DIR/deps/livox_ros_driver2"
-LIVOX_WS="$SANDO_WS/livox_ws"
+LIVOX_WS="$CODE_DIR/livox_ws"
 if [ -d "$LIVOX_DRIVER" ] && [ ! -d "$LIVOX_WS/install/livox_ros_driver2" ]; then
     echo "Building livox_ros_driver2..."
     mkdir -p "$LIVOX_WS/src"
