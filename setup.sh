@@ -235,22 +235,41 @@ else
 fi
 
 # ============================================================
-# 10. Build the workspace
+# 10. Build the workspace (three passes, matching Dockerfile)
 # ============================================================
 echo ""
 echo "============================================="
 echo "STEP 10: Building SANDO Workspace"
 echo "============================================="
 cd "$SANDO_WS"
+
+# Pass 1: decomp_util must be built first (decomp_rviz_plugins depends on it)
+echo "Building decomp_util first (required by other packages)..."
 source /opt/ros/humble/setup.bash
-# Source livox driver if built
-[ -f "$LIVOX_WS/install/setup.bash" ] && source "$LIVOX_WS/install/setup.bash"
+colcon build --packages-select decomp_util \
+    --parallel-workers "$NUM_JOBS" \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+# Pass 2: Build everything except ros2_livox_simulation (needs livox driver sourced)
+echo "Building main workspace..."
+source /opt/ros/humble/setup.bash
+source "$SANDO_WS/install/setup.bash"
 colcon build \
+    --packages-ignore ros2_livox_simulation \
     --parallel-workers "$NUM_JOBS" \
     --cmake-args -DCMAKE_BUILD_TYPE=Release \
                  -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
                  -DCMAKE_C_COMPILER=/usr/bin/gcc \
     --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
+
+# Pass 3: Build ros2_livox_simulation (requires livox_ros_driver2)
+echo "Building ros2_livox_simulation..."
+source /opt/ros/humble/setup.bash
+source "$SANDO_WS/install/setup.bash"
+[ -f "$LIVOX_WS/install/setup.bash" ] && source "$LIVOX_WS/install/setup.bash"
+colcon build --packages-select ros2_livox_simulation \
+    --parallel-workers "$NUM_JOBS" \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # ============================================================
 # 11. Configure shell environment
@@ -269,6 +288,14 @@ export PATH="${PATH}:${GUROBI_HOME}/bin"
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
 export GRB_LICENSE_FILE="$HOME/gurobi.lic"
 BASHEOF
+
+# Add Livox library path and source livox workspace
+grep -qxF "export LD_LIBRARY_PATH=$LIVOX_WS/install/livox_ros_driver2/lib:\$LD_LIBRARY_PATH" ~/.bashrc || \
+    echo "export LD_LIBRARY_PATH=$LIVOX_WS/install/livox_ros_driver2/lib:\$LD_LIBRARY_PATH:/usr/local/lib" >> ~/.bashrc
+
+# Source SANDO workspace
+grep -qxF "source $SANDO_WS/install/setup.bash" ~/.bashrc || \
+    echo "source $SANDO_WS/install/setup.bash" >> ~/.bashrc
 
 # Add ROS domain ID
 grep -qxF 'export ROS_DOMAIN_ID=20' ~/.bashrc || \
