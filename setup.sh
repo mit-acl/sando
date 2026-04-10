@@ -30,11 +30,13 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SANDO_WS="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)" || SANDO_WS="$HOME/code/sando_ws"
 CODE_DIR="$(cd "$SANDO_WS/.." && pwd)"
+DECOMP_WS="$CODE_DIR/decomp_ws"
 
 echo "============================================="
 echo "SANDO Complete Setup Script"
 echo "============================================="
 echo "  Workspace: $SANDO_WS"
+echo "  Decomp:    $DECOMP_WS"
 echo "  Sando dir: $SCRIPT_DIR"
 echo "  Using $NUM_JOBS parallel jobs for building"
 echo ""
@@ -189,8 +191,8 @@ echo "============================================="
 WS_SRC="$SANDO_WS/src"
 for d in "$SCRIPT_DIR"/deps/*/; do
     name=$(basename "$d")
-    # Skip Livox deps (built separately, not standard colcon packages)
-    case "$name" in Livox-SDK2|livox_ros_driver2) continue;; esac
+    # Skip deps built in separate workspaces
+    case "$name" in Livox-SDK2|livox_ros_driver2|DecompROS2) continue;; esac
     if [ ! -e "$WS_SRC/$name" ]; then
         ln -s "$d" "$WS_SRC/$name"
         echo "  Linked: $name"
@@ -198,11 +200,43 @@ for d in "$SCRIPT_DIR"/deps/*/; do
 done
 
 # ============================================================
-# 8. Build Livox-SDK2 (cmake, not colcon)
+# 8. Build DecompROS2 (separate workspace, matching mighty)
 # ============================================================
 echo ""
 echo "============================================="
-echo "STEP 8: Building Livox-SDK2"
+echo "STEP 8: Building DecompROS2"
+echo "============================================="
+mkdir -p "$DECOMP_WS/src"
+
+DECOMP_SRC="$SCRIPT_DIR/deps/DecompROS2"
+if [ -d "$DECOMP_SRC" ]; then
+    if [ ! -d "$DECOMP_WS/src/DecompROS2" ]; then
+        echo "Linking DecompROS2 to decomp_ws..."
+        ln -sf "$DECOMP_SRC" "$DECOMP_WS/src/DecompROS2"
+    fi
+
+    cd "$DECOMP_WS"
+    source /opt/ros/humble/setup.bash
+
+    echo "Building decomp_util first (required by other packages)..."
+    colcon build --packages-select decomp_util \
+        --parallel-workers "$NUM_JOBS" \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+    echo "Building remaining decomp packages..."
+    source "$DECOMP_WS/install/setup.bash"
+    colcon build --parallel-workers "$NUM_JOBS" \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release
+else
+    echo "DecompROS2 not found, skipping..."
+fi
+
+# ============================================================
+# 9. Build Livox-SDK2 (cmake, not colcon)
+# ============================================================
+echo ""
+echo "============================================="
+echo "STEP 9: Building Livox-SDK2"
 echo "============================================="
 LIVOX_SDK="$SCRIPT_DIR/deps/Livox-SDK2"
 if [ -d "$LIVOX_SDK" ] && [ ! -f "/usr/local/lib/liblivox_lidar_sdk_static.a" ]; then
@@ -215,11 +249,11 @@ else
 fi
 
 # ============================================================
-# 9. Build livox_ros_driver2 (needs its own workspace due to custom build.sh)
+# 10. Build livox_ros_driver2 (needs its own workspace due to custom build.sh)
 # ============================================================
 echo ""
 echo "============================================="
-echo "STEP 9: Building livox_ros_driver2"
+echo "STEP 10: Building livox_ros_driver2"
 echo "============================================="
 LIVOX_DRIVER="$SCRIPT_DIR/deps/livox_ros_driver2"
 LIVOX_WS="$CODE_DIR/livox_ws"
@@ -235,48 +269,31 @@ else
 fi
 
 # ============================================================
-# 10. Build the workspace (three passes, matching Dockerfile)
+# 11. Build SANDO workspace
 # ============================================================
 echo ""
 echo "============================================="
-echo "STEP 10: Building SANDO Workspace"
+echo "STEP 11: Building SANDO Workspace"
 echo "============================================="
 cd "$SANDO_WS"
-
-# Pass 1: decomp_util must be built first (decomp_rviz_plugins depends on it)
-echo "Building decomp_util first (required by other packages)..."
 source /opt/ros/humble/setup.bash
-colcon build --packages-select decomp_util \
-    --parallel-workers "$NUM_JOBS" \
-    --cmake-args -DCMAKE_BUILD_TYPE=Release
+source "$DECOMP_WS/install/setup.bash"
+export CMAKE_PREFIX_PATH="$LIVOX_WS/install/livox_ros_driver2:$DECOMP_WS/install/decomp_util:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="$LIVOX_WS/install/livox_ros_driver2/lib:$LD_LIBRARY_PATH"
 
-# Pass 2: Build everything except ros2_livox_simulation (needs livox driver sourced)
-echo "Building main workspace..."
-source /opt/ros/humble/setup.bash
-source "$SANDO_WS/install/setup.bash"
 colcon build \
-    --packages-ignore ros2_livox_simulation \
     --parallel-workers "$NUM_JOBS" \
     --cmake-args -DCMAKE_BUILD_TYPE=Release \
                  -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
                  -DCMAKE_C_COMPILER=/usr/bin/gcc \
     --allow-overriding gazebo_dev gazebo_msgs gazebo_ros gazebo_ros_pkgs gazebo_plugins
 
-# Pass 3: Build ros2_livox_simulation (requires livox_ros_driver2)
-echo "Building ros2_livox_simulation..."
-source /opt/ros/humble/setup.bash
-source "$SANDO_WS/install/setup.bash"
-[ -f "$LIVOX_WS/install/setup.bash" ] && source "$LIVOX_WS/install/setup.bash"
-colcon build --packages-select ros2_livox_simulation \
-    --parallel-workers "$NUM_JOBS" \
-    --cmake-args -DCMAKE_BUILD_TYPE=Release
-
 # ============================================================
-# 11. Configure shell environment
+# 12. Configure shell environment
 # ============================================================
 echo ""
 echo "============================================="
-echo "STEP 11: Setting Up Bash Configuration"
+echo "STEP 12: Setting Up Bash Configuration"
 echo "============================================="
 
 # Add Gurobi to bashrc (idempotent)
@@ -289,11 +306,13 @@ export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
 export GRB_LICENSE_FILE="$HOME/gurobi.lic"
 BASHEOF
 
-# Add Livox library path and source livox workspace
+# Add Livox library path
 grep -qxF "export LD_LIBRARY_PATH=$LIVOX_WS/install/livox_ros_driver2/lib:\$LD_LIBRARY_PATH" ~/.bashrc || \
     echo "export LD_LIBRARY_PATH=$LIVOX_WS/install/livox_ros_driver2/lib:\$LD_LIBRARY_PATH:/usr/local/lib" >> ~/.bashrc
 
-# Source SANDO workspace
+# Source decomp and SANDO workspaces
+grep -qxF "source $DECOMP_WS/install/setup.bash" ~/.bashrc || \
+    echo "source $DECOMP_WS/install/setup.bash" >> ~/.bashrc
 grep -qxF "source $SANDO_WS/install/setup.bash" ~/.bashrc || \
     echo "source $SANDO_WS/install/setup.bash" >> ~/.bashrc
 
@@ -311,6 +330,7 @@ echo "============================================="
 echo ""
 echo "Workspaces:"
 echo "  - SANDO:  $SANDO_WS"
+echo "  - Decomp: $DECOMP_WS"
 echo "  - Livox:  $LIVOX_WS"
 echo ""
 echo "To get started:"

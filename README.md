@@ -238,15 +238,7 @@ git clone --recursive https://github.com/mit-acl/sando.git
 cd sando
 ```
 
-**2. Obtain a Gurobi License**
-
-Get a free [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/) and place the license file at `~/gurobi.lic`:
-
-```bash
-cp /path/to/your/gurobi.lic ~/gurobi.lic
-```
-
-**3. Run the Setup Script**
+**2. Run the Setup Script**
 
 ```bash
 ./setup.sh
@@ -265,6 +257,17 @@ This automated script will:
 - Use `./setup.sh -j 4` to increase build parallelism (default: all CPUs)
 - The script appends ROS 2 sourcing, workspace sourcing, Gurobi environment variables, and library paths to `~/.bashrc`
 - After completion, run `source ~/.bashrc` to use SANDO immediately
+
+**3. Obtain a Gurobi License**
+
+Gurobi is installed by the setup script but requires a license to run. Get a free [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/), then activate it:
+
+```bash
+source ~/.bashrc
+grbgetkey YOUR_LICENSE_KEY   # saves license to ~/gurobi.lic
+```
+
+> **Note:** The license is only needed to **run** SANDO, not to build it.
 
 **4. Run Simulations**
 
