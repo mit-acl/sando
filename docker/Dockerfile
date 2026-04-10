@@ -48,7 +48,7 @@ ENV LIVOX_WS=/root/livox_ws
 RUN mkdir -p ${SANDO_WS}/src
 WORKDIR ${SANDO_WS}/src
 ARG DUMMY=unknown
-ARG SANDO_TAG=v0.0.1
+ARG SANDO_TAG=v0.0.2
 RUN DUMMY=${DUMMY} git clone --branch ${SANDO_TAG} --depth 1 https://github.com/mit-acl/sando.git && \
     cd sando && \
     git submodule update --init --recursive

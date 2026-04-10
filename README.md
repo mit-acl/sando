@@ -27,14 +27,19 @@ SANDO plans safe, dynamically-feasible trajectories for UAVs in environments wit
 
 **Full video:** [https://youtu.be/_T10DJiLQXg](https://youtu.be/_T10DJiLQXg)
 
-**arXiv Paper:** Coming soon!
+**arXiv Paper:** [https://arxiv.org/abs/2604.07599](https://arxiv.org/abs/2604.07599)
 
 **ResearchGate Paper:** [https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments](https://www.researchgate.net/publication/403632573_SANDO_Safe_Autonomous_Trajectory_Planning_for_Dynamic_Unknown_Environments)
 
 ```bibtex
 @article{kondo2026sando,
-      title={SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments},
+      title={SANDO: Safe Autonomous Trajectory Planning for Dynamic Unknown Environments}, 
+      author={Kota Kondo and Jesús Tordesillas and Jonathan P. How},
       year={2026},
+      eprint={2604.07599},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2604.07599}, 
 }
 ```
 
@@ -81,39 +86,9 @@ SANDO has been tested on Ubuntu 22.04 with ROS 2 Humble. Three installation meth
 
 **1. Install Docker Engine**
 
-> **Important:** You must install **Docker Engine** (the CLI version), **not** Docker Desktop. Docker Desktop for Linux runs containers inside a VM, which breaks X11 display passthrough and GPU access. If you have Docker Desktop installed, [uninstall it](https://docs.docker.com/desktop/uninstall/) first.
+Install **Docker Engine** (not Docker Desktop) by following the [official installation guide](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository).
 
-Install Docker Engine using the [official apt repository](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository):
-
-```bash
-# Set up Docker's apt repository
-sudo apt update
-sudo apt install ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
-Types: deb
-URIs: https://download.docker.com/linux/ubuntu
-Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-EOF
-
-sudo apt update
-
-# Install Docker Engine
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# Add your user to the docker group (so you don't need sudo for docker commands)
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Verify
-sudo docker run hello-world
-```
+> **Important:** You must use **Docker Engine**, not Docker Desktop. Docker Desktop for Linux runs containers inside a VM, which breaks X11 display passthrough and GPU access. If you have Docker Desktop installed, [uninstall it](https://docs.docker.com/desktop/uninstall/) first.
 
 **2. Obtain a Gurobi WLS License**
 
@@ -149,6 +124,12 @@ make run-demo SCENARIO=static_easy
 # Interactive shell (for debugging)
 make shell
 ```
+
+> **GPU errors?** If you get NVIDIA/GPU-related errors (e.g., missing `nvidia-container-toolkit`), you can disable GPU with `GPU=false`:
+> ```bash
+> make run-interactive GPU=false
+> ```
+> GPU is only used for Gazebo rendering — RViz-only modes work fine without it.
 
 See the [What You Can Do](#what-you-can-do) section above for the full list of modes.
 
