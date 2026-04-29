@@ -53,7 +53,7 @@ ANALYZE_BIN = os.path.expanduser(
     "~/code/sando_ws/install/sando/lib/sando/analyze_benchmark"
 )
 
-OUTPUT_TEX = os.path.expanduser("~/paper_writing/SANDO_v3/tables/sfc_ablation.tex")
+OUTPUT_TEX = os.path.expanduser("~/paper_writing/SANDO_paper/tables/sfc_ablation.tex")
 
 
 def run_analysis(data_dir):

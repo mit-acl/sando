@@ -582,10 +582,10 @@ static bool parseTrajCsv(const fs::path& csv_path, TrajCsv& out) {
 // ------------------------ marker building for trajectories ------------------------
 
 static inline std::string prettyPlannerName(const std::string& planner_key) {
-  // SANDO2
-  if (planner_key == "sando_N4" || planner_key == "sando_N4") return "SANDO2(N=4)";
-  if (planner_key == "sando_N5" || planner_key == "sando_N5") return "SANDO2(N=5)";
-  if (planner_key == "sando_N6" || planner_key == "sando_N6") return "SANDO2(N=6)";
+  // SANDO (legacy dump dirs used the pre-rename "dynus2_N*" key)
+  if (planner_key == "sando_N4" || planner_key == "dynus2_N4") return "SANDO(N=4)";
+  if (planner_key == "sando_N5" || planner_key == "dynus2_N5") return "SANDO(N=5)";
+  if (planner_key == "sando_N6" || planner_key == "dynus2_N6") return "SANDO(N=6)";
 
   // Orig. FASTER
   if (planner_key == "original_faster_N4") return "Orig.FASTER(N=4)";
@@ -593,7 +593,7 @@ static inline std::string prettyPlannerName(const std::string& planner_key) {
   if (planner_key == "original_faster_N6") return "Orig.FASTER(N=6)";
 
   // SUPER
-  if (planner_key == "super_l2") return "SUPER(L2)";
+  if (planner_key == "super_l2") return "SUPER-L2";
   if (planner_key == "super_linf") return "SUPER";
 
   // CP FASTER
@@ -1096,8 +1096,9 @@ class VisualizeLocalTrajsNode final : public rclcpp::Node {
       RCLCPP_ERROR(get_logger(), "Parameter sfc_dir is empty.");
       return;
     }
-    if (traj_dump_root_dir_.empty()) {
-      RCLCPP_ERROR(get_logger(), "Parameter traj_dump_root_dir is empty.");
+    if (traj_dump_root_dir_.empty() && traj_dump_root_dirs_.empty()) {
+      RCLCPP_ERROR(
+          get_logger(), "Parameters traj_dump_root_dir and traj_dump_root_dirs are both empty.");
       return;
     }
 
