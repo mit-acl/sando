@@ -935,14 +935,20 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
     poly_out_whole_ = shared_spatial_poly_out;
   }
 
-  // Shared flag: when one thread succeeds, all others abort early
-  auto any_thread_succeeded = std::make_shared<std::atomic<bool>>(false);
+  // Cross-thread coordination for "first solution wins":
+  //  - winner_index: index of the FIRST factor thread to succeed (first-come claim)
+  //  - num_finished: how many threads have returned (success or failure)
+  //  - completion_cv: lets the main thread sleep until the first success (or until
+  //    all threads fail) instead of busy-polling the futures.
+  // These live on this stack frame; every worker is joined before we return (their
+  // lambdas capture locals by reference), so capturing them by reference is safe.
+  std::atomic<int> winner_index{-1};
+  std::atomic<int> num_finished{0};
+  std::mutex completion_mtx;
+  std::condition_variable completion_cv;
 
   std::vector<std::future<std::tuple<bool, double, double, double, vec_E<Polyhedron<3>>>>> futures;
   futures.reserve(factors_.size());
-
-  // Time the parallel optimization section
-  auto parallel_opt_start = std::chrono::steady_clock::now();
 
   for (size_t i = 0; i < factors_.size(); ++i) {
     const double factor = factors_[i];  // corresponding factor for solver i
@@ -951,12 +957,26 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
         std::launch::async,
         [this, i, factor, &global_path, local_A, local_E, sub_goal, A_time, initial_dt, &obst_pos,
          &obst_bbox, &base_map, use_precomputed_constraints, &shared_spatial_constraints,
-         &shared_spatial_poly_out,
-         any_thread_succeeded]() -> std::tuple<bool, double, double, double, vec_E<Polyhedron<3>>> {
+         &shared_spatial_poly_out, &winner_index, &num_finished, &completion_mtx,
+         &completion_cv]() -> std::tuple<bool, double, double, double, vec_E<Polyhedron<3>>> {
+          // Announce completion so the main thread wakes the instant the first solver
+          // succeeds (or once everyone has failed). The first successful thread claims
+          // the winner slot; later finishers only bump the counter.
+          auto notify_done = [&](bool succeeded) {
+            {
+              std::lock_guard<std::mutex> lk(completion_mtx);
+              if (succeeded && winner_index.load() < 0) winner_index.store(static_cast<int>(i));
+              num_finished.fetch_add(1);
+            }
+            completion_cv.notify_one();
+          };
+
           try {
             // Early exit: another thread already found a solution
-            if (any_thread_succeeded->load(std::memory_order_relaxed))
+            if (winner_index.load(std::memory_order_acquire) >= 0) {
+              notify_done(false);
               return {false, 0.0, 0.0, factor, vec_E<Polyhedron<3>>{}};
+            }
 
             double thread_gurobi_time = 0.0;
             double thread_convx_decomp_time = 0.0;
@@ -974,22 +994,21 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
                 use_precomputed_constraints ? &shared_spatial_constraints : nullptr,
                 use_precomputed_constraints ? &shared_spatial_poly_out : nullptr);
 
-            // Signal other threads to stop
-            if (result) any_thread_succeeded->store(true, std::memory_order_relaxed);
+            // Claim the winner slot (first success wins) and wake the main thread.
+            notify_done(result);
 
             return {
                 result, thread_gurobi_time, thread_convx_decomp_time, factor, thread_poly_out_safe};
           } catch (const std::exception& ex) {
             std::cerr << "Exception in async task with factor " << factor << ": " << ex.what()
                       << std::endl;
+            notify_done(false);
             return {false, 0.0, 0.0, factor, vec_E<Polyhedron<3>>{}};
           }
         }));
   }
 
-  // Poll futures for first success instead of blocking sequentially.
-  // This ensures we react immediately when ANY thread finishes successfully,
-  // rather than waiting for earlier (by index) threads to complete first.
+  // Per-factor result slots, filled in when we join the workers below.
   std::vector<bool> vec_optimization_succeeded;
   std::vector<std::vector<RobotState>> vec_goal_setpoints;
   std::vector<PieceWisePol> vec_pwp_to_share;
@@ -1007,93 +1026,74 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
   vec_convx_decomp_times.resize(num_factors, 0.0);
   vec_poly_out_safe.resize(num_factors);
 
-  std::vector<bool> collected(num_factors, false);
-  size_t num_collected = 0;
-  int winner_index = -1;
-
-  // Poll until we find a winner or all futures are collected
-  while (num_collected < num_factors) {
-    for (size_t i = 0; i < num_factors; ++i) {
-      if (collected[i]) continue;
-
-      // Non-blocking check: is this future ready?
-      if (futures[i].wait_for(std::chrono::microseconds(0)) != std::future_status::ready) continue;
-
-      // Collect the result
-      auto
-          [result, thread_gurobi_time, thread_convx_decomp_time, thread_factor,
-           thread_poly_out_safe] = futures[i].get();
-      collected[i] = true;
-      num_collected++;
-
-      // Save polytopes for visualization even if the optimizer failed
-      if (poly_out_safe_.empty() && !thread_poly_out_safe.empty())
-        poly_out_safe_ = thread_poly_out_safe;
-
-      if (!result) continue;
-
-      // First success — immediately stop all other solvers
-      for (size_t j = 0; j < num_factors; ++j) {
-        if (j == i) continue;
-        try {
-          whole_traj_solver_ptrs_[j]->stopExecution();
-        } catch (const std::exception& e) {
-          std::cout << "it's likely that the solver has gurobi error and already released the "
-                       "gurobi environment"
-                    << std::endl;
-          std::cerr << e.what() << '\n';
-        }
-      }
-
-      // Get results from the successful solver
-      whole_traj_solver_ptrs_[i]->fillGoalSetPoints();
-      whole_traj_solver_ptrs_[i]->getGoalSetpoints(vec_goal_setpoints[i]);
-      whole_traj_solver_ptrs_[i]->getPieceWisePol(vec_pwp_to_share[i]);
-      whole_traj_solver_ptrs_[i]->getControlPoints(vec_cps[i]);  // Bezier control points
-      vec_gurobi_times[i] = thread_gurobi_time;
-      vec_convx_decomp_times[i] = thread_convx_decomp_time;
-      vec_poly_out_safe[i] = thread_poly_out_safe;
-      vec_optimization_succeeded[i] = true;
-      winner_index = static_cast<int>(i);
-    }
-
-    // If we found a winner, still drain remaining futures (they should exit fast
-    // due to stopExecution + any_thread_succeeded flag)
-    if (winner_index >= 0 && num_collected < num_factors) {
-      for (size_t i = 0; i < num_factors; ++i) {
-        if (!collected[i]) {
-          futures[i].get();  // These should return quickly since solvers were stopped
-          collected[i] = true;
-          num_collected++;
-        }
-      }
-      break;
-    }
-
-    // Brief yield to avoid busy-spin
-    std::this_thread::yield();
+  // Sleep until the FIRST factor thread reports success — or until every thread has
+  // finished (meaning all failed). This is event-driven: the winning worker wakes us
+  // through completion_cv, so the main thread does not burn a core busy-polling and
+  // does not wait for lower-index threads to finish first.
+  {
+    std::unique_lock<std::mutex> lk(completion_mtx);
+    completion_cv.wait(lk, [&] {
+      return winner_index.load() >= 0 || num_finished.load() == static_cast<int>(num_factors);
+    });
   }
 
-  // Measure wall-clock time for the parallel optimization only
-  auto parallel_opt_end = std::chrono::steady_clock::now();
-  double parallel_opt_ms =
-      std::chrono::duration<double, std::milli>(parallel_opt_end - parallel_opt_start).count();
+  const int successful_index = winner_index.load();
 
-  // Find the first successful optimization
-  int successful_index = -1;
-  for (size_t i = 0; i < vec_optimization_succeeded.size(); ++i) {
-    if (vec_optimization_succeeded[i]) {
-      optimization_succeeded = true;
-      goal_setpoints_ = vec_goal_setpoints[i];
-      pwp_to_share_ = vec_pwp_to_share[i];
-      cps_ = vec_cps[i];
-      local_traj_computation_time_ = parallel_opt_ms;
-      cvx_decomp_time_ = vec_convx_decomp_times[i];
-      successful_factor_ = factors_[i];
-      poly_out_safe_ = vec_poly_out_safe[i];
-      successful_index = i;
-      break;  // Exit the loop after the first success
+  // A winner exists: tell every other solver to abort its now-useless solve. Their
+  // Gurobi callbacks observe should_terminate_ and return almost immediately, so the
+  // join below is fast.
+  if (successful_index >= 0) {
+    for (size_t j = 0; j < num_factors; ++j) {
+      if (static_cast<int>(j) == successful_index) continue;
+      try {
+        whole_traj_solver_ptrs_[j]->stopExecution();
+      } catch (const std::exception& e) {
+        std::cout << "it's likely that the solver has gurobi error and already released the "
+                     "gurobi environment"
+                  << std::endl;
+        std::cerr << e.what() << '\n';
+      }
     }
+  }
+
+  // Join ALL workers before touching anything they captured by reference
+  // (global_path, obst_pos, base_map, ...). We collect every result so that any other
+  // solver that happened to finish before being aborted is kept as a suboptimal
+  // alternative.
+  for (size_t i = 0; i < num_factors; ++i) {
+    auto
+        [result, thread_gurobi_time, thread_convx_decomp_time, thread_factor,
+         thread_poly_out_safe] = futures[i].get();
+
+    // Save polytopes for visualization even if the optimizer failed
+    if (poly_out_safe_.empty() && !thread_poly_out_safe.empty())
+      poly_out_safe_ = thread_poly_out_safe;
+
+    if (!result) continue;
+
+    whole_traj_solver_ptrs_[i]->fillGoalSetPoints();
+    whole_traj_solver_ptrs_[i]->getGoalSetpoints(vec_goal_setpoints[i]);
+    whole_traj_solver_ptrs_[i]->getPieceWisePol(vec_pwp_to_share[i]);
+    whole_traj_solver_ptrs_[i]->getControlPoints(vec_cps[i]);  // Bezier control points
+    vec_gurobi_times[i] = thread_gurobi_time;
+    vec_convx_decomp_times[i] = thread_convx_decomp_time;
+    vec_poly_out_safe[i] = thread_poly_out_safe;
+    vec_optimization_succeeded[i] = true;
+  }
+
+  // Use the thread that finished first (the winner), not the lowest-index one.
+  if (successful_index >= 0 && vec_optimization_succeeded[successful_index]) {
+    optimization_succeeded = true;
+    goal_setpoints_ = vec_goal_setpoints[successful_index];
+    pwp_to_share_ = vec_pwp_to_share[successful_index];
+    cps_ = vec_cps[successful_index];
+    // Per-optimization time = the winning solver's own Gurobi solve time, measured
+    // inside generateLocalTrajectory. NOT the parallel-block wall-clock (which also
+    // includes thread spawn, convex decomposition, and the loser-abort/join tail).
+    local_traj_computation_time_ = vec_gurobi_times[successful_index];
+    cvx_decomp_time_ = vec_convx_decomp_times[successful_index];
+    successful_factor_ = factors_[successful_index];
+    poly_out_safe_ = vec_poly_out_safe[successful_index];
   }
 
   if (optimization_succeeded) {

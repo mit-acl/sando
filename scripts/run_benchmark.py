@@ -97,6 +97,48 @@ def set_num_p_everywhere(num_p: int):
             print(f"Warning: {yaml_path} not found, skipping")
 
 
+def update_num_n_in_yaml(yaml_path: str, num_n: int):
+    """Update the num_N parameter in a sando.yaml file using text replacement.
+
+    Preserves comments and formatting via regex substitution.
+
+    Args:
+        yaml_path: Path to sando.yaml config file
+        num_n: New value for num_N
+    """
+    import re
+
+    with open(yaml_path, "r") as f:
+        content = f.read()
+
+    new_content = re.sub(r"(num_N:\s*)\d+", rf"\g<1>{num_n}", content)
+
+    with open(yaml_path, "w") as f:
+        f.write(new_content)
+
+    print(f"Updated num_N to {num_n} in {yaml_path}")
+
+
+def set_num_n_everywhere(num_n: int):
+    """Update num_N in both src and install copies of sando.yaml.
+
+    Args:
+        num_n: New value for num_N
+    """
+    script_dir = Path(__file__).parent
+    src_yaml = script_dir.parent / "config" / "sando.yaml"
+    ws_dir = script_dir.parent.parent.parent  # sando_ws
+    install_yaml = (
+        ws_dir / "install" / "sando" / "share" / "sando" / "config" / "sando.yaml"
+    )
+
+    for yaml_path in [src_yaml, install_yaml]:
+        if yaml_path.exists():
+            update_num_n_in_yaml(str(yaml_path), num_n)
+        else:
+            print(f"Warning: {yaml_path} not found, skipping")
+
+
 def load_sando_params_from_yaml(yaml_path: str) -> dict:
     """Load SANDO parameters from sando.yaml
 
@@ -1347,6 +1389,16 @@ def main():
         "Creates P_<N> subfolders in the output directory for each value.",
     )
 
+    parser.add_argument(
+        "--num-n-values",
+        type=int,
+        nargs="+",
+        default=None,
+        help="List of num_N values to sweep over (e.g., --num-n-values 5 6). "
+        "Creates N_<n> subfolders (above any P_<p> subfolders). Combined with "
+        "--num-p-values this sweeps every (N, P) pair; configs with P >= N are skipped.",
+    )
+
     args = parser.parse_args()
 
     # Map cases to obstacle counts
@@ -1365,8 +1417,18 @@ def main():
     else:
         cases_to_run = [c for c in args.cases if c != "all"]
 
-    # Determine num_P sweep values (default: no sweep, use whatever is in sando.yaml)
+    # Determine num_N / num_P sweep values (default: no sweep, use sando.yaml as-is)
+    num_n_values = args.num_n_values if args.num_n_values else [None]
     num_p_values = args.num_p_values if args.num_p_values else [None]
+
+    # Build the (num_N, num_P) sweep, skipping invalid configs (require num_P < num_N)
+    sweep_combos = []
+    for num_n in num_n_values:
+        for num_p in num_p_values:
+            if num_n is not None and num_p is not None and num_p >= num_n:
+                print(f"Skipping num_N={num_n}, num_P={num_p} (requires num_P < num_N)")
+                continue
+            sweep_combos.append((num_n, num_p))
 
     print(f"\n{'=' * 80}")
     print("SANDO BENCHMARK")
@@ -1375,6 +1437,8 @@ def main():
     print(f"Mode: {args.mode}")
     print(f"Cases to run: {', '.join(cases_to_run)}")
     print(f"Number of trials per case: {args.num_trials}")
+    if args.num_n_values:
+        print(f"num_N sweep: {args.num_n_values}")
     if args.num_p_values:
         print(f"num_P sweep: {args.num_p_values}")
     if args.mode == "rviz-only":
@@ -1382,24 +1446,31 @@ def main():
     print(f"Timeout: {args.timeout}s")
     print(f"{'=' * 80}\n")
 
-    # Read original num_P so we can restore it after the sweep
+    # Read original num_P / num_N so we can restore them after the sweep
     original_num_p = None
-    if args.num_p_values:
+    original_num_n = None
+    if args.num_p_values or args.num_n_values:
         src_yaml = Path(__file__).parent.parent / "config" / "sando.yaml"
         if src_yaml.exists():
             with open(src_yaml, "r") as f:
                 _cfg = yaml.safe_load(f)
             _params = None
-            if "sando_node" in _cfg and "ros__parameters" in _cfg["sando_node"]:
-                _params = _cfg["sando_node"]["ros__parameters"]
-            elif "sando" in _cfg and "ros__parameters" in _cfg["sando"]:
-                _params = _cfg["sando"]["ros__parameters"]
+            if isinstance(_cfg, dict):
+                node = _cfg.get("sando_node") or _cfg.get("sando")
+                if isinstance(node, dict):
+                    _params = node.get("ros__parameters")
             if _params:
                 original_num_p = _params.get("num_P")
+                original_num_n = _params.get("num_N")
 
     try:
-        # Outer loop: sweep over num_P values
-        for num_p in num_p_values:
+        # Sweep over (num_N, num_P) combinations
+        for num_n, num_p in sweep_combos:
+            if num_n is not None:
+                print(f"\n{'#' * 80}")
+                print(f"# SETTING num_N = {num_n}")
+                print(f"{'#' * 80}\n")
+                set_num_n_everywhere(num_n)
             if num_p is not None:
                 print(f"\n{'#' * 80}")
                 print(f"# SETTING num_P = {num_p}")
@@ -1422,12 +1493,16 @@ def main():
                     num_obstacles = case_obstacles[case]
                     env_name = None
 
-                # Determine output directory for this case
+                # Determine output directory for this case.
+                # Layout: [<base>/]N_<n>/P_<p>/<case>[_<ts>], with N_/P_ levels
+                # added only for the dimensions actually being swept.
                 if args.output_dir:
+                    base_dir = Path(args.output_dir)
+                    if num_n is not None:
+                        base_dir = base_dir / f"N_{num_n}"
                     if num_p is not None:
-                        output_dir = Path(args.output_dir) / f"P_{num_p}" / case
-                    else:
-                        output_dir = Path(args.output_dir) / case
+                        base_dir = base_dir / f"P_{num_p}"
+                    output_dir = base_dir / case
                 else:
                     # Default to benchmark_data with case and timestamp
                     base_dir = (
@@ -1435,6 +1510,8 @@ def main():
                         / "benchmark_data"
                         / args.config_name
                     )
+                    if num_n is not None:
+                        base_dir = base_dir / f"N_{num_n}"
                     if num_p is not None:
                         base_dir = base_dir / f"P_{num_p}"
                     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1571,10 +1648,13 @@ def main():
     except KeyboardInterrupt:
         print("\n\nBenchmark interrupted by user")
     finally:
-        # Restore original num_P if we changed it
+        # Restore original num_P / num_N if we changed them
         if original_num_p is not None:
             print(f"\nRestoring original num_P = {original_num_p}")
             set_num_p_everywhere(original_num_p)
+        if original_num_n is not None:
+            print(f"\nRestoring original num_N = {original_num_n}")
+            set_num_n_everywhere(original_num_n)
 
     print(f"\n{'=' * 80}")
     print("ALL BENCHMARKS COMPLETE")

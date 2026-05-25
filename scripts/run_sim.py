@@ -85,6 +85,12 @@ def workspace_source_commands(ros_domain_id: int) -> list:
         'source /opt/ros/humble/setup.bash',
         '. "$SETUP_BASH"',
         f"export ROS_DOMAIN_ID={ros_domain_id}",
+        # Gazebo's GPU lidar/camera sensors need an X rendering context. tmux panes
+        # (especially started over SSH) inherit no DISPLAY, so the sensors return empty
+        # clouds and the occupancy map never builds. Fall back to the desktop display
+        # when the launching shell didn't provide one.
+        'export DISPLAY="${DISPLAY:-:1}"',
+        'export XAUTHORITY="${XAUTHORITY:-/run/user/1001/gdm/Xauthority}"',
     ]
 
 
