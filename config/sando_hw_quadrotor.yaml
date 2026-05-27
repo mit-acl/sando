@@ -106,7 +106,7 @@ sando_node:
         heat_tau_ratio: 0.5                         # [-] Time decay ratio
         heat_gamma: 0.0                             # [m/s] Tube radius growth rate
         heat_Hmax: 20.0                               # [-] Much higher than sim (2.0) — stronger repulsion for real-world safety
-        dyn_base_inflation_m: 0.2                   # [m] Larger than sim (0.1) — extra buffer for real obstacle size uncertainty
+        dyn_base_inflation_m: 0.5                   # [m] Larger than sim (0.1) — extra buffer for real obstacle size uncertainty
         dyn_heat_tube_radius_m: 3.0                 # [m] Wider than sim (0.5) — accounts for noisy real-world tracking
         heat_num_samples: 15                        # [-] Number of samples for heat computation
 
@@ -156,8 +156,8 @@ sando_node:
         factor_initial: 1.2                       # [-] Higher than sim (1.0) to give Gurobi more slack on NX
         factor_final: 2.5                         # [-] Final factor for the trajectory time allocation
         factor_constant_step_size: 0.1          # [-] Step size for the constant factor increase
-        obst_max_vel: 0.25                         # [m/s] Lower than sim (0.5) — real obstacles (people) move slower
-        obst_position_error: 0.0                  # [m] Bounded position estimation error for dynamic obstacles
+        obst_max_vel: 0.6                          # [m/s] Conservative upper bound on real obstacle Euclidean speed (obstacles commanded at ~0.5 m/s; 0.6 covers measured peaks so Assumption 1 / Theorem 1 hold)
+        obst_position_error: 0.2                  # [m] Bounded position estimation error for dynamic obstacles
         inflate_unknown_boundary: false           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
         max_gurobi_comp_time_sec: 1.0            # [s] Maximum Gurobi computation time per replanning
         jerk_smooth_weight: 1.0e+1                # [-] Weight for the jerk smoothness
