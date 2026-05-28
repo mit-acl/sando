@@ -42,16 +42,16 @@ sando_node:
         drone_bbox: [0.2, 0.2, 0.2]                     # [m] Vehicle bounding box (include prop guards for hardware)
 
         # --- Trajectory Optimization ---
-        num_P: 3                                        # [-] Number of polytopes (more = smoother but slower, num_P <= num_N)
-        num_N: 5                                        # [-] Number of trajectory segments
+        num_P: 2                                        # [-] Number of polytopes (more = smoother but slower, num_P <= num_N)
+        num_N: 6                                        # [-] Number of trajectory segments
 
         # --- Map Bounds ---
         x_min: -200.0                                   # [m] Map x lower bound
         x_max: 200.0                                    # [m] Map x upper bound
-        y_min: -200.0                                   # [m] Map y lower bound
-        y_max: 200.0                                    # [m] Map y upper bound
-        z_min: 0.0                                      # [m] Min altitude (points below are ground)
-        z_max: 6.0                                      # [m] Max altitude
+        y_min: -10.0                                   # [m] Map y lower bound
+        y_max: 10.0                                    # [m] Map y upper bound
+        z_min: 0.5                                      # [m] Min altitude (points below are ground)
+        z_max: 5.0                                      # [m] Max altitude
         sando_map_res: 0.3                              # [m] Voxel map resolution
 
         # --- Goal ---
@@ -69,7 +69,7 @@ sando_node:
         global_planner: "astar_heat"                    # ["sjps", "sastar", "astar_heat"]
         inflation_hgp: 0.45                             # [m] Static obstacle inflation for global A* planning
         hgp_timeout_duration_ms: 1000                   # [ms] Global planner timeout
-        environment_assumption: "dynamic"               # ["static", "dynamic", "dynamic_worst_case"] Decomposition mode
+        environment_assumption: "dynamic"    # ["static", "dynamic", "dynamic_worst_case"] Decomposition mode
 
         # --- Local Planning ---
         horizon: 15.0                                   # [m] Planning horizon
@@ -229,7 +229,7 @@ sando_node:
         acceleration_threshold: 2.0                     # [m/s^2] Acceleration threshold for dynamic classification
         use_life_time_for_box_visualization: true       # [-] Use lifetime for box visualization
         box_visualization_duration: 1.0                 # [s] Box visualization duration
-        use_only_curr_pos_for_dynamic_obst: false       # [-] Use only current position (no prediction) for comparison
+        use_only_curr_pos_for_dynamic_obst: true       # [-] Use only current position (no prediction) for comparison
 
         # --- Debug ---
         global_planner_verbose: false                   # [-] Global planner debug output

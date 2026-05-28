@@ -220,6 +220,68 @@ def load_sando_params_from_yaml(yaml_path: str) -> dict:
         return defaults
 
 
+def write_run_config_snapshot(
+    output_dir, args, case, num_obstacles, env_name, trajs_topic, num_n, num_p
+):
+    """Persist the parameters used for this config to ``run_config.json``.
+
+    ``num_N`` / ``num_P`` cannot be recovered from the recorded bag, so we snapshot
+    them (plus the effective velocity / inflation / decomposition settings) next to the
+    data. The swept ``num_n`` / ``num_p`` take precedence; when not swept (None), the
+    effective value is read from the active sando.yaml (install copy preferred, since
+    that is what actually runs, falling back to the source copy).
+    """
+    ws_dir = Path(__file__).resolve().parents[3]
+    yaml_candidates = [
+        ws_dir / "install" / "sando" / "share" / "sando" / "config" / "sando.yaml",
+        Path(__file__).resolve().parent.parent / "config" / "sando.yaml",
+    ]
+    params = {}
+    for yp in yaml_candidates:
+        if yp.exists():
+            try:
+                cfg = yaml.safe_load(open(yp))
+                node = cfg.get("sando_node") or cfg.get("sando") or {}
+                params = node.get("ros__parameters", {}) or {}
+                break
+            except Exception:
+                continue
+
+    def eff(swept, key):
+        return swept if swept is not None else params.get(key)
+
+    snapshot = {
+        "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        "case": case,
+        "num_obstacles": num_obstacles,
+        "mode": args.mode,
+        "env": env_name,
+        "trajs_topic": trajs_topic,
+        "num_trials": args.num_trials,
+        "start": list(args.start),
+        "goal": list(args.goal),
+        "timeout": args.timeout,
+        "dynamic_ratio": args.dynamic_ratio,
+        "num_N": eff(num_n, "num_N"),
+        "num_P": eff(num_p, "num_P"),
+        "v_max": params.get("v_max"),
+        "a_max": params.get("a_max"),
+        "j_max": params.get("j_max"),
+        "obst_max_vel": params.get("obst_max_vel"),
+        "environment_assumption": params.get("environment_assumption"),
+        "global_planner": params.get("global_planner"),
+        "horizon": params.get("horizon"),
+        "max_dist_vertexes": params.get("max_dist_vertexes"),
+    }
+    out = Path(output_dir) / "run_config.json"
+    with open(out, "w") as f:
+        json.dump(snapshot, f, indent=2)
+    print(
+        f"  Wrote run config snapshot: {out} "
+        f"(num_N={snapshot['num_N']}, num_P={snapshot['num_P']})"
+    )
+
+
 def check_lingering_processes() -> bool:
     """Check if any sando ROS nodes are still running (excludes benchmark script)"""
     try:
@@ -1005,6 +1067,13 @@ def run_single_trial(
             "/tf",
             "/tf_static",
             trajs_topic,
+            # --- diagnostics ---
+            # /rosout captures runtime warnings/errors. Note: the one-time Num N/Num P
+            # param dump is logged at node construction, before recording starts, so it
+            # is usually NOT captured here.
+            "/rosout",
+            # per-cycle solver / decomposition timings.
+            f"/{monitor.namespace}/computation_times",
         ]
 
         bag_cmd = ["ros2", "bag", "record", "-o", bag_path] + record_topics
@@ -1537,6 +1606,22 @@ def main():
                 # Create CSV directory for SANDO benchmark data
                 csv_dir = output_dir / "csv"
                 csv_dir.mkdir(parents=True, exist_ok=True)
+
+                # Snapshot the run parameters (esp. num_N / num_P, which are otherwise
+                # unrecoverable from the bag) next to the data.
+                try:
+                    write_run_config_snapshot(
+                        output_dir,
+                        args,
+                        case,
+                        num_obstacles,
+                        env_name,
+                        trajs_topic,
+                        num_n,
+                        num_p,
+                    )
+                except Exception as e:
+                    print(f"  Warning: could not write run_config.json: {e}")
 
                 # Start timing the benchmark
                 benchmark_start_time = time.time()
