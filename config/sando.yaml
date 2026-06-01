@@ -33,6 +33,7 @@ sando_node:
         provide_goal_in_global_frame: false             # [-] Goal given in global frame (true for hardware with Vicon)
         visual_level: 2                                 # [-] Visualization level (0: none, 1: minimal, 2: full)
         skip_initial_yawing: false                      # [-] Skip YAWING state, go directly to TRAVELING (useful for interactive sim)
+        always_yaw_on_new_goal: false                   # [-] If true, every new goal forces YAWING first (no mid-flight smooth goal updates)
 
         # --- Vehicle Dynamic Limits ---
         v_max: 5.0                                      # [m/s]   Max velocity

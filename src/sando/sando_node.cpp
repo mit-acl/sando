@@ -394,6 +394,7 @@ void SANDO_NODE::declareParameters() {
   this->declare_parameter("w_max", 0.5);
   this->declare_parameter("w_max_yawing", 0.5);
   this->declare_parameter("skip_initial_yawing", false);
+  this->declare_parameter("always_yaw_on_new_goal", false);
   this->declare_parameter("yaw_spinning_threshold", 10);
   this->declare_parameter("yaw_spinning_dyaw", 0.1);
 
@@ -595,6 +596,7 @@ void SANDO_NODE::setParameters() {
   par_.w_max = this->get_parameter("w_max").as_double();
   par_.w_max_yawing = this->get_parameter("w_max_yawing").as_double();
   par_.skip_initial_yawing = this->get_parameter("skip_initial_yawing").as_bool();
+  par_.always_yaw_on_new_goal = this->get_parameter("always_yaw_on_new_goal").as_bool();
   par_.yaw_spinning_threshold = this->get_parameter("yaw_spinning_threshold").as_int();
   par_.yaw_spinning_dyaw = this->get_parameter("yaw_spinning_dyaw").as_double();
 
@@ -789,7 +791,10 @@ void SANDO_NODE::cleanUpOldTrajsCallback() {
 
 void SANDO_NODE::trajCallback(const dynus_interfaces::msg::DynTraj::SharedPtr msg) {
   // Filter out its own traj
-  if (msg->id == id_) return;
+  if (msg->id == id_) {
+    std::cout << "reject its own traj" << std::endl;
+    return;
+  }
 
   // Get current time
   double current_time = this->now().seconds();

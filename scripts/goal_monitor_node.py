@@ -26,7 +26,7 @@ class GoalMonitorNode(Node):
 
         # Parameters
         self.declare_parameter(
-            "goal_tolerance", 0.6
+            "goal_tolerance", 0.35
         )  # Distance tolerance to consider goal reached
         self.goal_tolerance = self.get_parameter("goal_tolerance").value
         self.distance_check_frequency = (
@@ -78,14 +78,14 @@ class GoalMonitorNode(Node):
             # opposite of NX05
             self.goal_points = [[-8.090, 5.878, 1.0], [8.090, -5.878, 1.0]]
 
-        elif self.namespace == "PX03":
-            self.goal_points = [[15.2, 0.9, 0.85], [-4.0, 0.0, 0.85]]
-            # self.goal_points = [[6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
-            #                     [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
-            #                     [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
-            #                     [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
-            #                     [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85]
-            #                     ]
+        elif self.namespace == "PX01":
+            # self.goal_points = [[15.2, 0.9, 0.85], [-4.0, 0.0, 0.85]]
+            self.goal_points = [[6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
+                                [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
+                                [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
+                                [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85],
+                                [6.0, 0.0, 0.85], [-4.0, 0.0, 0.85]
+                                ]
         else:
             self.get_logger().error(
                 f"Unknown namespace: {self.namespace}. No goal points defined."

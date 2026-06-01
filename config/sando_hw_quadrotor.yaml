@@ -62,7 +62,7 @@ sando_node:
         y_min: -5.0                                             # [m] Tightened to physical flight arena (sim: -200)
         y_max: 5.0                                              # [m] Tightened to physical flight arena (sim: 200)
         z_min: 0.3                                              # [m] points below this are considered ground
-        z_max: 1.5                                              # [m] Indoor ceiling / safety-net height constraint (sim: 6.0)
+        z_max: 2.0                                              # [m] Indoor ceiling / safety-net height constraint (sim: 6.0)
         hgp_timeout_duration_ms: 1000                           # [ms] Timeout duration for the HGP
         max_num_expansion: 100000                                # [-] Maximum number of node expansions allowed
         use_free_start: true                                    # [-] Use free start for the HGP
@@ -99,15 +99,15 @@ sando_node:
         dynamic_heat_enabled: true                  # [-] Enable dynamic heat computation
         dynamic_as_occupied_current: true           # [-] Mark current position as hard occupied
         dynamic_as_occupied_future: false           # [-] Mark future positions as hard occupied
-        heat_alpha0: 1.0                            # [-] Higher than sim (0.2) — stronger proximity penalty for safety
+        heat_alpha0: 0.5                            # [-] Higher than sim (0.2) — stronger proximity penalty for safety
         heat_alpha1: 1.0                            # [-] Trajectory tube weight
         heat_p: 1                                   # [-] Linear falloff (sim: 2) — wider safety margin around obstacles
         heat_q: 2                                   # [-] Tube falloff power
-        heat_tau_ratio: 0.5                         # [-] Time decay ratio
-        heat_gamma: 0.0                             # [m/s] Tube radius growth rate
+        heat_tau_ratio: 1.5                         # [-] Time decay ratio
+        heat_gamma: 0.3                             # [m/s] Tube radius growth rate
         heat_Hmax: 20.0                               # [-] Much higher than sim (2.0) — stronger repulsion for real-world safety
         dyn_base_inflation_m: 0.5                   # [m] Larger than sim (0.1) — extra buffer for real obstacle size uncertainty
-        dyn_heat_tube_radius_m: 3.0                 # [m] Wider than sim (0.5) — accounts for noisy real-world tracking
+        dyn_heat_tube_radius_m: 0.8                 # [m] Wider than sim (0.5) — accounts for noisy real-world tracking
         heat_num_samples: 15                        # [-] Number of samples for heat computation
 
         # Static obstacle heat (boundary halo)
@@ -157,8 +157,8 @@ sando_node:
         factor_final: 2.5                         # [-] Final factor for the trajectory time allocation
         factor_constant_step_size: 0.1          # [-] Step size for the constant factor increase
         obst_max_vel: 0.6                          # [m/s] Conservative upper bound on real obstacle Euclidean speed (obstacles commanded at ~0.5 m/s; 0.6 covers measured peaks so Assumption 1 / Theorem 1 hold)
-        obst_position_error: 0.2                  # [m] Bounded position estimation error for dynamic obstacles
-        inflate_unknown_boundary: false           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
+        obst_position_error: 0.3                  # [m] Bounded position estimation error for dynamic obstacles
+        inflate_unknown_boundary: true           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
         max_gurobi_comp_time_sec: 1.0            # [s] Maximum Gurobi computation time per replanning
         jerk_smooth_weight: 1.0e+1                # [-] Weight for the jerk smoothness
 
@@ -175,6 +175,7 @@ sando_node:
         alpha_filter_dyaw: 0.8                  # [-] Yaw angle smoothing \in [0,1]. Higher--> smoother (each step covers (1-alpha) of remaining error). 0.8 = 20% per step
         w_max: 1.0                              # [rd/s] Maximum yaw rate (~57 deg/s)
         w_max_yawing: 0.5                        # [rad/s] Maximum yaw rate during YAWING state
+        always_yaw_on_new_goal: true             # [-] Every new goal forces YAWING first (no mid-flight smooth goal updates)
         yaw_spinning_threshold: 10              # [-] Lower than sim (10000) — allow spinning recovery on real hardware
         yaw_spinning_dyaw: 1.0                  # [rd/s] Spinning dyaw
 
@@ -201,14 +202,14 @@ sando_node:
         center_shift_factor: 0.5                # [-] Factor for the center shift
         initial_wdx: 20.0                       # [m] Asymmetric map sized for corridor-shaped arena (sim: 15x15)
         initial_wdy: 10.0                       # [m] Narrower than sim (15.0) to match physical space
-        initial_wdz: 4.0                       # [m] Height of the map
+        initial_wdz: 2.0                       # [m] Height of the map
         min_wdx: 20.0                           # [m] Minimum width of the map
         min_wdy: 10.0                           # [m] Minimum depth of the map
-        min_wdz: 4.0                           # [m] Minimum height of the map
-        sando_map_res: 0.3              # [m] Resolution of the map
+        min_wdz: 2.0                           # [m] Minimum height of the map
+        sando_map_res: 0.2              # [m] Resolution of the map
 
         # Communication delay parameters
-        use_comm_delay_inflation: true  # [-] Use communication delay inflation
+        use_comm_delay_inflation: false  # [-] Use communication delay inflation
         comm_delay_inflation_alpha: 0.2 # [-] Alpha for the communication delay inflation
         comm_delay_inflation_max: 0.1   # [m] Maximum communication delay inflation
         comm_delay_filter_alpha: 0.9    # [-] Alpha for the communication delay filter new_comm_delay = alpha * new_comm_delay + (1-alpha) * old_comm_delay

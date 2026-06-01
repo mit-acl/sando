@@ -1830,7 +1830,14 @@ void SANDO::setTerminalGoal(const RobotState& term_goal) {
   // If the drone is already in TRAVELING or GOAL_SEEN state (i.e. mid-flight),
   // smoothly update the terminal goal without stopping.  The replanning timer
   // will pick up the new goal on the next cycle and replan toward it.
-  if (terminal_goal_initialized_ &&
+  //
+  // When always_yaw_on_new_goal is set, skip this smooth-update path so that
+  // every distinct new goal forces a full re-init (YAWING first, then travel).
+  // This avoids the race where goal_monitor publishes the next goal before the
+  // drone settles into GOAL_REACHED, which would otherwise let it turn while
+  // moving instead of yawing in place. (The duplicate-goal guard above still
+  // prevents the periodic goal re-publish from re-triggering YAWING.)
+  if (!par_.always_yaw_on_new_goal && terminal_goal_initialized_ &&
       (drone_status_ == DroneStatus::TRAVELING || drone_status_ == DroneStatus::GOAL_SEEN)) {
     setGterm(term_goal);
     p_hover_ = term_goal.pos;

@@ -186,6 +186,7 @@ struct Parameters {
   double w_max;
   double w_max_yawing;
   bool skip_initial_yawing;
+  bool always_yaw_on_new_goal;
   int yaw_spinning_threshold;
   double yaw_spinning_dyaw;
 

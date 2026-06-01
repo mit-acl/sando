@@ -74,6 +74,18 @@ def record_ros2_bag(
         "/tf_static",
         "/trajs",
         "/clock",
+        "/RR03_tower/world",
+        "/RR03_tower/mocap/twist",
+        "/RR04_tower/world",
+        "/RR04_tower/mocap/twist",
+        "/RR05_tower/world",
+        "/RR05_tower/mocap/twist",
+        "/RR06_tower/world",
+        "/RR06_tower/mocap/twist",
+        "/RR08_tower/world",
+        "/RR08_tower/mocap/twist",
+        "/HELMET1/world",
+        "/HELMET1/mocap/twist",
     ]
 
     # Simulation-only global topics

@@ -396,7 +396,7 @@ def generate_launch_description():
                 nodes_to_start.append(spawn_entity_node)
             elif parameters["sim_env"] == "fake_sim":
                 nodes_to_start.append(pcl_render_node)
-        nodes_to_start.append(obstacle_tracker_node) if use_obstacle_tracker else None
+        # nodes_to_start.append(obstacle_tracker_node) if use_obstacle_tracker else None
 
         return nodes_to_start
 
