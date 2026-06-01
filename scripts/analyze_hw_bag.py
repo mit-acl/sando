@@ -131,6 +131,7 @@ def compute_time_stats(comp_msgs):
         ("total_replanning_ms", "Total Replanning [ms]"),
         ("housekeeping_ms", "  Housekeeping [ms]"),
         ("global_planning_ms", "  Global Planning [ms]"),
+        ("update_map_ms", "    Update Map [ms]"),
         ("hgp_static_jps_ms", "    HGP Static JPS [ms]"),
         ("hgp_check_path_ms", "    HGP Check Path [ms]"),
         ("hgp_dynamic_astar_ms", "    HGP Dynamic A* [ms]"),
@@ -1141,14 +1142,19 @@ def process_bag(bag_path, args):
     else:
         ref_t, ref_p = extract_goal_pos_array(data.get(goal_topic, []))
 
-    if ref_t is not None and actual_t is not None:
-        te = compute_tracking_error(ref_t, ref_p, actual_t, actual_p)
+    # Tracking error: always use the onboard pose, NOT mocap. The reference
+    # (setpoint_trajectory / goal) is published in the DLIO/mavros local
+    # frame; mocap drone pose lives in world frame, offset by the static
+    # world->init_pose transform. Comparing across frames produces a constant
+    # ~3.7 m bias in our setup, not a meaningful tracking-error.
+    if ref_t is not None and pose_t is not None:
+        te = compute_tracking_error(ref_t, ref_p, pose_t, pose_p)
         if te is not None:
             te["reference_source"] = ref_kind
-            te["actual_source"] = drone_actual_source
+            te["actual_source"] = "onboard /mavros pose"
             metrics["tracking_error"] = te
-    elif actual_t is None and obstacle_mocap_topics:
-        print(f"  WARNING: no drone-pose messages; skipping tracking-error and clearance.")
+    elif pose_t is None and obstacle_mocap_topics:
+        print(f"  WARNING: no onboard /mavros pose messages; skipping tracking error.")
 
     mocap_data = {}
     for mt in obstacle_mocap_topics:

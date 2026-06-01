@@ -1264,6 +1264,7 @@ void SANDO_NODE::setComputationTimesToZero() {
   hgp_dynamic_astar_time_ = 0.0;
   hgp_recover_path_time_ = 0.0;
   cvx_decomp_time_ = 0.0;
+  update_map_time_ = 0.0;
   local_traj_computation_time_ = 0.0;
   safe_paths_time_ = 0.0;
   safety_check_time_ = 0.0;
@@ -1283,7 +1284,8 @@ void SANDO_NODE::retrieveData() {
       hgp_dynamic_astar_time_, hgp_recover_path_time_, cvx_decomp_time_,
       local_traj_computation_time_, safety_check_time_, safe_paths_time_, yaw_sequence_time_,
       yaw_fitting_time_, successful_factor_,
-      housekeeping_time_, local_outer_time_, append_time_, final_housekeeping_time_);
+      housekeeping_time_, local_outer_time_, append_time_, final_housekeeping_time_,
+      update_map_time_);
 }
 
 // ----------------------------------------------------------------------------
@@ -1323,6 +1325,7 @@ void SANDO_NODE::publishComputationTimes(bool result) {
   msg.hgp_dynamic_astar_ms = hgp_dynamic_astar_time_;
   msg.hgp_recover_path_ms = hgp_recover_path_time_;
   msg.cvx_decomp_ms = cvx_decomp_time_;
+  msg.update_map_ms = update_map_time_;
   msg.local_traj_ms = local_traj_computation_time_;
   msg.safe_paths_ms = safe_paths_time_;
   msg.safety_check_ms = safety_check_time_;

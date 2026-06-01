@@ -374,7 +374,8 @@ class SANDO {
       double& housekeeping_time,
       double& local_outer_time,
       double& append_time,
-      double& final_housekeeping_time);
+      double& final_housekeeping_time,
+      double& update_map_time);
 
   /** @brief Retrieves the whole and safe corridor polytopes from the last replan. */
   void retrievePolytopes(vec_E<Polyhedron<3>>& poly_out_whole, vec_E<Polyhedron<3>>& poly_out_safe);
@@ -526,6 +527,7 @@ class SANDO {
   double hgp_dynamic_astar_time_ = 0.0;
   double hgp_recover_path_time_ = 0.0;
   double cvx_decomp_time_ = 0.0;
+  double update_map_time_ = 0.0;
   double successful_factor_ = 0.0;
   double local_traj_computation_time_ = 0.0;
   double safe_paths_time_ = 0.0;

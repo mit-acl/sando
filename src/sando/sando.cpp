@@ -496,6 +496,7 @@ void SANDO::resetData() {
   hgp_dynamic_astar_time_ = 0.0;
   hgp_recover_path_time_ = 0.0;
   cvx_decomp_time_ = 0.0;
+  update_map_time_ = 0.0;
   local_traj_computation_time_ = 0.0;
   safe_paths_time_ = 0.0;
   safety_check_time_ = 0.0;
@@ -535,7 +536,8 @@ void SANDO::retrieveData(
     double& housekeeping_time,
     double& local_outer_time,
     double& append_time,
-    double& final_housekeeping_time) {
+    double& final_housekeeping_time,
+    double& update_map_time) {
   final_g = final_g_;
   global_planning_time = global_planning_time_;
   hgp_static_jps_time = hgp_static_jps_time_;
@@ -553,6 +555,7 @@ void SANDO::retrieveData(
   local_outer_time = local_outer_time_;
   append_time = append_time_;
   final_housekeeping_time = final_housekeeping_time_;
+  update_map_time = update_map_time_;
 }
 
 // ----------------------------------------------------------------------------
@@ -2014,6 +2017,12 @@ void SANDO::updateMapPtr(
 // ----------------------------------------------------------------------------
 
 void SANDO::updateMap(double current_time) {
+  // Wall-clock timer for the whole updateMap (computeMapSize + obstacle snapshot +
+  // hgp_manager_.updateMap grid rebuild + KD-tree builds + vec conversions).
+  // Reported via update_map_time_ so the analyze script can break it out from
+  // generateGlobalPath's wall-clock.
+  MyTimer timer_update_map(true);
+
   // Update the map size
   RobotState local_state, local_G;
   getState(local_state);
@@ -2076,6 +2085,8 @@ void SANDO::updateMap(double current_time) {
           "updateMap: member pclptr_unk_ was null or empty; skipping KD‐tree update");
     }
   }
+
+  update_map_time_ = timer_update_map.getElapsedMicros() / 1000.0;
 }
 
 // ----------------------------------------------------------------------------
@@ -2095,6 +2106,11 @@ void SANDO::updateOccupancyMapPtr(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr
 // ----------------------------------------------------------------------------
 
 void SANDO::updateOccupancyMap(double current_time) {
+  // Wall-clock timer for the whole updateOccupancyMap (sim variant of updateMap).
+  // Mirrors the timer in updateMap so the analyze script can read update_map_ms
+  // for both hardware and sim bags.
+  MyTimer timer_update_map(true);
+
   // Update the map size
   RobotState local_state, local_G;
   getState(local_state);
@@ -2134,6 +2150,8 @@ void SANDO::updateOccupancyMap(double current_time) {
           "updateMap: member pclptr_map_ was null or empty; skipping KD-tree update");
     }
   }
+
+  update_map_time_ = timer_update_map.getElapsedMicros() / 1000.0;
 }
 
 // ----------------------------------------------------------------------------

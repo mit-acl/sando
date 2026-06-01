@@ -361,6 +361,7 @@ class SANDO_NODE : public rclcpp::Node {
   double hgp_dynamic_astar_time_ = 0.0;
   double hgp_recover_path_time_ = 0.0;
   double cvx_decomp_time_ = 0.0;
+  double update_map_time_ = 0.0;
   double local_traj_computation_time_ = 0.0;
   double safe_paths_time_ = 0.0;
   double safety_check_time_ = 0.0;
