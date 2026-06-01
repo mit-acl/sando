@@ -53,6 +53,8 @@ def record_ros2_bag(
         "/drone_marker",
         # --- Computation times ---
         "/computation_times",
+        # --- World ---
+        "/world",
     ]
 
     # Hardware-only per-agent topics
