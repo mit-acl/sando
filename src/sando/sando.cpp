@@ -501,6 +501,10 @@ void SANDO::resetData() {
   safety_check_time_ = 0.0;
   yaw_sequence_time_ = 0.0;
   yaw_fitting_time_ = 0.0;
+  housekeeping_time_ = 0.0;
+  local_outer_time_ = 0.0;
+  append_time_ = 0.0;
+  final_housekeeping_time_ = 0.0;
 
   poly_out_whole_.clear();
   poly_out_safe_.clear();
@@ -527,7 +531,11 @@ void SANDO::retrieveData(
     double& safe_paths_time,
     double& yaw_sequence_time,
     double& yaw_fitting_time,
-    double& successful_factor) {
+    double& successful_factor,
+    double& housekeeping_time,
+    double& local_outer_time,
+    double& append_time,
+    double& final_housekeeping_time) {
   final_g = final_g_;
   global_planning_time = global_planning_time_;
   hgp_static_jps_time = hgp_static_jps_time_;
@@ -541,6 +549,10 @@ void SANDO::retrieveData(
   yaw_sequence_time = yaw_sequence_time_;
   yaw_fitting_time = yaw_fitting_time_;
   successful_factor = successful_factor_;
+  housekeeping_time = housekeeping_time_;
+  local_outer_time = local_outer_time_;
+  append_time = append_time_;
+  final_housekeeping_time = final_housekeeping_time_;
 }
 
 // ----------------------------------------------------------------------------
@@ -600,9 +612,9 @@ std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, dou
       return std::make_tuple(false, false);  // no avoidance needed, stay hovering
   }
 
+  housekeeping_time_ = timer_housekeeping.getElapsedMicros() / 1000.0;
   if (par_.debug_verbose)
-    std::cout << "Housekeeping: " << timer_housekeeping.getElapsedMicros() / 1000.0 << " ms"
-              << std::endl;
+    std::cout << "Housekeeping: " << housekeeping_time_ << " ms" << std::endl;
 
   /* -------------------- Global Planning -------------------- */
 
@@ -622,27 +634,27 @@ std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, dou
 
   MyTimer timer_local(true);
   if (!planLocalTrajectory(global_path, last_replaning_computation_time)) {
+    local_outer_time_ = timer_local.getElapsedMicros() / 1000.0;
     if (par_.debug_verbose)
-      std::cout << "Local Trajectory Optimization: " << timer_local.getElapsedMicros() / 1000.0
-                << " ms" << std::endl;
+      std::cout << "Local Trajectory Optimization: " << local_outer_time_ << " ms" << std::endl;
     return std::make_tuple(false, true);
   }
+  local_outer_time_ = timer_local.getElapsedMicros() / 1000.0;
   if (par_.debug_verbose)
-    std::cout << "Local Trajectory Optimization: " << timer_local.getElapsedMicros() / 1000.0
-              << " ms" << std::endl;
+    std::cout << "Local Trajectory Optimization: " << local_outer_time_ << " ms" << std::endl;
 
   /* -------------------- Append to Plan -------------------- */
 
   MyTimer timer_append(true);
   if (!appendToPlan()) {
+    append_time_ = timer_append.getElapsedMicros() / 1000.0;
     if (par_.debug_verbose)
-      std::cout << "Append to Plan: " << timer_append.getElapsedMicros() / 1000.0 << " ms"
-                << std::endl;
+      std::cout << "Append to Plan: " << append_time_ << " ms" << std::endl;
     return std::make_tuple(false, true);
   }
+  append_time_ = timer_append.getElapsedMicros() / 1000.0;
   if (par_.debug_verbose)
-    std::cout << "Append to Plan: " << timer_append.getElapsedMicros() / 1000.0 << " ms"
-              << std::endl;
+    std::cout << "Append to Plan: " << append_time_ << " ms" << std::endl;
 
   /* -------------------- Final Housekeeping -------------------- */
 
@@ -653,9 +665,9 @@ std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, dou
 
   // Reset the replanning failure count
   replanning_failure_count_ = 0;
+  final_housekeeping_time_ = timer_final.getElapsedMicros() / 1000.0;
   if (par_.debug_verbose)
-    std::cout << "Final Housekeeping: " << timer_final.getElapsedMicros() / 1000.0 << " ms"
-              << std::endl;
+    std::cout << "Final Housekeeping: " << final_housekeeping_time_ << " ms" << std::endl;
 
   return std::make_tuple(true, true);
 }

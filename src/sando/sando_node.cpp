@@ -1269,6 +1269,10 @@ void SANDO_NODE::setComputationTimesToZero() {
   safety_check_time_ = 0.0;
   yaw_sequence_time_ = 0.0;
   yaw_fitting_time_ = 0.0;
+  housekeeping_time_ = 0.0;
+  local_outer_time_ = 0.0;
+  append_time_ = 0.0;
+  final_housekeeping_time_ = 0.0;
 }
 
 // ----------------------------------------------------------------------------
@@ -1278,7 +1282,8 @@ void SANDO_NODE::retrieveData() {
       final_g_, global_planning_time_, hgp_static_jps_time_, hgp_check_path_time_,
       hgp_dynamic_astar_time_, hgp_recover_path_time_, cvx_decomp_time_,
       local_traj_computation_time_, safety_check_time_, safe_paths_time_, yaw_sequence_time_,
-      yaw_fitting_time_, successful_factor_);
+      yaw_fitting_time_, successful_factor_,
+      housekeeping_time_, local_outer_time_, append_time_, final_housekeeping_time_);
 }
 
 // ----------------------------------------------------------------------------
@@ -1308,6 +1313,10 @@ void SANDO_NODE::publishComputationTimes(bool result) {
   msg.result = result;
   msg.successful_factor = successful_factor_;
   msg.total_replanning_ms = replanning_computation_time_ * 1000.0;
+  msg.housekeeping_ms = housekeeping_time_;
+  msg.local_outer_ms = local_outer_time_;
+  msg.append_ms = append_time_;
+  msg.final_housekeeping_ms = final_housekeeping_time_;
   msg.global_planning_ms = global_planning_time_;
   msg.hgp_static_jps_ms = hgp_static_jps_time_;
   msg.hgp_check_path_ms = hgp_check_path_time_;

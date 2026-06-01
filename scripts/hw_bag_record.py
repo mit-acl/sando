@@ -56,6 +56,11 @@ def record_ros2_bag(bag_name, bag_path, agents, topics=None):
         "/cluster_bounding_boxes",
         "/yaw_output",
         "/predicted_trajs",
+        "/world",                  # mocap drone pose, broadcast as /<agent>/world
+        "/computation_times",      # per-replan timing breakdown
+        "/mavros/local_position/pose",
+        "/mavros/setpoint_trajectory/local",
+        "/mavros/vision_pose/pose_cov",
     ]
 
     # Static topics (not agent-specific)

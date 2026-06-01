@@ -366,6 +366,11 @@ class SANDO_NODE : public rclcpp::Node {
   double safety_check_time_ = 0.0;
   double yaw_sequence_time_ = 0.0;
   double yaw_fitting_time_ = 0.0;
+  // Wrapper-stage breakdown of total replanning time.
+  double housekeeping_time_ = 0.0;
+  double local_outer_time_ = 0.0;
+  double append_time_ = 0.0;
+  double final_housekeeping_time_ = 0.0;
   double replanning_computation_time_ = 0.0;
   double successful_factor_ = 0.0;
   double current_time_for_debug_ = 0.0;

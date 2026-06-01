@@ -370,7 +370,11 @@ class SANDO {
       double& safe_paths_time,
       double& yaw_sequence_time,
       double& yaw_fitting_time,
-      double& successful_factor);
+      double& successful_factor,
+      double& housekeeping_time,
+      double& local_outer_time,
+      double& append_time,
+      double& final_housekeeping_time);
 
   /** @brief Retrieves the whole and safe corridor polytopes from the last replan. */
   void retrievePolytopes(vec_E<Polyhedron<3>>& poly_out_whole, vec_E<Polyhedron<3>>& poly_out_safe);
@@ -528,6 +532,12 @@ class SANDO {
   double safety_check_time_ = 0.0;
   double yaw_sequence_time_ = 0.0;
   double yaw_fitting_time_ = 0.0;
+  // Wrapper-stage breakdown of total replanning time (helps identify where
+  // time is going inside replan() beyond the sub-stage timers above).
+  double housekeeping_time_ = 0.0;
+  double local_outer_time_ = 0.0;
+  double append_time_ = 0.0;
+  double final_housekeeping_time_ = 0.0;
   vec_E<Polyhedron<3>> poly_out_whole_;
   vec_E<Polyhedron<3>> poly_out_safe_;
   std::vector<RobotState> goal_setpoints_;
