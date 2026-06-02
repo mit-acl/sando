@@ -931,20 +931,25 @@ void SANDO_NODE::replanCallback() {
     publishStaticPushPoints();
   }
 
-  // Always retrieve data so we can publish computation times
-  retrieveData();
+  // Only retrieve + publish + record + verbose-print on cycles where we actually
+  // attempted to plan. No-op cycles (drone hovering at goal, no readiness yet, no
+  // avoidance needed) would otherwise inflate the failure rate computed by the
+  // analyze script, since it counts every result==false as a failure.
+  if (sando_ptr_->wasReplanAttempted()) {
+    retrieveData();
 
-  // Publish computation times topic
-  publishComputationTimes(replanning_result);
+    // Publish computation times topic
+    publishComputationTimes(replanning_result);
 
-  // Verbose computation time to the terminal
-  if (verbose_computation_time_) printComputationTime(replanning_result);
+    // Verbose computation time to the terminal
+    if (verbose_computation_time_) printComputationTime(replanning_result);
 
-  // Verbose only local trajectory computation time
-  if (local_traj_comp_verbose_ && !verbose_computation_time_)
-    std::cout << "Local Traj Time [ms]: " << local_traj_computation_time_ << std::endl;
+    // Verbose only local trajectory computation time
+    if (local_traj_comp_verbose_ && !verbose_computation_time_)
+      std::cout << "Local Traj Time [ms]: " << local_traj_computation_time_ << std::endl;
 
-  if (use_benchmark_) recordData(replanning_result);
+    if (use_benchmark_) recordData(replanning_result);
+  }
 
   // Usually this is done is goal callback but becuase we don't call that in push path test, we need
   // to call it here

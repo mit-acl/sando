@@ -104,6 +104,12 @@ class SANDO {
    */
   std::tuple<bool, bool> replan(double last_replaning_computation_time, double current_time);
 
+  /** @brief Returns true if the most recent replan() call got past the early-return
+   *  no-op checks (not-ready / no-need-to-replan / hover-avoidance) and actually
+   *  attempted to plan. Use this to gate computation-time publication so no-op
+   *  cycles (e.g. drone hovering at the goal) are not counted as planning failures. */
+  bool wasReplanAttempted() const { return replan_attempted_; }
+
   /** @brief Enables adaptive k-value computation based on accumulated replanning computation times.
    */
   void startAdaptKValue();
@@ -529,6 +535,10 @@ class SANDO {
   double cvx_decomp_time_ = 0.0;
   double update_map_time_ = 0.0;
   double successful_factor_ = 0.0;
+  // True iff this replan() got past the early-return no-op checks (ready / needReplan /
+  // hover-avoidance). Read via wasReplanAttempted() to decide whether to publish
+  // computation_times. Reset to false at the top of every replan().
+  bool replan_attempted_ = false;
   double local_traj_computation_time_ = 0.0;
   double safe_paths_time_ = 0.0;
   double safety_check_time_ = 0.0;

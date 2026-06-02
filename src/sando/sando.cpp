@@ -586,6 +586,12 @@ void SANDO::retrieveCPs(std::vector<Eigen::Matrix<double, 3, 4>>& cps) { cps = c
 // ----------------------------------------------------------------------------
 
 std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, double current_time) {
+  // Reset the "was a real replan attempted" flag. Only flipped to true once we get
+  // past the early-return no-op checks below (ready / needReplan / hover-avoidance).
+  // The node uses wasReplanAttempted() to skip computation-time publication on
+  // no-op cycles so the failure-rate metric reflects real planning failures.
+  replan_attempted_ = false;
+
   /* -------------------- Housekeeping -------------------- */
 
   MyTimer timer_housekeeping(true);
@@ -614,6 +620,10 @@ std::tuple<bool, bool> SANDO::replan(double last_replaning_computation_time, dou
     if (!checkHoverAvoidance(current_time))
       return std::make_tuple(false, false);  // no avoidance needed, stay hovering
   }
+
+  // From here on, this is a genuine replan attempt. Anything that fails downstream
+  // (HGP, MIQP, appendToPlan) is a real planning failure and gets published.
+  replan_attempted_ = true;
 
   housekeeping_time_ = timer_housekeeping.getElapsedMicros() / 1000.0;
   if (par_.debug_verbose)
