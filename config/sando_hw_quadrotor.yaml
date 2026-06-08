@@ -62,7 +62,7 @@ sando_node:
         y_min: -5.0                                             # [m] Tightened to physical flight arena (sim: -200)
         y_max: 5.0                                              # [m] Tightened to physical flight arena (sim: 200)
         z_min: 0.3                                              # [m] points below this are considered ground
-        z_max: 2.0                                              # [m] Indoor ceiling / safety-net height constraint (sim: 6.0)
+        z_max: 1.5                                              # [m] Indoor ceiling / safety-net height constraint (sim: 6.0)
         hgp_timeout_duration_ms: 1000                           # [ms] Timeout duration for the HGP
         max_num_expansion: 100000                                # [-] Maximum number of node expansions allowed
         use_free_start: true                                    # [-] Use free start for the HGP
@@ -114,8 +114,8 @@ sando_node:
         static_heat_enabled: true                   # [-] Enable static heat computation
         static_heat_alpha: 1.0                      # [-] Peak heat at obstacle boundary
         static_heat_p: 2                            # [-] Falloff power
-        static_heat_Hmax: 5.0                      # [-] Maximum static heat value
-        static_heat_rmax_m: 2.0                     # [m] Larger than sim (1.0) — wider keep-out halo for real walls
+        static_heat_Hmax: 10.0                      # [-] Maximum static heat value
+        static_heat_rmax_m: 3.0                     # [m] Larger than sim (1.0) — wider keep-out halo for real walls
         static_heat_default_radius_m: 1.0           # [m] Larger than sim (0.5) — extra static obstacle margin
         static_heat_boundary_only: true             # [-] Use only boundary voxels
         static_heat_apply_on_unknown: false         # [-] Apply heat on unknown cells
@@ -140,7 +140,7 @@ sando_node:
         horizon: 15.0                               # [m] Horizon
         dc: 0.01                                    # [s] Duration for the interpolation=Value of the timer pubGoal
         dynamic_constraint_type: "Linf"               # [-] Constraint type: "Linf" (per-axis |v|≤vmax), "L2" (||v||₂≤vmax), "L1" (||v||₁≤vmax)
-        v_max: 2.0                                  # [m/s]  Conservative for flight safety (sim: 5.0)
+        v_max: 4.0                                  # [m/s]  Conservative for flight safety (sim: 5.0)
         a_max: 5.0                                  # [m/s2] Conservative for flight safety (sim: 20.0)
         j_max: 7.5                                 # [m/s3] Conservative for flight safety (sim: 100.0)
         drone_bbox: [0.9, 0.9, 0.5]              # [m] Actual drone footprint including props (sim: 0.2 point-mass)
@@ -203,10 +203,10 @@ sando_node:
         initial_wdx: 20.0                       # [m] Asymmetric map sized for corridor-shaped arena (sim: 15x15)
         initial_wdy: 10.0                       # [m] Narrower than sim (15.0) to match physical space
         initial_wdz: 2.0                       # [m] Height of the map
-        min_wdx: 20.0                           # [m] Minimum width of the map
+        min_wdx: 16.0                           # [m] Minimum width of the map
         min_wdy: 10.0                           # [m] Minimum depth of the map
         min_wdz: 2.0                           # [m] Minimum height of the map
-        sando_map_res: 0.2              # [m] Resolution of the map
+        sando_map_res: 0.3              # [m] Resolution of the map
 
         # Communication delay parameters
         use_comm_delay_inflation: false  # [-] Use communication delay inflation
