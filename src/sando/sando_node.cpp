@@ -374,7 +374,15 @@ void SANDO_NODE::declareParameters() {
   this->declare_parameter("factor_initial", 1.0);
   this->declare_parameter("factor_final", 5.0);
   this->declare_parameter("factor_constant_step_size", 0.1);
-  this->declare_parameter("obst_max_vel", 0.5);
+  // Per-axis and L2 obstacle velocity bounds.
+  // Known-obstacle AABB inflation always uses the per-axis values; unknown-space inflation
+  // uses either L2 (with obst_max_vel_l2) or per_axis (with the per-axis values) depending on
+  // unknown_inflation_norm.
+  this->declare_parameter("obst_max_vel_x", 0.5);
+  this->declare_parameter("obst_max_vel_y", 0.5);
+  this->declare_parameter("obst_max_vel_z", 0.5);
+  this->declare_parameter("obst_max_vel_l2", 0.5);
+  this->declare_parameter("unknown_inflation_norm", std::string("L2"));
   this->declare_parameter("obst_position_error", 0.0);
   this->declare_parameter("inflate_unknown_boundary", true);
   this->declare_parameter("max_gurobi_comp_time_sec", 0.05);
@@ -576,7 +584,18 @@ void SANDO_NODE::setParameters() {
   par_.factor_initial = this->get_parameter("factor_initial").as_double();
   par_.factor_final = this->get_parameter("factor_final").as_double();
   par_.factor_constant_step_size = this->get_parameter("factor_constant_step_size").as_double();
-  par_.obst_max_vel = this->get_parameter("obst_max_vel").as_double();
+  par_.obst_max_vel_x = this->get_parameter("obst_max_vel_x").as_double();
+  par_.obst_max_vel_y = this->get_parameter("obst_max_vel_y").as_double();
+  par_.obst_max_vel_z = this->get_parameter("obst_max_vel_z").as_double();
+  par_.obst_max_vel_l2 = this->get_parameter("obst_max_vel_l2").as_double();
+  par_.unknown_inflation_norm = this->get_parameter("unknown_inflation_norm").as_string();
+  if (par_.unknown_inflation_norm != "L2" && par_.unknown_inflation_norm != "per_axis") {
+    RCLCPP_ERROR(
+        this->get_logger(),
+        "Invalid unknown_inflation_norm: '%s'. Must be 'L2' or 'per_axis'. Falling back to 'L2'.",
+        par_.unknown_inflation_norm.c_str());
+    par_.unknown_inflation_norm = "L2";
+  }
   par_.obst_position_error = this->get_parameter("obst_position_error").as_double();
   par_.inflate_unknown_boundary = this->get_parameter("inflate_unknown_boundary").as_bool();
   par_.max_gurobi_comp_time_sec = this->get_parameter("max_gurobi_comp_time_sec").as_double();
@@ -748,7 +767,18 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "Factor Initial: %f", par_.factor_initial);
   RCLCPP_INFO(this->get_logger(), "Factor Final: %f", par_.factor_final);
   RCLCPP_INFO(this->get_logger(), "Factor Constant Step Size: %f", par_.factor_constant_step_size);
-  RCLCPP_INFO(this->get_logger(), "Obst Max Vel: %f", par_.obst_max_vel);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "Obst Max Vel per-axis (x,y,z): (%f, %f, %f) -- used by known-obstacle AABB inflation and per_axis unknown-space inflation",
+      par_.obst_max_vel_x, par_.obst_max_vel_y, par_.obst_max_vel_z);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "Obst Max Vel L2: %f -- used by L2 unknown-space inflation",
+      par_.obst_max_vel_l2);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "Unknown-space inflation norm: %s",
+      par_.unknown_inflation_norm.c_str());
   RCLCPP_INFO(this->get_logger(), "Obst Position Error: %f", par_.obst_position_error);
   RCLCPP_INFO(this->get_logger(), "Max Gurobi Comp Time Sec: %f", par_.max_gurobi_comp_time_sec);
   RCLCPP_INFO(this->get_logger(), "Jerk Smooth Weight: %f", par_.jerk_smooth_weight);

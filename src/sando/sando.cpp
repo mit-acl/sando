@@ -284,8 +284,32 @@ void SANDO::findSafeSubGoal(vec_Vecf<3>& global_path) {
   // Sampling parameters (TODO: make these parameters configurable)
   const double sample_dist = 0.1;  // [m] distance between two samples along the trajectory
 
-  // Inflation radius for unknown space (max extent)
-  const double r_inflate = par_.obst_max_vel * traj_max_time_;  // [m]
+  // Inflation radius for unknown space (max extent).
+  //
+  // The safe-subgoal walk-back uses an L2 KD-tree (kdtree_unk_) to test whether a
+  // candidate point's drone footprint intersects the inflated unknown region.
+  //
+  //   * "L2"      : the unknown-space inflation IS an L2 ball, so the L2 distance threshold
+  //                 is exact. r_inflate = obst_max_vel_l2 * t.
+  //   * "per_axis": the unknown-space inflation is an axis-aligned cube with half-sides
+  //                 (v_x, v_y, v_z) * t. The L2 KD-tree returns Euclidean distances, so we
+  //                 cannot check the per-axis cube exactly. To remain CONSERVATIVE
+  //                 (never accept an unsafe sub-goal), we use the L2 radius that fully
+  //                 ENCLOSES the cube: r_inflate = sqrt(v_x^2 + v_y^2 + v_z^2) * t. Every
+  //                 point inside the per-axis cube is then guaranteed to be inside the L2
+  //                 ball, so the rejection test cannot miss a point that should be rejected.
+  //                 It may over-reject candidates in the diagonal "corners" of the ball,
+  //                 which is a safety-preserving conservative bias.
+  double r_inflate;
+  if (par_.unknown_inflation_norm == "per_axis") {
+    const double vx = par_.obst_max_vel_x;
+    const double vy = par_.obst_max_vel_y;
+    const double vz = par_.obst_max_vel_z;
+    const double v_enclosing_l2 = std::sqrt(vx * vx + vy * vy + vz * vz);
+    r_inflate = v_enclosing_l2 * traj_max_time_;
+  } else {
+    r_inflate = par_.obst_max_vel_l2 * traj_max_time_;
+  }
   const double thr_orig = par_.drone_radius;                    // [m]
   const double thr_infl = par_.drone_radius + r_inflate;        // [m]
   const double thr_orig2 = thr_orig * thr_orig;
@@ -935,8 +959,9 @@ bool SANDO::planLocalTrajectory(vec_Vecf<3>& global_path, double last_replaning_
     std::vector<double> seg_end_times;
     if (par_.environment_assumption == "dynamic_worst_case") {
       // Worst-case inflation: set ALL segment end times to the maximum possible time horizon
-      // across all factor threads. This inflates every obstacle by obst_max_vel * max_time,
-      // producing the most conservative corridors (ablation baseline).
+      // across all factor threads. This inflates every obstacle by the per-axis bounds * max_time
+      // (or the L2 bound for unknown space, depending on unknown_inflation_norm), producing the
+      // most conservative corridors (ablation baseline).
       const double max_time_horizon =
           static_cast<double>(par_.num_N) * initial_dt * factors_.back();
       seg_end_times.assign(P, max_time_horizon);

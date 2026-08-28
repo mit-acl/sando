@@ -165,7 +165,16 @@ struct Parameters {
   double factor_initial = 1.0;         // initial factor for the trajectory time allocation
   double factor_final = 5.0;           // final factor for the trajectory time allocation
   double factor_constant_step_size = 0.1;  // step size for the constant factor increase
-  double obst_max_vel;                     // maximum velocity of dynamic obstacles
+  // Per-axis bounds: used by known-obstacle AABB inflation in map_util::readMap and by per_axis
+  // unknown-space inflation when unknown_inflation_norm == "per_axis".
+  double obst_max_vel_x = 1.5;
+  double obst_max_vel_y = 1.5;
+  double obst_max_vel_z = 1.5;
+  // L2 (Euclidean) bound: used by L2-ball unknown-space inflation when unknown_inflation_norm == "L2".
+  double obst_max_vel_l2 = 1.8;
+  // "L2" or "per_axis"; controls only the unknown-space (boundary) inflation mode. Known-obstacle
+  // inflation is always per-axis AABB regardless of this setting.
+  std::string unknown_inflation_norm = "L2";
   double obst_position_error = 0.0;      // bounded position estimation error for dynamic obstacles
   bool inflate_unknown_boundary = true;  // inflate unknown-space boundary in corridor decomposition
   double max_gurobi_comp_time_sec;       // maximum Gurobi computation time per replanning

@@ -229,6 +229,19 @@ def extract_pose_array(msgs):
     return t, np.array(p_list)
 
 
+def extract_state_pos_array(msgs):
+    """Extract (t, xyz) from dynus_interfaces/State messages. Unlike
+    /mavros/local_position/pose, State carries the drone position in the
+    *global* (DLIO-corrected / world) frame, so it is the correct source for
+    goal-reached checks when the goal is specified in the global frame.
+    Returns (None, None) if empty."""
+    if not msgs:
+        return None, None
+    t = np.array([_stamp_sec(m.header.stamp) for m in msgs])
+    p = np.array([[m.pos.x, m.pos.y, m.pos.z] for m in msgs])
+    return t, p
+
+
 def extract_goal_pos_array(msgs):
     """Extract (t, xyz) commanded reference from dynus_interfaces/Goal messages."""
     if not msgs:
@@ -338,6 +351,52 @@ def compute_flight_window(
     return float(start_t), end_t, returns
 
 
+def compute_flight_window_by_goal(
+    goal_msgs, pose_t, pose_p, goal_xyz, goal_threshold_m=0.5
+):
+    """Detect the active-flight time window for a single-traverse-to-goal flight.
+
+    Start = timestamp of the first ``/goal`` message.
+    End   = timestamp at which the drone first comes within ``goal_threshold_m``
+            (Euclidean) of ``goal_xyz``. If the drone never reaches the goal in
+            the bag, end is the time of minimum distance to the goal instead.
+
+    ``pose_t`` and ``pose_p`` must be pre-extracted (timestamps, Nx3 positions)
+    in the SAME frame as ``goal_xyz``. For goals expressed in the global frame,
+    use ``extract_state_pos_array`` on ``/<ns>/state`` (which carries the
+    DLIO-corrected pose in the global frame); for local-frame goals,
+    ``extract_pose_array`` on ``/<ns>/mavros/local_position/pose`` is fine.
+
+    Returns ``(start_t, end_t, reached)``. ``reached`` is ``True`` iff the drone
+    actually came within the threshold of the goal in this bag.
+    """
+    if not goal_msgs or pose_t is None or len(pose_t) == 0:
+        return None, None, False
+    start_t = _stamp_sec(goal_msgs[0].header.stamp)
+    order = np.argsort(pose_t)
+    pose_t = pose_t[order]
+    pose_p = pose_p[order]
+    sel = pose_t >= start_t
+    if not np.any(sel):
+        return start_t, None, False
+    t_post = pose_t[sel]
+    p_post = pose_p[sel]
+    goal = np.asarray(goal_xyz, dtype=float)
+    dist = np.linalg.norm(p_post - goal, axis=1)
+    inside = np.where(dist < goal_threshold_m)[0]
+    if inside.size > 0:
+        end_t = float(t_post[inside[0]])
+        return float(start_t), end_t, True
+    # Drone never came within threshold (likely deflected by avoidance maneuvers,
+    # or threshold tighter than the actual stopping radius). Fall back to the
+    # time of MINIMUM distance — this is when the drone was effectively "as close
+    # to the goal as it would get this flight" — rather than the very last pose
+    # sample (which often includes the descent after stopping). Treat this as
+    # not-quite-reached for the boolean return so callers can warn the user.
+    i_min = int(np.argmin(dist))
+    return float(start_t), float(t_post[i_min]), False
+
+
 def filter_by_time(msgs, t_lo, t_hi):
     """Keep messages whose representative timestamp is in [t_lo, t_hi].
     Pass-through if either bound is None. Handles both header-bearing messages
@@ -404,6 +463,33 @@ def extract_obstacle_estimates(msgs):
     return out
 
 
+def extract_obstacle_estimates_with_bbox(msgs):
+    """Flatten DynTraj to [(t_sec, id, pos_xyz, half_extents_xyz)].
+
+    DynTraj.bbox carries the FULL extent published by the tracker (max - min of
+    the observed cluster), so it is halved here. It is the obstacle's own
+    estimated size: the vehicle's half-extents are added later, on the planner
+    side, so this is the right quantity for a clearance measurement.
+    """
+    out = []
+    for m in msgs:
+        if getattr(m, "is_agent", False):
+            continue
+        bbox = list(getattr(m, "bbox", []) or [])
+        if len(bbox) < 3:
+            continue
+        t = _stamp_sec(m.header.stamp)
+        out.append(
+            (
+                t,
+                int(m.id),
+                np.array([m.pos.x, m.pos.y, m.pos.z]),
+                0.5 * np.array([float(bbox[0]), float(bbox[1]), float(bbox[2])]),
+            )
+        )
+    return out
+
+
 def interp_xyz(t_src, p_src, t_query):
     """Per-axis linear interpolation; clamps queries outside the source range."""
     if t_src is None or len(t_src) == 0:
@@ -443,6 +529,229 @@ def compute_replan_failures(comp_msgs):
         "failure_rate_pct": 100.0 * fails / total if total else 0.0,
         "longest_failure_streak": longest,
     }
+
+
+def compute_failure_streaks(comp_msgs):
+    """Maximal runs of consecutive replanning failures, timed.
+
+    ``compute_replan_failures`` counts the longest streak in *cycles*, which
+    cannot be compared against the committed horizon. This returns each run with
+    its wall-clock extent so the duration can be reasoned about directly (R4.4).
+    Returns (streaks, replan_period_s); each streak has t_start/t_end (absolute),
+    n_cycles and duration_s.
+    """
+    if not comp_msgs:
+        return [], None
+    stamped = sorted(
+        ((_stamp_sec(m.header.stamp), bool(m.result)) for m in comp_msgs),
+        key=lambda x: x[0],
+    )
+    times = np.array([t for t, _ in stamped])
+    period = float(np.median(np.diff(times))) if len(times) > 1 else None
+
+    runs = []
+    run_start_i = None
+    for i, (_t, ok) in enumerate(stamped):
+        if not ok and run_start_i is None:
+            run_start_i = i
+        elif ok and run_start_i is not None:
+            runs.append((run_start_i, i - 1))
+            run_start_i = None
+    if run_start_i is not None:
+        runs.append((run_start_i, len(stamped) - 1))
+
+    out = []
+    for i0, i1 in runs:
+        t0, t1 = stamped[i0][0], stamped[i1][0]
+        # The vehicle keeps flying the committed plan until the next attempt
+        # succeeds, so the exposed interval extends to that attempt (or to the
+        # last failure plus one period if the bag ends mid-streak).
+        t_end = stamped[i1 + 1][0] if i1 + 1 < len(stamped) else (t1 + (period or 0.0))
+        out.append(
+            {
+                "t_start": float(t0),
+                "t_end": float(t_end),
+                "n_cycles": int(i1 - i0 + 1),
+                "duration_s": float(t_end - t0),
+            }
+        )
+    return out, period
+
+
+def compute_stop_state_events(
+    streaks,
+    goal_t,
+    goal_p,
+    goal_radius_m=0.5,
+    stagnation_win_s=0.3,
+    stagnation_tol_m=0.02,
+):
+    """Did a failure streak last long enough to exhaust the committed plan?
+
+    ``N*dt`` is not logged, so instead of inferring the horizon we detect its
+    observable consequence: a committed plan that has run out stops advancing the
+    commanded setpoint. Within each failure streak we look for the commanded
+    position (``/goal``) moving less than ``stagnation_tol_m`` over a sliding
+    ``stagnation_win_s`` window. Stagnation within ``goal_radius_m`` of the final
+    commanded position is ignored -- that is the legitimate arrival hover.
+
+    Position stagnation is used rather than |v| ~ 0 because commanded speed dips
+    through zero at trajectory reversals while commanded position does not.
+    """
+    if goal_t is None or goal_p is None or len(goal_t) == 0 or not streaks:
+        return None
+    order = np.argsort(goal_t)
+    gt = np.asarray(goal_t)[order]
+    gp = np.asarray(goal_p)[order]
+    p_final = gp[-1]
+
+    events = []
+    for s in streaks:
+        m = (gt >= s["t_start"]) & (gt <= s["t_end"])
+        if int(m.sum()) < 2:
+            continue
+        wt, wp = gt[m], gp[m]
+        stagnant = np.zeros(len(wt), dtype=bool)
+        for i, t in enumerate(wt):
+            j = int(np.searchsorted(wt, t + stagnation_win_s, side="right")) - 1
+            # searchsorted clamps at the end of the array, so require the window
+            # to actually span stagnation_win_s -- otherwise a short streak gets
+            # flagged for holding still over a few milliseconds.
+            if j <= i or float(wt[j] - wt[i]) < stagnation_win_s:
+                continue
+            span = float(np.max(np.linalg.norm(wp[i : j + 1] - wp[i], axis=1)))
+            if span < stagnation_tol_m:
+                stagnant[i] = True
+        stagnant &= np.linalg.norm(wp - p_final, axis=1) >= goal_radius_m
+        if not stagnant.any():
+            continue
+        best = 0.0
+        best_i0 = None
+        cur_i0 = None
+        for i, f in enumerate(stagnant):
+            if f:
+                if cur_i0 is None:
+                    cur_i0 = i
+                cur = float(wt[i] - wt[cur_i0])
+                if cur > best:
+                    best, best_i0 = cur, cur_i0
+            else:
+                cur_i0 = None
+        events.append(
+            {
+                "t_start": s["t_start"],
+                "duration_s": s["duration_s"],
+                "n_cycles": s["n_cycles"],
+                "stagnant_s": best,
+                "stagnant_t_start": float(wt[best_i0]) if best_i0 is not None else None,
+            }
+        )
+    return {
+        "n_events": len(events),
+        "events": events,
+        "max_stagnant_s": max((e["stagnant_s"] for e in events), default=0.0),
+    }
+
+
+def compute_onboard_clearance(drone_t, drone_p, est_records, max_gap_s=0.5,
+                              min_track_life_s=0.0):
+    """Clearance between the drone and the *onboard-estimated* obstacles.
+
+    This is not ground truth: it uses the tracker output the planner itself
+    consumed (``/predicted_trajs``), which is all that is available in the large
+    flight area (R4.4). Reports both center-to-center distance -- the same
+    quantity as the mocap-based ``d_min`` -- and the distance from the drone
+    center to the estimated AABB surface.
+
+    Samples where the nearest estimate for that track is more than ``max_gap_s``
+    away are skipped, so clearance is never manufactured by extrapolating across
+    a dropped track.
+    """
+    if drone_t is None or len(drone_t) == 0 or not est_records:
+        return None
+    drone_t = np.asarray(drone_t)
+    drone_p = np.asarray(drone_p)
+    by_id = {}
+    for t, oid, pos, half in est_records:
+        by_id.setdefault(oid, []).append((t, pos, half))
+
+    t0 = float(drone_t[0])
+    best_center = (float("inf"), None, None)
+    best_surface = (float("inf"), None, None)
+    per_obstacle = {}
+    n_dropped = 0
+    for oid, recs in by_id.items():
+        recs.sort(key=lambda r: r[0])
+        t_o = np.array([r[0] for r in recs])
+        p_o = np.array([r[1] for r in recs])
+        h_o = np.array([r[2] for r in recs])
+        if len(t_o) < 2:
+            continue
+        # Transient detections (downwash, split returns, momentary reflections)
+        # appear for a fraction of a second, while a real obstacle is tracked
+        # continuously for tens of seconds. Drop the short-lived ones so the
+        # minimum is not set by a cluster that never corresponded to an object.
+        if float(t_o[-1] - t_o[0]) < min_track_life_s:
+            n_dropped += 1
+            continue
+        idx = np.clip(np.searchsorted(t_o, drone_t), 1, len(t_o) - 1)
+        gap = np.minimum(np.abs(drone_t - t_o[idx - 1]), np.abs(t_o[idx] - drone_t))
+        live = gap <= max_gap_s
+        if not live.any():
+            continue
+        tq = drone_t[live]
+        p_at = interp_xyz(t_o, p_o, tq)
+        h_at = interp_xyz(t_o, h_o, tq)
+        delta = np.abs(drone_p[live] - p_at)
+        d_center = np.linalg.norm(drone_p[live] - p_at, axis=1)
+        d_surface = np.linalg.norm(np.maximum(delta - h_at, 0.0), axis=1)
+        i_c, i_s = int(np.argmin(d_center)), int(np.argmin(d_surface))
+        per_obstacle[oid] = {
+            "min_center_m": float(d_center[i_c]),
+            "min_center_time_s": float(tq[i_c] - t0),
+            "min_surface_m": float(d_surface[i_s]),
+            "min_surface_time_s": float(tq[i_s] - t0),
+            "p5_center_m": float(np.percentile(d_center, 5)),
+            "n_samples": int(live.sum()),
+        }
+        if d_center[i_c] < best_center[0]:
+            best_center = (float(d_center[i_c]), oid, float(tq[i_c] - t0))
+        if d_surface[i_s] < best_surface[0]:
+            best_surface = (float(d_surface[i_s]), oid, float(tq[i_s] - t0))
+
+    if not per_obstacle:
+        return None
+    return {
+        "min_center_m": best_center[0],
+        "min_center_obstacle_id": best_center[1],
+        "min_center_time_s": best_center[2],
+        "min_surface_m": best_surface[0],
+        "min_surface_obstacle_id": best_surface[1],
+        "min_surface_time_s": best_surface[2],
+        "n_tracks": len(per_obstacle),
+        "n_tracks_dropped": n_dropped,
+        "min_track_life_s": min_track_life_s,
+        "per_obstacle": per_obstacle,
+    }
+
+
+def compute_clearance_during_streaks(
+    drone_t, drone_p, est_records, streaks, max_gap_s=0.5, min_track_life_s=0.0
+):
+    """Onboard clearance restricted to the failure streaks -- the windows where
+    the vehicle was flying the fallback rather than a freshly replanned trajectory."""
+    if drone_t is None or len(drone_t) == 0 or not streaks:
+        return None
+    drone_t = np.asarray(drone_t)
+    drone_p = np.asarray(drone_p)
+    mask = np.zeros(len(drone_t), dtype=bool)
+    for s in streaks:
+        mask |= (drone_t >= s["t_start"]) & (drone_t <= s["t_end"])
+    if not mask.any():
+        return None
+    return compute_onboard_clearance(
+        drone_t[mask], drone_p[mask], est_records, max_gap_s, min_track_life_s
+    )
 
 
 def compute_tracking_error(goal_t, goal_p, pose_t, pose_p):
@@ -501,41 +810,78 @@ def compute_clearance(drone_t, drone_p, mocap_data):
     }
 
 
-def compute_obstacle_estimation_error(est_records, mocap_data):
+def compute_obstacle_estimation_error(est_records, mocap_data, assoc_max_dist=2.0):
     """Pair each AEKF estimate (predicted_trajs.pos) to the nearest mocap obstacle
-    at the estimate's timestamp, and compute the position error."""
+    at the estimate's timestamp, and compute the position error.
+
+    Estimates whose nearest mocap obstacle is more than ``assoc_max_dist`` metres
+    away are treated as spurious detections (clutter / lost tracks not present in
+    motion capture) and rejected from the error statistic. ``assoc_max_dist`` is
+    sized to accommodate (a) the largest expected steady-state estimation error
+    of a well-tracked obstacle (~0.5 m sensor + filter + bbox-centroid budget),
+    (b) transient errors during track re-acquisition (~1.2 m), while remaining
+    strictly below typical inter-obstacle spacing (~2 m). The rejection count is
+    returned so the user can sanity-check the gate."""
     if not est_records or not mocap_data:
         return None
     names = list(mocap_data.keys())
     errs = []
     assoc_counts = {n: 0 for n in names}
+    n_rejected = 0  # estimates beyond assoc_max_dist from every mocap obstacle
+    n_out_of_coverage = 0  # estimates outside the time window of every mocap track
     for t_e, _id, p_est in est_records:
         best_d = float("inf")
         best_name = None
         best_truth = None
+        any_coverage = False
         for n in names:
             t_m, p_m = mocap_data[n]
             if t_m is None or len(t_m) == 0:
                 continue
             if t_e < t_m[0] or t_e > t_m[-1]:
                 continue  # outside mocap coverage
+            any_coverage = True
             p_truth = interp_xyz(t_m, p_m, np.array([t_e]))[0]
             d = float(np.linalg.norm(p_est - p_truth))
             if d < best_d:
                 best_d = d
                 best_name = n
                 best_truth = p_truth
-        if best_name is not None:
+        if not any_coverage:
+            n_out_of_coverage += 1
+            continue
+        if best_name is not None and best_d <= assoc_max_dist:
             errs.append((t_e, best_name, p_est, best_truth, p_est - best_truth))
             assoc_counts[best_name] += 1
+        else:
+            n_rejected += 1
     if not errs:
-        return None
+        return {
+            "n_samples": 0,
+            "n_rejected_over_gate": int(n_rejected),
+            "n_out_of_coverage": int(n_out_of_coverage),
+            "assoc_max_dist_m": float(assoc_max_dist),
+            "all_estimates_zero": False,
+            "est_err_mean_m": 0.0,
+            "est_err_max_m": 0.0,
+            "est_err_p95_m": 0.0,
+            "max_x": 0.0,
+            "max_y": 0.0,
+            "max_z": 0.0,
+            "assoc_counts": assoc_counts,
+        }
     err_vec = np.array([e[4] for e in errs])
     err_norm = np.linalg.norm(err_vec, axis=1)
     per_axis_max = np.max(np.abs(err_vec), axis=0)
     all_zero = all(np.allclose(e[2], 0.0) for e in errs)
+    n_attempted = len(errs) + n_rejected
+    rejection_rate = (n_rejected / n_attempted) if n_attempted > 0 else 0.0
     return {
         "n_samples": int(len(errs)),
+        "n_rejected_over_gate": int(n_rejected),
+        "n_out_of_coverage": int(n_out_of_coverage),
+        "assoc_max_dist_m": float(assoc_max_dist),
+        "rejection_rate": float(rejection_rate),
         "all_estimates_zero": bool(all_zero),
         "est_err_mean_m": float(np.mean(err_norm)),
         "est_err_max_m": float(np.max(err_norm)),
@@ -632,6 +978,58 @@ def print_metrics(metrics, bag_name):
         print(f"  Failure rate        : {rf['failure_rate_pct']:.2f} %")
         print(f"  Longest streak      : {rf['longest_failure_streak']}")
 
+    fs = metrics.get("failure_streaks")
+    if fs is not None:
+        print("\n[Fallback exposure  (R4.4)]")
+        per = fs.get("replan_period_s")
+        print(f"  Replan period       : {per*1000:.1f} ms" if per else "  Replan period       : n/a")
+        print(f"  Failure streaks     : {fs['n_streaks']}")
+        print(
+            f"  Longest streak      : {fs['longest_streak_cycles']} cycles"
+            f"  =  {fs['longest_streak_s']:.2f} s"
+        )
+    ss = metrics.get("stop_state")
+    if ss is not None:
+        if ss["n_events"] == 0:
+            print("  Stop-state events   : 0  (commanded setpoint never stalled mid-flight)")
+        else:
+            print(
+                f"  Stop-state events   : {ss['n_events']}"
+                f"   (longest stall {ss['max_stagnant_s']:.2f} s)"
+            )
+            for e in ss["events"][:5]:
+                print(
+                    f"    - streak {e['n_cycles']:3d} cycles / {e['duration_s']:.2f} s,"
+                    f" stalled {e['stagnant_s']:.2f} s"
+                )
+    for key, label in (
+        ("onboard_clearance", "whole flight"),
+        ("onboard_clearance_during_streaks", "during failure streaks only"),
+    ):
+        oc = metrics.get(key)
+        if oc is None:
+            continue
+        print(f"\n[Onboard-estimated clearance -- {label}]  (NOT ground truth)")
+        print(
+            f"  MIN center-to-center  : {oc['min_center_m']:.3f} m"
+            f"  (track {oc['min_center_obstacle_id']} at t = {oc['min_center_time_s']:.2f} s)"
+        )
+        print(
+            f"  MIN center-to-surface : {oc['min_surface_m']:.3f} m"
+            f"  (track {oc['min_surface_obstacle_id']} at t = {oc['min_surface_time_s']:.2f} s)"
+        )
+        print(
+            f"  Tracks considered     : {oc['n_tracks']}"
+            f"   (dropped {oc.get('n_tracks_dropped', 0)} shorter than"
+            f" {oc.get('min_track_life_s', 0.0):.1f} s)"
+        )
+    sw = metrics.get("onboard_clearance_sweep")
+    if sw:
+        print("\n[Sensitivity to the track-persistence threshold]")
+        print(f"  {'min life':>9} {'d_min center':>13} {'d_min surf':>11} {'kept':>5} {'dropped':>8}")
+        for thr, c, s, nk, nd in sw:
+            print(f"  {thr:>7.1f} s {c:>12.3f} {s:>11.3f} {nk:>5} {nd:>8}")
+
     te = metrics.get("tracking_error")
     if te is not None:
         src = te.get("reference_source", "goal")
@@ -679,6 +1077,17 @@ def print_metrics(metrics, bag_name):
                 "reflect the mocap obstacle position, not the AEKF estimate."
             )
         print(f"  n samples           : {oe['n_samples']}")
+        gate = oe.get("assoc_max_dist_m")
+        nr = oe.get("n_rejected_over_gate", 0)
+        noc = oe.get("n_out_of_coverage", 0)
+        if gate is not None:
+            rr = oe.get("rejection_rate", 0.0)
+            print(
+                f"  Association gate    : {gate:.2f} m   "
+                f"rejected = {nr}   ({rr*100:.1f}% of in-coverage estimates)"
+            )
+            if noc:
+                print(f"  Out-of-coverage est.: {noc} (skipped, no mocap data at that time)")
         print(
             f"  Mean Euclidean error: {oe['est_err_mean_m']*100:7.2f} cm   ({oe['est_err_mean_m']:.4f} m)"
         )
@@ -716,6 +1125,27 @@ def save_metrics_csv(metrics, save_path):
         rows.append(("replan_failures", rf["num_failures"], ""))
         rows.append(("replan_failure_rate", f"{rf['failure_rate_pct']:.4f}", "%"))
         rows.append(("longest_failure_streak", rf["longest_failure_streak"], ""))
+    fs = metrics.get("failure_streaks")
+    if fs is not None:
+        rows.append(("n_failure_streaks", fs["n_streaks"], ""))
+        if fs.get("replan_period_s"):
+            rows.append(("replan_period_s", f"{fs['replan_period_s']:.4f}", "s"))
+        rows.append(("longest_failure_streak_s", f"{fs['longest_streak_s']:.4f}", "s"))
+    ss = metrics.get("stop_state")
+    if ss is not None:
+        rows.append(("n_stop_state_events", ss["n_events"], ""))
+        rows.append(("max_stop_state_stall_s", f"{ss['max_stagnant_s']:.4f}", "s"))
+    for key, tag in (
+        ("onboard_clearance", "onboard"),
+        ("onboard_clearance_during_streaks", "onboard_streak"),
+    ):
+        oc = metrics.get(key)
+        if oc is None:
+            continue
+        rows.append((f"{tag}_d_min_center_m", f"{oc['min_center_m']:.4f}", "m"))
+        rows.append((f"{tag}_d_min_surface_m", f"{oc['min_surface_m']:.4f}", "m"))
+        rows.append((f"{tag}_d_min_center_time_s", f"{oc['min_center_time_s']:.3f}", "s"))
+        rows.append((f"{tag}_n_tracks", oc["n_tracks"], ""))
     te = metrics.get("tracking_error")
     if te is not None:
         rows.append(("tracking_rms_m", f"{te['rms_pos_err_m']:.4f}", "m"))
@@ -750,6 +1180,11 @@ def save_metrics_csv(metrics, save_path):
         rows.append(("est_err_max_z_m", f"{oe['max_z']:.4f}", "m"))
         rows.append(("est_err_n_samples", oe["n_samples"], ""))
         rows.append(("est_all_zero_warning", int(oe["all_estimates_zero"]), ""))
+        if "assoc_max_dist_m" in oe:
+            rows.append(("est_assoc_max_dist_m", f"{oe['assoc_max_dist_m']:.4f}", "m"))
+            rows.append(("est_n_rejected_over_gate", oe.get("n_rejected_over_gate", 0), ""))
+            rows.append(("est_n_out_of_coverage", oe.get("n_out_of_coverage", 0), ""))
+            rows.append(("est_rejection_rate", f"{oe.get('rejection_rate', 0.0):.4f}", ""))
     sp = metrics.get("obstacle_speed")
     if sp:
         for name, s in sp.items():
@@ -815,9 +1250,9 @@ def plot_history(
     a,
     j,
     save_path,
-    v_max=5.0,
-    a_max=20.0,
-    j_max=100.0,
+    v_max=2.0,
+    a_max=5.0,
+    j_max=7.5,
     use_tex=False,
     tol_abs=0.001,
     p_ylim=None,
@@ -973,11 +1408,17 @@ def process_bag(bag_path, args):
     pose_topic = f"{ns}/mavros/local_position/pose"
     pred_topic = f"{ns}/predicted_trajs"
     setpoint_topic = f"{ns}/mavros/setpoint_trajectory/local"
+    # State carries the drone position in the global (DLIO-corrected) frame,
+    # used by the goal-mode flight-window detector when --flight_goal_xyz is
+    # specified in the global frame. Pose tracking / clearance still use
+    # pose_topic (local) and the optional mocap topics.
+    state_topic = f"{ns}/state"
 
     topic_type_pairs = [
         (goal_topic, "dynus_interfaces/msg/Goal"),
         (comp_topic, "dynus_interfaces/msg/ComputationTimes"),
         (pose_topic, "geometry_msgs/msg/PoseStamped"),
+        (state_topic, "dynus_interfaces/msg/State"),
         (pred_topic, "dynus_interfaces/msg/DynTraj"),
         (setpoint_topic, "trajectory_msgs/msg/MultiDOFJointTrajectory"),
     ]
@@ -1006,29 +1447,73 @@ def process_bag(bag_path, args):
     # --- Flight-window mask (active flight only): first /goal -> N-th return to start ---
     apply_mask = not getattr(args, "no_mask", False)
     if apply_mask:
-        n_back = int(getattr(args, "num_back_and_forth", 5))
-        near_m = float(getattr(args, "mask_near_m", 0.5))
-        away_m = float(getattr(args, "mask_away_m", 2.0))
-        t_lo, t_hi, n_obs = compute_flight_window(
-            data.get(goal_topic, []),
-            data.get(pose_topic, []),
-            num_returns=n_back,
-            near_m=near_m,
-            away_m=away_m,
-        )
-        if t_lo is None or t_hi is None:
-            print("  WARNING: could not determine flight window; reporting on full bag.")
-            t_lo, t_hi = None, None
-        else:
-            if n_obs < n_back:
+        goal_xyz = getattr(args, "flight_goal_xyz", None)
+        if goal_xyz is not None and len(goal_xyz) == 3:
+            # Single-traverse-to-goal flight: end the window when the drone
+            # first comes within --flight_goal_threshold of --flight_goal_xyz,
+            # rather than counting back-and-forth returns. Anything after that
+            # (hover, landing, manual takeover) is excluded from the metrics.
+            goal_thr = float(getattr(args, "flight_goal_threshold", 0.5))
+            # Goals are usually in the global frame; /state carries the drone
+            # position in the same global frame (DLIO-corrected). Prefer it; fall
+            # back to the local-frame pose_topic only if /state is empty, with a
+            # warning so the user knows their goal coordinates may need adjustment.
+            state_t, state_p = extract_state_pos_array(data.get(state_topic, []))
+            if state_t is None or len(state_t) == 0:
                 print(
-                    f"  WARNING: only {n_obs} of {n_back} requested returns observed; "
-                    "ending the window at the last pose sample."
+                    f"  WARNING: {state_topic} has no messages; falling back to "
+                    f"{pose_topic} for goal-reached check. Make sure "
+                    "--flight_goal_xyz is expressed in the LOCAL frame in that case."
                 )
-            print(
-                f"  Flight window: [{t_lo:.3f}, {t_hi:.3f}] s "
-                f"(duration {t_hi - t_lo:.1f} s, returns observed = {n_obs})"
+                state_t, state_p = extract_pose_array(data.get(pose_topic, []))
+            t_lo, t_hi, reached = compute_flight_window_by_goal(
+                data.get(goal_topic, []),
+                state_t,
+                state_p,
+                goal_xyz=goal_xyz,
+                goal_threshold_m=goal_thr,
             )
+            if t_lo is None or t_hi is None:
+                print("  WARNING: could not determine flight window; reporting on full bag.")
+                t_lo, t_hi = None, None
+            else:
+                if not reached:
+                    print(
+                        f"  WARNING: drone never came within {goal_thr:.2f} m of goal "
+                        f"{tuple(goal_xyz)}; ending the window at the time of "
+                        "minimum distance to goal instead (likely deflected by "
+                        "avoidance maneuvers)."
+                    )
+                print(
+                    f"  Flight window (goal-mode): [{t_lo:.3f}, {t_hi:.3f}] s "
+                    f"(duration {t_hi - t_lo:.1f} s, goal_reached = {reached}, "
+                    f"goal_threshold = {goal_thr:.2f} m)"
+                )
+            n_obs = None  # not used in goal mode
+        else:
+            n_back = int(getattr(args, "num_back_and_forth", 5))
+            near_m = float(getattr(args, "mask_near_m", 0.5))
+            away_m = float(getattr(args, "mask_away_m", 2.0))
+            t_lo, t_hi, n_obs = compute_flight_window(
+                data.get(goal_topic, []),
+                data.get(pose_topic, []),
+                num_returns=n_back,
+                near_m=near_m,
+                away_m=away_m,
+            )
+            if t_lo is None or t_hi is None:
+                print("  WARNING: could not determine flight window; reporting on full bag.")
+                t_lo, t_hi = None, None
+            else:
+                if n_obs < n_back:
+                    print(
+                        f"  WARNING: only {n_obs} of {n_back} requested returns observed; "
+                        "ending the window at the last pose sample."
+                    )
+                print(
+                    f"  Flight window: [{t_lo:.3f}, {t_hi:.3f}] s "
+                    f"(duration {t_hi - t_lo:.1f} s, returns observed = {n_obs})"
+                )
     else:
         print("  Flight-window mask disabled (--no_mask).")
         t_lo, t_hi = None, None
@@ -1156,10 +1641,41 @@ def process_bag(bag_path, args):
     elif pose_t is None and obstacle_mocap_topics:
         print(f"  WARNING: no onboard /mavros pose messages; skipping tracking error.")
 
+    # Per-topic z offset to map a mocap marker (e.g. helmet on top of head) to
+    # the obstacle's effective centroid (e.g. body center ~0.8 m below). The
+    # offset is ADDED to the raw mocap z, so a marker that sits 0.8 m above the
+    # centroid takes z_offset = -0.8. Applied once here so all downstream
+    # consumers (clearance, estimation-error) see the corrected position; twist
+    # (velocity) is unaffected by a constant rigid offset, so we leave it alone.
+    mocap_z_offsets = {}
+    for spec in getattr(args, "obstacle_mocap_z_offsets", []) or []:
+        if "=" not in spec:
+            print(
+                f"  WARNING: --obstacle_mocap_z_offsets spec '{spec}' missing '='; "
+                "expected format <topic>=<z_offset_m>. Skipping."
+            )
+            continue
+        topic_name, value_str = spec.split("=", 1)
+        try:
+            mocap_z_offsets[topic_name.strip()] = float(value_str.strip())
+        except ValueError:
+            print(
+                f"  WARNING: could not parse z offset '{value_str}' for topic "
+                f"{topic_name}; expected a number. Skipping."
+            )
+
     mocap_data = {}
     for mt in obstacle_mocap_topics:
         t_m, p_m = extract_pose_array(data.get(mt, []))
         if t_m is not None and len(t_m) > 0:
+            if mt in mocap_z_offsets:
+                dz = mocap_z_offsets[mt]
+                p_m = p_m.copy()
+                p_m[:, 2] += dz
+                print(
+                    f"  Applied z offset {dz:+.3f} m to mocap topic {mt} "
+                    "(marker-to-centroid correction)."
+                )
             mocap_data[mt] = (t_m, p_m)
         else:
             print(f"  WARNING: mocap topic {mt} has no messages in this bag.")
@@ -1170,9 +1686,72 @@ def process_bag(bag_path, args):
             cl["drone_source"] = drone_actual_source
             metrics["clearance"] = cl
 
+    # --- R4.4: fallback exposure in the flights without mocap coverage -------
+    # Failure streaks timed in seconds, whether any streak outlasted the
+    # committed plan (commanded setpoint stops advancing), and the clearance to
+    # the obstacles the planner itself was tracking.
+    if comp_msgs:
+        streaks, replan_period = compute_failure_streaks(comp_msgs)
+        metrics["failure_streaks"] = {
+            "n_streaks": len(streaks),
+            "replan_period_s": replan_period,
+            "longest_streak_s": max((s["duration_s"] for s in streaks), default=0.0),
+            "longest_streak_cycles": max((s["n_cycles"] for s in streaks), default=0),
+        }
+        # Use /goal explicitly (the planner's commanded setpoint) rather than
+        # ref_t/ref_p, which may point at setpoint_trajectory/local depending on
+        # --tracking_reference. data[] is already masked to the flight window.
+        cmd_t, cmd_p = extract_goal_pos_array(data.get(goal_topic, []))
+        sse = compute_stop_state_events(
+            streaks,
+            cmd_t,
+            cmd_p,
+            goal_radius_m=getattr(args, "flight_goal_radius", 0.5) or 0.5,
+        )
+        if sse is not None:
+            metrics["stop_state"] = sse
+
+        est_bbox_records = extract_obstacle_estimates_with_bbox(data.get(pred_topic, []))
+        # Frame matters here. The tracker publishes obstacle estimates in the
+        # GLOBAL (DLIO-corrected / world) frame -- the same frame as /<ns>/state
+        # and the mocap topics -- while /mavros/local_position/pose is the local
+        # frame, offset from it by the static world->init_pose transform (~3.7 m
+        # in x in our setup). The drone position for this metric must therefore
+        # come from /<ns>/state, not from the mavros pose.
+        clr_t, clr_p = extract_state_pos_array(data.get(state_topic, []))
+        if est_bbox_records and clr_t is not None and len(clr_t) > 0:
+            life_thr = float(getattr(args, "min_track_life_s", 1.0))
+            oc = compute_onboard_clearance(
+                clr_t, clr_p, est_bbox_records, min_track_life_s=life_thr
+            )
+            if oc is not None:
+                oc["drone_source"] = f"{state_topic} (global frame)"
+                metrics["onboard_clearance"] = oc
+            ocs = compute_clearance_during_streaks(
+                clr_t, clr_p, est_bbox_records, streaks, min_track_life_s=life_thr
+            )
+            if ocs is not None:
+                metrics["onboard_clearance_during_streaks"] = ocs
+            # Sensitivity to the persistence threshold, so the choice of
+            # threshold is visible rather than buried.
+            sweep = []
+            for thr in (0.0, 1.0, 2.0, 3.0):
+                s = compute_onboard_clearance(
+                    clr_t, clr_p, est_bbox_records, min_track_life_s=thr
+                )
+                if s is not None:
+                    sweep.append((thr, s["min_center_m"], s["min_surface_m"],
+                                  s["n_tracks"], s["n_tracks_dropped"]))
+            if sweep:
+                metrics["onboard_clearance_sweep"] = sweep
+
     est_records = extract_obstacle_estimates(data.get(pred_topic, []))
     if est_records and mocap_data:
-        oe = compute_obstacle_estimation_error(est_records, mocap_data)
+        oe = compute_obstacle_estimation_error(
+            est_records,
+            mocap_data,
+            assoc_max_dist=getattr(args, "obstacle_assoc_max_dist", 2.0),
+        )
         if oe is not None:
             metrics["obstacle_est_error"] = oe
     elif obstacle_mocap_topics and not est_records:
@@ -1762,11 +2341,11 @@ def main():
     parser.add_argument(
         "path", help="Path to a bag folder or parent directory containing bags"
     )
-    parser.add_argument("--v_max", type=float, default=5.0, help="Velocity limit [m/s]")
+    parser.add_argument("--v_max", type=float, default=2.0, help="Velocity limit [m/s]")
     parser.add_argument(
-        "--a_max", type=float, default=20.0, help="Acceleration limit [m/s^2]"
+        "--a_max", type=float, default=5.0, help="Acceleration limit [m/s^2]"
     )
-    parser.add_argument("--j_max", type=float, default=100.0, help="Jerk limit [m/s^3]")
+    parser.add_argument("--j_max", type=float, default=7.5, help="Jerk limit [m/s^3]")
     parser.add_argument(
         "--use_tex", action="store_true", help="Use LaTeX for text rendering"
     )
@@ -1817,6 +2396,52 @@ def main():
         "obstacle linear velocity directly, e.g. /RR04/mocap/twist. When provided, "
         "obstacle Euclidean speed is computed from these messages (preferred; "
         "avoids the timestamp-jitter spike caused by differentiating pose).",
+    )
+    parser.add_argument(
+        "--flight_goal_xyz",
+        nargs=3,
+        type=float,
+        default=None,
+        metavar=("X", "Y", "Z"),
+        help="Goal position (x y z, in the drone-pose frame) for single-traverse "
+        "flights. When provided, the active-flight window ENDS at the first "
+        "timestamp when the drone comes within --flight_goal_threshold of this "
+        "point, instead of counting --num_back_and_forth returns to the start. "
+        "Use for one-shot fly-to-goal experiments where the drone does not "
+        "return.",
+    )
+    parser.add_argument(
+        "--flight_goal_threshold",
+        type=float,
+        default=0.5,
+        help="Goal-reached radius (m) for --flight_goal_xyz. Default 0.5 m.",
+    )
+    parser.add_argument(
+        "--obstacle_mocap_z_offsets",
+        nargs="*",
+        default=[],
+        help="Per-topic z offset (m) added to the mocap marker position to recover "
+        "the obstacle's effective centroid for clearance and estimation-error "
+        "comparisons. Format: <topic>=<z_offset_m>, repeated per topic. Use a "
+        "negative value when the marker is above the centroid (e.g. a helmet "
+        "marker ~0.8 m above body centroid: "
+        "'--obstacle_mocap_z_offsets /HELMET1/world=-0.8'). Only the position is "
+        "shifted; the twist topic, if any, is unchanged since a constant rigid "
+        "offset does not affect velocity.",
+    )
+    parser.add_argument(
+        "--obstacle_assoc_max_dist",
+        type=float,
+        default=2.0,
+        help="Association gate (m) for pairing each AEKF obstacle estimate to its "
+        "nearest mocap-tracked obstacle when computing estimation error. Estimates "
+        "whose nearest mocap obstacle is farther than this are treated as spurious "
+        "detections of clutter (passing personnel, fixtures, partial point-cloud "
+        "splits) not present in motion capture, and excluded from the error metric "
+        "(reported separately as 'rejected'). Default 2.0 m: covers expected steady-"
+        "state estimation error (~0.5 m) plus transient errors during track "
+        "re-acquisition (~1.2 m), while staying below typical inter-obstacle "
+        "spacing (~2 m).",
     )
     parser.add_argument(
         "--num_back_and_forth",
@@ -1871,6 +2496,15 @@ def main():
         "--no_goal_mask",
         action="store_true",
         help="Disable the goal-region mask even when --goal_points is provided.",
+    )
+    parser.add_argument(
+        "--min_track_life_s",
+        type=float,
+        default=2.0,
+        help="Minimum lifetime (s) for a tracked-obstacle track to count toward the "
+        "onboard clearance metric. Transient detections (downwash, split returns) "
+        "appear for a fraction of a second, while a real obstacle is tracked for "
+        "tens of seconds. Default 1.0 s; a sensitivity sweep is always printed.",
     )
     parser.add_argument(
         "--tracking_reference",

@@ -309,7 +309,13 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     declare_parameter<double>("factor_hgp", 1.0);
     declare_parameter<double>("inflation_hgp", 0.0);
     declare_parameter<double>("drone_radius", 0.1);
-    declare_parameter<double>("obst_max_vel", 0.1);  // affects obstacle_to_vec inflation r = v*t
+    // Per-axis and L2 obstacle velocity bounds. Per-axis values drive known-obstacle
+    // AABB inflation; obst_max_vel_l2 drives the L2-ball unknown-space inflation.
+    declare_parameter<double>("obst_max_vel_x", 0.1);
+    declare_parameter<double>("obst_max_vel_y", 0.1);
+    declare_parameter<double>("obst_max_vel_z", 0.1);
+    declare_parameter<double>("obst_max_vel_l2", 0.1);
+    declare_parameter<std::string>("unknown_inflation_norm", "L2");
     declare_parameter<std::vector<double>>("sfc_size", {4.0, 4.0, 3.0});
     declare_parameter<bool>("use_shrinked_box", false);
     declare_parameter<double>("shrinked_box_size", 0.2);
@@ -393,7 +399,11 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     par_.factor_hgp = get_parameter("factor_hgp").as_double();
     par_.inflation_hgp = get_parameter("inflation_hgp").as_double();
     par_.drone_radius = get_parameter("drone_radius").as_double();
-    par_.obst_max_vel = get_parameter("obst_max_vel").as_double();
+    par_.obst_max_vel_x = get_parameter("obst_max_vel_x").as_double();
+    par_.obst_max_vel_y = get_parameter("obst_max_vel_y").as_double();
+    par_.obst_max_vel_z = get_parameter("obst_max_vel_z").as_double();
+    par_.obst_max_vel_l2 = get_parameter("obst_max_vel_l2").as_double();
+    par_.unknown_inflation_norm = get_parameter("unknown_inflation_norm").as_string();
 
     {
       auto lbs = get_parameter("sfc_size").as_double_array();
@@ -681,10 +691,13 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     ma.markers.push_back(makeSphere(
         frame_id_, 2, goal_, 0.20, colorRGBA(1.0f, 0.0f, 0.0f, 1.0f), "start_goal", stamp));
 
-    // Reachable set spheres for dynamic obstacles at time layer n_show
-    // r = obst_max_vel * t_end[n]
+    // Reachable set spheres for dynamic obstacles at time layer n_show.
+    // For visualization we use the largest per-axis bound (per-axis cube radius) so the sphere
+    // conservatively contains the actual per-axis reach.
     const double t_end = time_end_times_[(size_t)n_show];
-    const double r = std::max(0.0, par_.obst_max_vel * t_end);
+    const double v_max_axis =
+        std::max({par_.obst_max_vel_x, par_.obst_max_vel_y, par_.obst_max_vel_z});
+    const double r = std::max(0.0, v_max_axis * t_end);
     const double diameter = 2.0 * r;
 
     for (size_t i = 0; i < obst_pos_.size(); ++i) {

@@ -600,6 +600,194 @@ def generate_gazebo_dynamic_yaml(
     return yaml.dump(yaml_content, default_flow_style=False, sort_keys=False)
 
 
+def _single_trefoil_obstacle(
+    center: tuple,
+    scale: tuple,
+    slower: float,
+    offset: float = 0.0,
+    bbox: tuple = (0.8, 0.8, 0.8),
+    name: str = "obstacle_0",
+) -> dict:
+    """One deterministic trefoil-knot obstacle dict (schema matches
+    _generate_obstacle_json / dyn_obstacles.launch.py)."""
+    cx, cy, cz = center
+    sx, sy, sz = scale
+    x_str, y_str, z_str, vx_str, vy_str, vz_str = _trefoil_expr(
+        cx, cy, cz, sx, sy, sz, offset, slower
+    )
+    return {
+        "name": name,
+        "x0": cx,
+        "y0": cy,
+        "z0": cz,
+        "scale_x": sx,
+        "scale_y": sy,
+        "scale_z": sz,
+        "offset": offset,
+        "slower": slower,
+        "traj_x": x_str,
+        "traj_y": y_str,
+        "traj_z": z_str,
+        "traj_vx": vx_str,
+        "traj_vy": vy_str,
+        "traj_vz": vz_str,
+        "size_x": bbox[0],
+        "size_y": bbox[1],
+        "size_z": bbox[2],
+    }
+
+
+def generate_prediction_eval_yaml(
+    setup_bash: Path,
+    start_pos: tuple = (0.0, 0.0, 2.0),
+    start_yaw: float = 0.0,
+    obs_center: tuple = (3.0, 0.0, 3.0),
+    obs_scale: tuple = (4.0, 4.0, 4.0),
+    obs_slower: float = 4.0,
+    obs_offset: float = 0.0,
+    ros_domain_id: int = 20,
+    use_rviz: bool = True,
+    use_gazebo_gui: bool = False,
+    bag_dir: str = None,
+    bag_start_delay: int = 25,
+    depth_topic: str = "d435/depth/color/points",
+    prediction_horizon: float = 2.0,
+    centroid_noise_std: float = 0.0,
+) -> str:
+    """CV-vs-CA obstacle-prediction accuracy experiment (perception-in-the-loop).
+
+    A drone hovers (no goal, fixed heading) at ``start_pos`` facing +x and
+    observes a single trefoil-knot obstacle moving in front of it via the D435
+    depth camera. The ACL mapper's obstacle tracker publishes BOTH a
+    constant-velocity (``/NX01/predicted_trajs_cv``) and a constant-acceleration
+    (``/NX01/predicted_trajs_ca``) roll-out from the same EKF state. Ground
+    truth is published on ``/trajs_ground_truth``. A rosbag records both so
+    ``analyze_prediction_accuracy.py`` can compare them.
+
+    The obstacle is physically present in Gazebo via the dynamic-obstacles
+    WorldPlugin (the D435 renders visual geometry, so it is seen even though the
+    plugin disables collision). ``use_sim_time`` is forced on the mapper and the
+    ground-truth node so their timestamps share the Gazebo /clock.
+    """
+    import json as _json
+
+    start_x, start_y, start_z = start_pos
+
+    # --- single deterministic trefoil obstacle in front of the drone ---
+    obstacle = _single_trefoil_obstacle(obs_center, obs_scale, obs_slower, obs_offset)
+    json_path = "/tmp/sando_pred_eval_obstacles.json"
+    with open(json_path, "w") as f:
+        _json.dump([obstacle], f)
+
+    # --- inject the dynamic-obstacle world plugin into the empty world ---
+    env = "empty_wo_ground"
+    install_dir = setup_bash.resolve().parent
+    base_world = (
+        install_dir / "sando" / "share" / "sando" / "worlds" / "empty_wo_ground.world"
+    )
+    temp_world = "/tmp/sando_pred_eval_world.world"
+    _inject_world_plugin(str(base_world), json_path, temp_world)
+
+    # --- bag recording ---
+    if bag_dir is None:
+        bag_dir = str(Path.home() / "code" / "sando_ws" / "prediction_eval_bags")
+    record_topics = [
+        "/NX01/predicted_trajs_cv",
+        "/NX01/predicted_trajs_ca",
+        "/NX01/predicted_trajs",
+        "/trajs_ground_truth",
+        "/NX01/cluster_bounding_boxes",
+        "/NX01/tracked_obstacles",
+        "/NX01/state",
+        "/tf",
+        "/tf_static",
+        "/clock",
+    ]
+
+    panes = [
+        # Gazebo + empty world + WorldPlugin (spawns + moves the trefoil obstacle)
+        {
+            "shell_command": [
+                f"ros2 launch sando base_sando.launch.py use_dyn_obs:=false "
+                f"use_gazebo_gui:={str(use_gazebo_gui).lower()} "
+                f"use_rviz:={str(use_rviz).lower()} env:={env} "
+                f"world_file:={temp_world} "
+                f"rviz_config:={RVIZ_CONFIG}"
+            ]
+        },
+        # Ground-truth /trajs_ground_truth + RViz markers/TF (sim time)
+        {
+            "shell_command": [
+                "sleep 3",
+                f"ros2 launch sando dyn_obstacles.launch.py "
+                f"skip_gazebo:=true "
+                f"obstacles_json_file:={json_path} "
+                f"num_obstacles:=1 "
+                f"dynamic_ratio:=1.0 "
+                f"publish_rate_hz:=100.0 "
+                f"use_sim_time:=true "
+                f"publish_markers:=true "
+                f"publish_tf:=true "
+                f"publish_trajs:=true "
+                f"trajs_topic:=/trajs_ground_truth "
+                f"launch_forest_node:=true",
+            ]
+        },
+        # ACL mapper + obstacle tracker with CV/CA comparison publishing
+        {
+            "shell_command": [
+                "sleep 10",
+                f"ros2 launch global_mapper_ros global_mapper_node.launch.py "
+                f"namespace:=NX01 param_file:=nx01_sim.yaml "
+                f"depth_pointcloud_topic:={depth_topic} "
+                f"pose_topic:=world publish_init_tf:=false use_tracker:=true",
+            ]
+        },
+        # Onboard agent NX01 hovering at start_pos (no goal sender, fixed heading)
+        {
+            "shell_command": [
+                "sleep 10",
+                f"ros2 launch sando onboard_sando.launch.py namespace:=NX01 "
+                f"x:={start_x} y:={start_y} z:={start_z} yaw:={start_yaw} "
+                f"skip_initial_yawing:=true",
+            ]
+        },
+        # Hold the drone at start (goal = start): this initializes its planning
+        # stack so it publishes /NX01/state (the mapper needs pose) while staying
+        # put. skip_initial_yawing keeps the heading fixed (D435 keeps facing +x).
+        {
+            "shell_command": [
+                "sleep 25",
+                f"ros2 launch sando goal_sender.launch.py "
+                f"list_agents:=\"['NX01']\" "
+                f"list_goals:=\"['[{start_x}, {start_y}, {start_z}]']\"",
+            ]
+        },
+        # rosbag recording (Ctrl-C in this pane to stop)
+        {
+            "shell_command": [
+                f"mkdir -p {bag_dir}",
+                f"sleep {bag_start_delay}",
+                "ros2 bag record -o "
+                f"{bag_dir}/pred_eval_$(date +%Y%m%d_%H%M%S) " + " ".join(record_topics),
+            ]
+        },
+    ]
+
+    yaml_content = {
+        "session_name": "sando_pred_eval",
+        "windows": [
+            {
+                "window_name": "main",
+                "layout": "tiled",
+                "shell_command_before": workspace_source_commands(ros_domain_id),
+                "panes": panes,
+            }
+        ],
+    }
+    return yaml.dump(yaml_content, default_flow_style=False, sort_keys=False)
+
+
 def generate_hover_test_yaml(
     setup_bash: Path,
     start_pos: tuple = (0, 0, 2.0),
@@ -1386,6 +1574,7 @@ def main():
             "interactive",
             "hover-test",
             "adversarial-test",
+            "prediction-eval",
             "benchmark-record",
             "static",
             "dynamic",
@@ -1601,6 +1790,62 @@ def main():
         type=str,
         default="/trajs",
         help="Topic name for DynTraj publishing (default: /trajs). Use /trajs_ground_truth for unknown_dynamic benchmark.",
+    )
+
+    # --- prediction-eval mode (CV-vs-CA obstacle prediction study) ---
+    parser.add_argument(
+        "--obs-center",
+        type=float,
+        nargs=3,
+        metavar=("X", "Y", "Z"),
+        default=[3.0, 0.0, 3.0],
+        help="prediction-eval: trefoil obstacle center, in front of the drone "
+        "(default: 3.0 0.0 3.0 -> +x; z=3 keeps the scale=4 z-swing of +/-2m "
+        "inside the [1,5] map height)",
+    )
+    parser.add_argument(
+        "--obs-scale",
+        type=float,
+        nargs=3,
+        metavar=("SX", "SY", "SZ"),
+        default=[4.0, 4.0, 4.0],
+        help="prediction-eval: trefoil per-axis scale (default: 4.0 4.0 4.0 = "
+        "benchmark worst case, ~2 m/s peak). Larger = faster/curvier but swings "
+        "wider; can leave the D435 cone at its extremes.",
+    )
+    parser.add_argument(
+        "--obs-slower",
+        type=float,
+        default=4.0,
+        help="prediction-eval: trefoil time-dilation (bigger = slower; default: 4.0)",
+    )
+    parser.add_argument(
+        "--prediction-horizon",
+        type=float,
+        default=2.0,
+        help="prediction-eval: tracker look-ahead [s]; sets the predicted-trajectory "
+        "length (RViz line = speed x horizon) and the CV/CA study span (default: 2.0)",
+    )
+    parser.add_argument(
+        "--centroid-noise",
+        type=float,
+        default=0.0,
+        help="prediction-eval: per-axis Gaussian jitter [m] on the tracked centroid "
+        "(emulate noisy perception; degrades the acceleration estimate -> hurts CA). "
+        "Default: 0.0 (clean).",
+    )
+    parser.add_argument(
+        "--obs-offset",
+        type=float,
+        default=0.0,
+        help="prediction-eval: trefoil phase offset (default: 0.0)",
+    )
+    parser.add_argument(
+        "--bag-dir",
+        type=str,
+        default=None,
+        help="prediction-eval: directory for the recorded bag "
+        "(default: ~/code/sando_ws/prediction_eval_bags)",
     )
 
     parser.add_argument(
@@ -1831,6 +2076,43 @@ def main():
         )
         print(f"[INFO] Goal: ({args.goal[0]}, {args.goal[1]}, {args.goal[2]})")
         print(f"[INFO] Seed: {args.seed}")
+    elif args.mode == "prediction-eval":
+        use_rviz = args.rviz and not args.no_rviz
+        use_gazebo_gui = args.gazebo_gui and not args.no_gazebo_gui
+        yaml_content = generate_prediction_eval_yaml(
+            setup_bash,
+            start_pos=tuple(args.start),
+            start_yaw=args.start_yaw,
+            obs_center=tuple(args.obs_center),
+            obs_scale=tuple(args.obs_scale),
+            obs_slower=args.obs_slower,
+            obs_offset=args.obs_offset,
+            ros_domain_id=args.ros_domain_id,
+            use_rviz=use_rviz,
+            use_gazebo_gui=use_gazebo_gui,
+            bag_dir=args.bag_dir,
+            prediction_horizon=args.prediction_horizon,
+            centroid_noise_std=args.centroid_noise,
+        )
+        print(
+            "[INFO] Mode: CV-vs-CA obstacle prediction accuracy (perception-in-the-loop)"
+        )
+        print(
+            f"[INFO] Drone hovers at ({args.start[0]}, {args.start[1]}, {args.start[2]}) "
+            f"yaw={args.start_yaw} (no goal); D435 faces +x"
+        )
+        print(
+            f"[INFO] Trefoil obstacle: center={tuple(args.obs_center)} "
+            f"scale={tuple(args.obs_scale)} slower={args.obs_slower}"
+        )
+        print(
+            "[INFO] Tracker publishes /NX01/predicted_trajs_cv and "
+            "/NX01/predicted_trajs_ca; ground truth on /trajs_ground_truth"
+        )
+        print(
+            "[INFO] Recording a bag (Ctrl-C the record pane to stop), then run:\n"
+            "       python3 scripts/analyze_prediction_accuracy.py <bag_path>"
+        )
     elif args.mode == "hover-test":
         use_rviz = args.rviz and not args.no_rviz
         yaml_content = generate_hover_test_yaml(

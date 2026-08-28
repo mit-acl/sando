@@ -20,7 +20,11 @@ def generate_launch_description():
                 name="temporal_layered_corridor_test_node",
                 output="screen",
                 parameters=[
-                    {"obst_max_vel": 0.2},
+                    {"obst_max_vel_x": 0.2},
+                    {"obst_max_vel_y": 0.2},
+                    {"obst_max_vel_z": 0.2},
+                    {"obst_max_vel_l2": 0.2},
+                    {"unknown_inflation_norm": "L2"},
                 ],
                 # prefix='xterm -e gdb -q -ex run --args', # gdb debugging
             ),

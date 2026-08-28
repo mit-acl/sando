@@ -5,7 +5,7 @@
 # (a) pushes the local terminal point farther (local_E = global_path.back(), and the
 # global path is clipped to num_P+1 vertices spaced max_dist_vertexes apart, so the
 # local horizon == num_P * max_dist_vertexes), and (b) grows dt -> grows corridor
-# inflation (r = obst_max_vel * traj_max_time + ...), and (c) adds polytopes (MIQP
+# inflation (r = per-axis (or L2) obst velocity * traj_max_time + ...), and (c) adds polytopes (MIQP
 # complexity). All three are entangled.
 #
 # This sweep holds the LOCAL HORIZON FIXED at L meters while varying P, by setting

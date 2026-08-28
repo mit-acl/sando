@@ -194,7 +194,11 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     declare_parameter<double>("factor_hgp", 1.0);
     declare_parameter<double>("inflation_hgp", 0.45);
     declare_parameter<double>("drone_radius", 0.1);
-    declare_parameter<double>("obst_max_vel", 0.0);  // set >0 only if you want dynamic inflation
+    declare_parameter<double>("obst_max_vel_x", 0.0);  // set >0 only if you want dynamic inflation
+    declare_parameter<double>("obst_max_vel_y", 0.0);
+    declare_parameter<double>("obst_max_vel_z", 0.0);
+    declare_parameter<double>("obst_max_vel_l2", 0.0);
+    declare_parameter<std::string>("unknown_inflation_norm", "L2");
     declare_parameter<double>("corridor_nominal_speed", 2.0);  // used to compute seg_end_times
     declare_parameter<double>("v_max", 2.0);
     declare_parameter<double>("a_max", 3.0);
@@ -280,7 +284,11 @@ class CorridorGeneratorNode final : public rclcpp::Node {
     par_.factor_hgp = get_parameter("factor_hgp").as_double();
     par_.inflation_hgp = get_parameter("inflation_hgp").as_double();
     par_.drone_radius = get_parameter("drone_radius").as_double();
-    par_.obst_max_vel = get_parameter("obst_max_vel").as_double();
+    par_.obst_max_vel_x = get_parameter("obst_max_vel_x").as_double();
+    par_.obst_max_vel_y = get_parameter("obst_max_vel_y").as_double();
+    par_.obst_max_vel_z = get_parameter("obst_max_vel_z").as_double();
+    par_.obst_max_vel_l2 = get_parameter("obst_max_vel_l2").as_double();
+    par_.unknown_inflation_norm = get_parameter("unknown_inflation_norm").as_string();
 
     par_.sfc_size =
         get_parameter("sfc_size").as_double_array();  // should be vector<double> in your struct

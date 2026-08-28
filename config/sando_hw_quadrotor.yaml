@@ -156,7 +156,14 @@ sando_node:
         factor_initial: 1.2                       # [-] Higher than sim (1.0) to give Gurobi more slack on NX
         factor_final: 2.5                         # [-] Final factor for the trajectory time allocation
         factor_constant_step_size: 0.1          # [-] Step size for the constant factor increase
-        obst_max_vel: 0.6                          # [m/s] Conservative upper bound on real obstacle Euclidean speed (obstacles commanded at ~0.5 m/s; 0.6 covers measured peaks so Assumption 1 / Theorem 1 hold)
+        # Known-obstacle AABB inflation always uses the per-axis bounds below.
+        # Unknown-space inflation chooses between L2 (radius = obst_max_vel_l2 * t) and
+        # per_axis (per-axis cube with (obst_max_vel_x/y/z) * t) via unknown_inflation_norm.
+        obst_max_vel_x: 0.6                        # [m/s] Per-axis bound, x  (known obstacles + per_axis unknown inflation)
+        obst_max_vel_y: 0.6                        # [m/s] Per-axis bound, y
+        obst_max_vel_z: 0.6                        # [m/s] Per-axis bound, z
+        obst_max_vel_l2: 0.6                       # [m/s] L2 bound for L2-ball unknown-space inflation
+        unknown_inflation_norm: "L2"               # ["L2", "per_axis"] Mode for unknown-space inflation
         obst_position_error: 0.3                  # [m] Bounded position estimation error for dynamic obstacles
         inflate_unknown_boundary: true           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
         max_gurobi_comp_time_sec: 1.0            # [s] Maximum Gurobi computation time per replanning

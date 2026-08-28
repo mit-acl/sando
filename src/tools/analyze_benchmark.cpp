@@ -123,6 +123,10 @@ struct Statistics {
 
 // Global flag: when true, skip cached stats and recompute from bags
 static bool g_recompute = false;
+// Global drone collision radius [m] applied as a sphere around the drone center
+// in dynamic/unknown_dynamic collision tests. Default 0.1 m matches the sim drone.
+// Set via --drone-radius CLI flag.
+static double g_drone_radius = 0.1;
 
 static void save_statistics_json(const Statistics& s, const fs::path& path) {
   nlohmann::json j;
@@ -609,9 +613,9 @@ static CollisionResult analyze_collisions(const BagData& data) {
       double distance = std::sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
       result.min_distance = std::min(result.min_distance, distance);
 
-      // Check collision: point inside AABB
-      if (obs_pos.x - hx <= px && px <= obs_pos.x + hx && obs_pos.y - hy <= py &&
-          py <= obs_pos.y + hy && obs_pos.z - hz <= pz && pz <= obs_pos.z + hz) {
+      // Collision: drone sphere of radius g_drone_radius intersects obstacle AABB
+      // (distance is point-to-AABB-surface; 0 when center is inside the box).
+      if (distance < g_drone_radius) {
         segment_collision_free = false;
         result.collision_count++;
       }
@@ -689,7 +693,9 @@ static CollisionResult analyze_static_collisions(const BagData& data,
       double dist = std::max(0.0, horiz_clearance);
       result.min_distance = std::min(result.min_distance, dist);
 
-      if (horiz_clearance < 0 && vert_inside) {
+      // Collision: drone sphere (radius g_drone_radius) intersects static cylinder
+      // (horiz_clearance is drone-center-to-cylinder-surface).
+      if (horiz_clearance < g_drone_radius && vert_inside) {
         segment_collision_free = false;
         result.collision_count++;
         obstacles_hit.insert(obs.id);
@@ -2284,7 +2290,9 @@ static void print_usage() {
          "best/worst)\n"
       << "  --data-dir2 DIR       Second data directory (for temporal_ablation: STSFC data)\n"
       << "  --latex-dir DIR       Output directory for LaTeX tables (required)\n"
-      << "  --recompute           Force recompute from bags (ignore cached stats_cache.json)\n";
+      << "  --recompute           Force recompute from bags (ignore cached stats_cache.json)\n"
+      << "  --drone-radius R      Drone collision sphere radius in meters "
+         "(default: 0.1, sim drone)\n";
 }
 
 static Args parse_args(int argc, char** argv) {
@@ -2315,6 +2323,8 @@ static Args parse_args(int argc, char** argv) {
       args.latex_dir = argv[++i];
     } else if (arg == "--recompute") {
       g_recompute = true;
+    } else if (arg == "--drone-radius" && i + 1 < argc) {
+      g_drone_radius = std::stod(argv[++i]);
     } else if (arg == "--goal-pos" && i + 3 < argc) {
       args.goal_pos.x = std::stod(argv[++i]);
       args.goal_pos.y = std::stod(argv[++i]);

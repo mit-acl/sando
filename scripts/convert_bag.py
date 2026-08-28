@@ -94,6 +94,12 @@ def main():
     parser.add_argument(
         "--pc-topics", nargs="*", default=[], help="PointCloud2 topics to z-filter"
     )
+    parser.add_argument(
+        "--keep-lifetime-topics",
+        nargs="*",
+        default=[],
+        help="Marker topics whose original lifetimes are kept (e.g. persistent trajectories)",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input_bag)
@@ -139,6 +145,7 @@ def main():
         )
 
     pc_topics_set = set(args.pc_topics)
+    keep_lifetime_set = set(args.keep_lifetime_topics)
     count = 0
     modified = 0
 
@@ -148,7 +155,7 @@ def main():
         type_str = topic_types.get(topic, "")
 
         # Adjust marker/poly lifetimes
-        if type_str in TYPE_HANDLERS:
+        if type_str in TYPE_HANDLERS and topic not in keep_lifetime_set:
             msg_class, fixer = TYPE_HANDLERS[type_str]
             msg = deserialize_message(data, msg_class)
             msg = fixer(msg, lifetime)

@@ -38,7 +38,9 @@ typedef timer::Timer MyTimer;
 template <int Dim>
 class MapUtil {
  public:
-  // Constructor
+  // Constructor.
+  // Per-axis and L2 obstacle-velocity bounds default to zero; callers must invoke
+  // setObstMaxVelocities() and setObstMaxVelocityL2() to configure them.
   MapUtil(
       float res,
       float x_min,
@@ -47,13 +49,10 @@ class MapUtil {
       float y_max,
       float z_min,
       float z_max,
-      float inflation,
-      float obst_max_vel) {
-    /* --------- Initialize parameters --------- */
-    setInflation(inflation);                               // Set inflation
-    setResolution(res);                                    // Set the resolution
-    setMapSize(x_min, x_max, y_min, y_max, z_min, z_max);  // Set the cells and z_boundaries
-    setObstMaxVelocity(obst_max_vel);                      // Set obstacle maximum velocity
+      float inflation) {
+    setInflation(inflation);
+    setResolution(res);
+    setMapSize(x_min, x_max, y_min, y_max, z_min, z_max);
   }
 
   // Copy constructor (needed because std::mutex is not copyable)
@@ -113,7 +112,10 @@ class MapUtil {
         y_max_(other.y_max_),
         z_min_(other.z_min_),
         z_max_(other.z_max_),
-        obst_max_vel_(other.obst_max_vel_),
+        obst_max_vel_x_(other.obst_max_vel_x_),
+        obst_max_vel_y_(other.obst_max_vel_y_),
+        obst_max_vel_z_(other.obst_max_vel_z_),
+        obst_max_vel_l2_(other.obst_max_vel_l2_),
         cells_x_(other.cells_x_),
         cells_y_(other.cells_y_),
         cells_z_(other.cells_z_),
@@ -305,8 +307,15 @@ class MapUtil {
     }  // end if (dynamic_as_occupied_current_)
 
     if (dynamic_as_occupied_future_) {
-      const double motion_radius = (obst_max_vel_ * traj_max_time);  // [m] reachable distance
-      if (motion_radius > 0.0 && !obst_pos.empty()) {
+      // Per-axis reachable distance: hi = bbox_i + v_max^i * traj_max_time.
+      // This matches the safety-theorem AABB inflation argument used in the paper
+      // (Theorem 1 + R4.10's L_inf cube containment) for KNOWN obstacles.
+      const double motion_radius_x = (obst_max_vel_x_ * traj_max_time);
+      const double motion_radius_y = (obst_max_vel_y_ * traj_max_time);
+      const double motion_radius_z = (obst_max_vel_z_ * traj_max_time);
+      const double motion_radius_max =
+          std::max({motion_radius_x, motion_radius_y, motion_radius_z});
+      if (motion_radius_max > 0.0 && !obst_pos.empty()) {
         for (size_t k = 0; k < obst_pos.size(); ++k) {
           const auto& O = obst_pos[k];
 
@@ -318,10 +327,10 @@ class MapUtil {
             bbox_z = obst_bbox[k].z();
           }
 
-          // Reachable region: bbox half-extents plus motion radius
-          const double hx = bbox_x + motion_radius;
-          const double hy = bbox_y + motion_radius;
-          const double hz = bbox_z + motion_radius;
+          // Reachable region: bbox half-extents plus per-axis motion radius
+          const double hx = bbox_x + motion_radius_x;
+          const double hy = bbox_y + motion_radius_y;
+          const double hz = bbox_z + motion_radius_z;
 
           int ix_min = int(std::floor((O.x() - hx - origin.x()) / res_));
           int ix_max = int(std::floor((O.x() + hx - origin.x()) / res_));
@@ -452,9 +461,13 @@ class MapUtil {
           }
           hk_list[k] = Eigen::Vector3f(hx, hy, hz);
 
-          // Reachable radius: bbox extent + motion
+          // Reachable radius: bbox extent + motion (use max per-axis velocity as a single
+          // conservative scalar here; this code path is the soft heat tube, which is
+          // not load-bearing for the formal safety theorem).
           const float max_extent = std::max({hx, hy, hz});
-          Rreach_list[k] = max_extent + (float)obst_max_vel_ * Th;
+          const float max_vel_per_axis =
+              std::max({(float)obst_max_vel_x_, (float)obst_max_vel_y_, (float)obst_max_vel_z_});
+          Rreach_list[k] = max_extent + max_vel_per_axis * Th;
         }
 
         // Tube radius and time-decay weight per sample
@@ -919,12 +932,26 @@ class MapUtil {
     z_map_max_ = z_max;
   }
 
-  /** @brief Set the assumed maximum velocity of dynamic obstacles for inflation radius computation.
+  /** @brief Set per-axis obstacle velocity bounds. Used by readMap's known-obstacle AABB
+   *  inflation; also used by the per-axis unknown-space-inflation path when
+   *  unknown_inflation_norm == "per_axis". For the L2 path, see setObstMaxVelocityL2.
    */
-  void setObstMaxVelocity(float obst_max_vel) {
-    // Set obstacle maximum velocity
-    obst_max_vel_ = obst_max_vel;
+  void setObstMaxVelocities(float vx, float vy, float vz) {
+    obst_max_vel_x_ = vx;
+    obst_max_vel_y_ = vy;
+    obst_max_vel_z_ = vz;
   }
+
+  /** @brief Set the L2 (Euclidean) bound used by L2-ball unknown-space inflation. */
+  void setObstMaxVelocityL2(float obst_max_vel_l2) {
+    obst_max_vel_l2_ = obst_max_vel_l2;
+  }
+
+  /** @brief Read accessors used by hgp_manager's unknown-space inflation. */
+  float getObstMaxVelX() const { return obst_max_vel_x_; }
+  float getObstMaxVelY() const { return obst_max_vel_y_; }
+  float getObstMaxVelZ() const { return obst_max_vel_z_; }
+  float getObstMaxVelL2() const { return obst_max_vel_l2_; }
 
   /**
    * @brief  Find a free point in the map that is closest to the given point
@@ -1607,8 +1634,14 @@ class MapUtil {
   // Map values
   float x_map_min_, x_map_max_, y_map_min_, y_map_max_, z_map_min_, z_map_max_;
   float x_min_, x_max_, y_min_, y_max_, z_min_, z_max_;
-  // Obstacle maximum velocity
-  float obst_max_vel_;
+  // Per-axis bounds used by known-obstacle AABB inflation and per-axis unknown-space inflation.
+  // Default to 0; configured via setObstMaxVelocities() from yaml-loaded parameters.
+  float obst_max_vel_x_ = 0.0f;
+  float obst_max_vel_y_ = 0.0f;
+  float obst_max_vel_z_ = 0.0f;
+  // L2 (Euclidean) bound used by L2-ball unknown-space inflation.
+  // Default to 0; configured via setObstMaxVelocityL2().
+  float obst_max_vel_l2_ = 0.0f;
   // Cells size
   int cells_x_, cells_y_, cells_z_;
   // Assume occupied cell has value 100

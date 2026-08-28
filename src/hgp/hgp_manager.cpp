@@ -36,7 +36,15 @@ void HGPManager::setParameters(const Parameters& par) {
   // shared pointer to the map util for actual planning
   map_util_ = std::make_shared<sando::VoxelMapUtil>(
       par.factor_hgp * par.res, par.x_min, par.x_max, par.y_min, par.y_max, par.z_min, par.z_max,
-      par.inflation_hgp, par.obst_max_vel);
+      par.inflation_hgp);
+  // Configure the per-axis and L2 obstacle-velocity bounds. The known-obstacle AABB
+  // inflation in MapUtil::readMap uses the per-axis values; the L2 bound is exposed for any
+  // downstream code that wants to query it explicitly.
+  map_util_->setObstMaxVelocities(
+      static_cast<float>(par.obst_max_vel_x),
+      static_cast<float>(par.obst_max_vel_y),
+      static_cast<float>(par.obst_max_vel_z));
+  map_util_->setObstMaxVelocityL2(static_cast<float>(par.obst_max_vel_l2));
 
   // ---------------- Global-planner configuration: YAML-driven heat map parameters ----------------
 
@@ -627,31 +635,64 @@ void HGPManager::obstacle_to_vec(
   // voxels). Dynamic obstacles are provided separately in obst_pos.
 
   const double res = par_.factor_hgp * par_.res;
-  const double r = par_.obst_max_vel * traj_max_time +
-                   par_.obst_position_error;  // [m] motion + estimation error
-
-  if (!(r > 0.0) || !(res > 0.0)) return;
-
-  // Grid half-width in cells
-  const int m = static_cast<int>(std::ceil(r / res));
-  if (m <= 0) return;
+  if (!(res > 0.0)) return;
 
   // ------------------------------------------------------------------------
-  // Offsets: pre-filter to the true radius to remove the hot-loop branch.
-  // sphereOffsetsCached(m) already gives offsets within m cells, but r can be slightly smaller.
+  // Mode-dependent kernel construction for unknown-space inflation.
+  //
+  //   * "L2"      : Euclidean ball of radius r = v_l2 * traj_max_time + eps.
+  //                 Matches Eq. eq:unknown_inflation in the paper.
+  //   * "per_axis": Per-axis AABB cube with half-widths (rx, ry, rz) computed
+  //                 from per-axis velocity bounds. Each axis is inflated by its
+  //                 own max velocity; mirrors the known-obstacle AABB inflation
+  //                 argument (R4.10) and tightens the safety bound when per-axis
+  //                 peaks (|v_i| ≤ v_max^i) are known.
   // ------------------------------------------------------------------------
-  const auto& offs_all = sphereOffsetsCached(m);
-
-  const double r2_over_res2_d = (r * r) / (res * res);
-  int max_n2 = static_cast<int>(std::floor(r2_over_res2_d + 1e-9));
-  const int m2 = m * m;
-  if (max_n2 > m2) max_n2 = m2;
-  if (max_n2 < 0) return;
-
   std::vector<Offset3i> offs_r;
-  offs_r.reserve(offs_all.size());
-  for (const auto& o : offs_all) {
-    if (o.n2 <= max_n2) offs_r.push_back(o);
+  int m = 0;  // largest per-axis half-width in cells; used by the dense-window allocator below.
+
+  if (par_.unknown_inflation_norm == "per_axis") {
+    const double rx = par_.obst_max_vel_x * traj_max_time + par_.obst_position_error;
+    const double ry = par_.obst_max_vel_y * traj_max_time + par_.obst_position_error;
+    const double rz = par_.obst_max_vel_z * traj_max_time + par_.obst_position_error;
+    if (!(rx > 0.0) && !(ry > 0.0) && !(rz > 0.0)) return;
+
+    const int mx = std::max(0, static_cast<int>(std::ceil(rx / res)));
+    const int my = std::max(0, static_cast<int>(std::ceil(ry / res)));
+    const int mz = std::max(0, static_cast<int>(std::ceil(rz / res)));
+    m = std::max({mx, my, mz});
+    if (m <= 0) return;
+
+    offs_r.reserve(
+        static_cast<std::size_t>(2 * mx + 1) * static_cast<std::size_t>(2 * my + 1) *
+        static_cast<std::size_t>(2 * mz + 1));
+    for (int ix = -mx; ix <= mx; ++ix) {
+      for (int iy = -my; iy <= my; ++iy) {
+        for (int iz = -mz; iz <= mz; ++iz) {
+          // Cube structuring element: per-axis bounds already enforced by loop range.
+          offs_r.push_back(Offset3i{ix, iy, iz, ix * ix + iy * iy + iz * iz});
+        }
+      }
+    }
+  } else {
+    // Default: L2 (also handles the "L2" string explicitly).
+    const double r = par_.obst_max_vel_l2 * traj_max_time + par_.obst_position_error;
+    if (!(r > 0.0)) return;
+
+    m = static_cast<int>(std::ceil(r / res));
+    if (m <= 0) return;
+
+    const auto& offs_all = sphereOffsetsCached(m);
+    const double r2_over_res2_d = (r * r) / (res * res);
+    int max_n2 = static_cast<int>(std::floor(r2_over_res2_d + 1e-9));
+    const int m2 = m * m;
+    if (max_n2 > m2) max_n2 = m2;
+    if (max_n2 < 0) return;
+
+    offs_r.reserve(offs_all.size());
+    for (const auto& o : offs_all) {
+      if (o.n2 <= max_n2) offs_r.push_back(o);
+    }
   }
   if (offs_r.empty()) return;
 
@@ -957,8 +998,15 @@ void HGPManager::obstacle_to_vec(
 
   // ------------------------------------------------------------------------
   // (B) Inflate dynamic obstacles (bbox-aware)
+  // Known-obstacle inflation is ALWAYS per-axis AABB, regardless of
+  // unknown_inflation_norm. This matches the safety-theorem proof for tracked
+  // obstacles (Theorem 1 + the per-axis cube containment argument in R4.10).
   // ------------------------------------------------------------------------
   if (obst_pos.empty()) return;
+
+  const double rx_known = par_.obst_max_vel_x * traj_max_time + par_.obst_position_error;
+  const double ry_known = par_.obst_max_vel_y * traj_max_time + par_.obst_position_error;
+  const double rz_known = par_.obst_max_vel_z * traj_max_time + par_.obst_position_error;
 
   for (size_t k = 0; k < obst_pos.size(); ++k) {
     const auto& O = obst_pos[k];
@@ -974,10 +1022,10 @@ void HGPManager::obstacle_to_vec(
       hz = obst_bbox[k].z();
     }
 
-    // Inflated bbox half-extents (inflate by motion radius r)
-    const double hx_inf = hx + r;
-    const double hy_inf = hy + r;
-    const double hz_inf = hz + r;
+    // Inflated bbox half-extents (per-axis motion radius)
+    const double hx_inf = hx + rx_known;
+    const double hy_inf = hy + ry_known;
+    const double hz_inf = hz + rz_known;
 
     // Grid bounds in cells
     const int mx = static_cast<int>(std::ceil(hx_inf / res));

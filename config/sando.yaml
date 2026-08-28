@@ -60,7 +60,17 @@ sando_node:
         default_goal_z: 2.0                             # [m] Default goal altitude when force_goal_z is true
 
         # --- Dynamic Obstacles ---
-        obst_max_vel: 1.5                               # [m/s] Expected max velocity of dynamic obstacles
+        # Known-obstacle AABB inflation always uses the per-axis bounds below
+        # (matches the per-axis-cube argument in R4.10 / Theorem 1's safety proof).
+        # Unknown-space (boundary) inflation chooses between:
+        #   * "L2"      : Euclidean ball with radius obst_max_vel_l2 * t  (existing implementation)
+        #   * "per_axis": per-axis AABB cube with (obst_max_vel_x/y/z) * t (each axis inflated
+        #                 by its own max velocity)
+        obst_max_vel_x: 1.0                             # [m/s] Per-axis upper bound, x  (known obstacles + per_axis unknown inflation)
+        obst_max_vel_y: 1.0                             # [m/s] Per-axis upper bound, y
+        obst_max_vel_z: 1.5                             # [m/s] Per-axis upper bound, z  (z-axis dominates for trefoil obstacles)
+        obst_max_vel_l2: 1.8                            # [m/s] L2 (Euclidean) upper bound, used by L2-ball unknown-space inflation
+        unknown_inflation_norm: "per_axis"                    # ["L2", "per_axis"] Mode for unknown-space inflation
 
         # =====================================================================
         # [TUNE] — Adjust for performance / behavior trade-offs
@@ -86,15 +96,15 @@ sando_node:
         dynamic_factor_k_radius: 0.4                    # [-] Factor search half-width around previous success
 
         # --- Safety Corridors ---
-        sfc_size: [3.0, 3.0, 3.0]                       # [m] Local planning window (smaller = faster, larger = smoother)
-        dyn_base_inflation_m: 0.1                       # [m] Base inflation for dynamic obstacle bounding boxes in temporal SFC
+        sfc_size: [1.5, 1.5, 1.5]                       # [m] Local planning window (smaller = faster, larger = smoother)
         inflate_unknown_boundary: true                  # [-] Inflate unknown voxel boundaries in SFC generation
         traj_lifetime: 2.0                              # [s] Discard obstacle trajectories older than this
 
         # --- Dynamic Obstacle Heat (soft costs) ---
-        heat_alpha0: 0.2                                # [-] Weight for reachability blob (penalizes proximity to obstacle)
+        heat_alpha0: 0.5                                # [-] Weight for reachability blob (penalizes proximity to obstacle)
         heat_alpha1: 1.0                                # [-] Weight for trajectory tube (penalizes crossing predicted path)
-        heat_Hmax: 2.0                                  # [-] Maximum dynamic heat value
+        dyn_base_inflation_m: 0.5                       # [m] Base inflation for dynamic obstacle bounding boxes in temporal SFC
+        heat_Hmax: 5.0                                  # [-] Maximum dynamic heat value
         dyn_heat_tube_radius_m: 0.5                     # [m] Heat corridor radius
 
         # --- Static Obstacle Heat (boundary halo) ---
@@ -135,7 +145,7 @@ sando_node:
         factor_hgp: 1.0                                 # [-] Do not change — resolution = factor_hgp * map_res
         max_num_expansion: 100000                       # [-] Max A* node expansions
         use_free_start: true                            # [-] Free the start voxel if occupied
-        free_start_factor: 2.0                          # [-] Radius factor for start freeing
+        free_start_factor: 1.0                          # [-] Radius factor for start freeing
         use_free_goal: false                            # [-] Free the goal voxel if occupied
         free_goal_factor: 2.0                           # [-] Radius factor for goal freeing
         global_planner_heuristic_weight: 2.0            # [-] A* heuristic weight (higher = greedier)
@@ -201,8 +211,8 @@ sando_node:
         hover_avoidance_min_repulsion_norm: 0.01        # [-] Min repulsion vector norm to trigger
 
         # --- Map Internals ---
-        map_buffer: 1.0                                 # [m] Buffer for goal & A point
-        center_shift_factor: 0.5                        # [-] Map center shift factor
+        map_buffer: 2.0                                 # [m] Buffer for goal & A point
+        center_shift_factor: 0.2                        # [-] Map center shift factor
         min_wdx: 15.0                                   # [m] Min map window width
         min_wdy: 15.0                                   # [m] Min map window depth
         min_wdz: 4.0                                    # [m] Min map window height
@@ -230,7 +240,7 @@ sando_node:
         acceleration_threshold: 2.0                     # [m/s^2] Acceleration threshold for dynamic classification
         use_life_time_for_box_visualization: true       # [-] Use lifetime for box visualization
         box_visualization_duration: 1.0                 # [s] Box visualization duration
-        use_only_curr_pos_for_dynamic_obst: true       # [-] Use only current position (no prediction) for comparison
+        use_only_curr_pos_for_dynamic_obst: false       # [-] Use only current position (no prediction) for comparison
 
         # --- Debug ---
         global_planner_verbose: false                   # [-] Global planner debug output
