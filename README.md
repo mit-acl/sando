@@ -284,6 +284,32 @@ python3 src/sando/scripts/run_sim.py -m dynamic -d hard -s install/setup.bash
 python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/setup.bash
 ```
 
+## Dependency Versioning
+
+All workspace dependencies (`acl-mapping`, `uav_simulator`, `DecompROS2`, etc.) are git submodules under `deps/`, so **every SANDO commit records the exact dependency commits it was developed and tested with**. `git clone --recursive` checks out the matching versions automatically, and `setup.sh` initializes any missing submodules and symlinks them into the workspace `src/` for colcon discovery.
+
+**Returning to a specific SANDO version** (e.g., to reproduce results from an earlier state of the code) — check out the version, then sync the submodules to its pinned commits:
+
+```bash
+cd ~/code/sando_ws/src/sando
+git checkout <commit-or-tag-or-branch>
+git submodule update --init --recursive   # moves every deps/ submodule to the pinned commit
+```
+
+Run the same `git submodule update --init --recursive` after every `git pull` to keep dependencies in sync.
+
+**Updating a dependency pin** (maintainers) — commit and push inside the submodule as usual, then record the new pin in SANDO:
+
+```bash
+cd deps/acl-mapping                # work on a branch, commit, and push as usual
+cd ../..                           # back to the sando repo root
+git add deps/acl-mapping
+git commit -m "Bump acl-mapping"   # records the submodule's current commit
+git push
+```
+
+> **Note:** if `git status` shows `modified: deps/<name> (new commits)`, your local checkout of that dependency differs from the pinned version. Commit it (as above) to update the pin, or run `git submodule update --init --recursive` to return to the pinned commit.
+
 ## Configuration
 
 All planner parameters are in `config/sando.yaml`, organized into three tiers:
