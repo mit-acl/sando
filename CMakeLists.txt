@@ -46,18 +46,32 @@ find_package(std_srvs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-# Gurobi
+# Gurobi (optional): needs a license to run. Without it, only the DAQP backend is available.
+option(SANDO_WITH_GUROBI "Build the Gurobi trajectory solver backend if Gurobi is found" ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}")
-find_package(GUROBI REQUIRED)
+if(SANDO_WITH_GUROBI)
+  find_package(GUROBI QUIET)
+endif()
+if(SANDO_WITH_GUROBI AND GUROBI_FOUND)
+  message(STATUS "Trajectory solver backends: gurobi, daqp")
+else()
+  message(STATUS "Trajectory solver backends: daqp (Gurobi not used)")
+  set(GUROBI_FOUND FALSE)
+endif()
 
-# check if gurobi is found
-if(GUROBI_FOUND)
-message(STATUS "GUROBI FOUND")
-else(GUROBI_FOUND)
-message(FATAL_ERROR "GUROBI NOT FOUND!")
-endif(GUROBI_FOUND)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}")
+# DAQP: fetched at a fixed release. To use a local checkout (e.g., when building offline), pass
+# -DFETCHCONTENT_SOURCE_DIR_DAQP=/path/to/daqp
+include(FetchContent)
+FetchContent_Declare(
+  daqp
+  GIT_REPOSITORY https://github.com/darnstrom/daqp.git
+  GIT_TAG 44a429a31ebb9e9eea3a12a5d84d3eaeec8c7938  # v0.11.0
+)
+FetchContent_GetProperties(daqp)
+if(NOT daqp_POPULATED)
+  FetchContent_Populate(daqp)
+  add_subdirectory(${daqp_SOURCE_DIR} ${daqp_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # OpenMP
 find_package(OpenMP REQUIRED)
@@ -68,17 +82,31 @@ if (OPENMP_FOUND)
 endif()
 
 # include directories
-include_directories(${EIGEN3_INCLUDE_DIR} ${PCL_INCLUDE_DIRS} ${DECOMP_UTIL_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${GUROBI_INCLUDE_DIRS} include)
+include_directories(${EIGEN3_INCLUDE_DIR} ${PCL_INCLUDE_DIRS} ${DECOMP_UTIL_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} include)
 link_directories(${PCL_LIBRARY_DIRS} ${BOOST_LIBRARY_DIRS} ${GAZEBO_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-# set up for gurobi
-FILE(GLOB GurobiSOFiles $ENV{GUROBI_HOME}/lib/libgurobi*[0-9].so) #files that are start with libgurobi and end with number.so
-set(GUROBI_LIBRARIES "$ENV{GUROBI_HOME}/lib/libgurobi_c++.a;${GurobiSOFiles};$ENV{GUROBI_HOME}/lib/" )
+# Trajectory solver backends
+set(SANDO_SOLVER_SOURCES src/sando/trajectory_solver.cpp src/sando/daqp_solver.cpp)
+if(GUROBI_FOUND)
+  list(APPEND SANDO_SOLVER_SOURCES src/sando/gurobi_solver.cpp)
+endif()
+add_library(sando_trajectory_solver STATIC ${SANDO_SOLVER_SOURCES})
+set_target_properties(sando_trajectory_solver PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# DAQP is private: its generically named headers (utils.h, types.h, ...) stay out of other targets
+target_link_libraries(sando_trajectory_solver PRIVATE daqp)
+ament_target_dependencies(sando_trajectory_solver PUBLIC rclcpp visualization_msgs Eigen3 decomp_ros_msgs sensor_msgs std_msgs decomp_rviz_plugins decomp_test_node)
+if(GUROBI_FOUND)
+  FILE(GLOB GurobiSOFiles $ENV{GUROBI_HOME}/lib/libgurobi*[0-9].so) #files that are start with libgurobi and end with number.so
+  set(GUROBI_LIBRARIES "$ENV{GUROBI_HOME}/lib/libgurobi_c++.a;${GurobiSOFiles};$ENV{GUROBI_HOME}/lib/" )
+  target_include_directories(sando_trajectory_solver PUBLIC ${GUROBI_INCLUDE_DIRS})
+  target_link_libraries(sando_trajectory_solver PUBLIC ${GUROBI_LIBRARIES})
+  target_compile_definitions(sando_trajectory_solver PRIVATE SANDO_HAS_GUROBI)
+endif()
 
 # add executables
-add_executable(sando src/sando/sando_node.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp src/sando/gurobi_solver.cpp)
-target_link_libraries(sando ${GUROBI_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(sando src/sando/sando_node.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp)
+target_link_libraries(sando sando_trajectory_solver ${PCL_LIBRARIES})
 ament_target_dependencies(sando rclcpp example_interfaces dynus_interfaces visualization_msgs Eigen3 decomp_ros_msgs sensor_msgs std_msgs decomp_rviz_plugins decomp_test_node tf2_geometry_msgs tf2 tf2_ros tf2_eigen std_srvs pcl_ros)
 
 # Add the fake_sim executable
@@ -146,19 +174,19 @@ ament_target_dependencies(dynamic_forest_node
 # For benchmark SFC generation
 add_executable(corridor_generator_node src/sando/corridor_generator_node.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp
 )
-target_link_libraries(corridor_generator_node ${GUROBI_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(corridor_generator_node sando_trajectory_solver ${PCL_LIBRARIES})
 ament_target_dependencies(corridor_generator_node rclcpp example_interfaces dynus_interfaces visualization_msgs Eigen3 decomp_ros_msgs sensor_msgs std_msgs decomp_rviz_plugins decomp_test_node tf2_geometry_msgs tf2 tf2_ros tf2_eigen std_srvs pcl_ros)
 
-add_executable(local_traj_benchmark_node src/sando/local_traj_benchmark.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp src/sando/gurobi_solver.cpp)
-target_link_libraries(local_traj_benchmark_node ${GUROBI_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(local_traj_benchmark_node src/sando/local_traj_benchmark.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp)
+target_link_libraries(local_traj_benchmark_node sando_trajectory_solver ${PCL_LIBRARIES})
 ament_target_dependencies(local_traj_benchmark_node rclcpp example_interfaces dynus_interfaces visualization_msgs Eigen3 decomp_ros_msgs sensor_msgs std_msgs decomp_rviz_plugins decomp_test_node tf2_geometry_msgs tf2 tf2_ros tf2_eigen std_srvs pcl_ros)
 
-add_executable(visualize_local_trajs_node src/sando/visualize_local_trajs.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp src/sando/gurobi_solver.cpp)
-target_link_libraries(visualize_local_trajs_node ${GUROBI_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(visualize_local_trajs_node src/sando/visualize_local_trajs.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp)
+target_link_libraries(visualize_local_trajs_node sando_trajectory_solver ${PCL_LIBRARIES})
 ament_target_dependencies(visualize_local_trajs_node rclcpp example_interfaces dynus_interfaces visualization_msgs Eigen3 decomp_ros_msgs sensor_msgs std_msgs decomp_rviz_plugins decomp_test_node tf2_geometry_msgs tf2 tf2_ros tf2_eigen std_srvs pcl_ros)
 
-add_executable(temporal_layered_corridor_test_node src/sando/temporal_layered_corridor_test_node.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp src/sando/gurobi_solver.cpp)
-target_link_libraries(temporal_layered_corridor_test_node ${GUROBI_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(temporal_layered_corridor_test_node src/sando/temporal_layered_corridor_test_node.cpp src/sando/sando.cpp src/hgp/hgp_manager.cpp src/hgp/utils.cpp src/hgp/hgp_planner.cpp src/hgp/graph_search.cpp src/sando/utils.cpp)
+target_link_libraries(temporal_layered_corridor_test_node sando_trajectory_solver ${PCL_LIBRARIES})
 ament_target_dependencies(temporal_layered_corridor_test_node rclcpp visualization_msgs std_msgs geometry_msgs Eigen3 decomp_util decomp_ros_msgs decomp_rviz_plugins decomp_test_node tf2 tf2_ros tf2_geometry_msgs tf2_eigen std_srvs pcl_ros pcl_conversions sensor_msgs dynus_interfaces)
 
 # Benchmark analysis tool (C++ port of analyze_dynamic_benchmark.py)
@@ -205,6 +233,7 @@ install(TARGETS
 
 # install for libraries
 install(TARGETS
+  daqp
   move_model
   imu_plugin
   dynamic_obstacles_world_plugin
@@ -227,5 +256,11 @@ install(PROGRAMS
   benchmarking/unc_benchmark_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  add_executable(test_daqp_solver test/test_daqp_solver.cpp)
+  target_link_libraries(test_daqp_solver sando_trajectory_solver)
+  add_test(NAME test_daqp_solver COMMAND test_daqp_solver)
+endif()
 
 ament_package()

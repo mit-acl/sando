@@ -24,7 +24,7 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "hgp/hgp_manager.hpp"
-#include "sando/gurobi_solver.hpp"
+#include "sando/trajectory_solver.hpp"
 #include "sando/sando_type.hpp"
 #include "sando/utils.hpp"
 #include <decomp_ros_msgs/msg/polyhedron_array.hpp>
@@ -299,6 +299,7 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     declare_parameter<double>("w_max", 0.5);
 
     declare_parameter<double>("max_gurobi_comp_time_sec", 5.0);
+    declare_parameter<std::string>("trajectory_solver", "auto");
     declare_parameter<double>("jerk_smooth_weight", 1.0e+1);
 
     declare_parameter<bool>("using_variable_elimination", true);
@@ -384,6 +385,7 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
     par_.w_max = get_parameter("w_max").as_double();
 
     par_.max_gurobi_comp_time_sec = get_parameter("max_gurobi_comp_time_sec").as_double();
+    par_.trajectory_solver = get_parameter("trajectory_solver").as_string();
     par_.jerk_smooth_weight = get_parameter("jerk_smooth_weight").as_double();
     par_.using_variable_elimination = get_parameter("using_variable_elimination").as_bool();
     par_.debug_verbose = get_parameter("debug_verbose").as_bool();
@@ -551,7 +553,7 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
 
   void solveTrajectory_() {
     // Solver setup
-    solver_ = std::make_shared<SolverGurobi>();
+    solver_ = makeTrajectorySolver(par_.trajectory_solver);
     solver_->setPlannerName("SANDO");
     solver_->initializeSolver(par_);
     solver_->setT0(0.0);
@@ -780,7 +782,7 @@ class TemporalLayeredCorridorTestNode final : public rclcpp::Node {
   // Core structs
   Parameters par_;
   HGPManager hgp_;
-  std::shared_ptr<SolverGurobi> solver_;
+  std::shared_ptr<TrajectorySolver> solver_;
 
   // Inputs
   vec_Vecf<3> obst_pos_;   // dynamic obstacle centers

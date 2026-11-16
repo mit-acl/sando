@@ -75,7 +75,8 @@ sando_node:
         horizon: 15.0                                   # [m] Planning horizon
         goal_radius: 0.5                                # [m] Goal reached threshold
         goal_seen_radius: 2.0                           # [m] Distance to stop replanning (too small makes planning very hard)
-        max_gurobi_comp_time_sec: 1.0                   # [s] Gurobi solver timeout per replanning cycle
+        trajectory_solver: "auto"                       # [-] Optimizer: "auto" (Gurobi if available and licensed, else DAQP), "gurobi", "daqp" (no license; no "L2" constraints)
+        max_gurobi_comp_time_sec: 1.0                   # [s] Solver timeout per replanning cycle (any backend)
 
         # --- Dynamic Factor Adaptation ---
         dynamic_factor_initial_mean: 1.5                # [-] Starting time-allocation factor (higher = more conservative)

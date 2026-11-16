@@ -53,8 +53,8 @@ SANDO::SANDO(Parameters par) : par_(par) {
   const int grb_threads_per_solver = std::max(1, num_cores / std::max(1, num_dynamic_factors_));
   whole_traj_solver_ptrs_.reserve(num_dynamic_factors_);
   for (int i = 0; i < num_dynamic_factors_; i++) {
-    auto solver = std::make_shared<SolverGurobi>();
-    solver->setGurobiThreads(grb_threads_per_solver);
+    auto solver = makeTrajectorySolver(par_.trajectory_solver);
+    solver->setNumThreads(grb_threads_per_solver);
     solver->initializeSolver(par_);
     whole_traj_solver_ptrs_.push_back(solver);
   }
@@ -64,7 +64,7 @@ SANDO::SANDO(Parameters par) : par_(par) {
 
   // Pre-compute the worst initial_dt * par_.num_N (this is the worst case time allocated for the
   // whole trajectory)
-  auto tmp_traj_solver_ptr = std::make_shared<SolverGurobi>();
+  auto tmp_traj_solver_ptr = makeTrajectorySolver(par_.trajectory_solver);
   tmp_traj_solver_ptr->initializeSolver(par_);
   tmp_traj_solver_ptr->resetToNominalState();
   RobotState tmp_start_state, tmp_end_state;
@@ -1238,7 +1238,7 @@ bool SANDO::generateLocalTrajectory(
     double A_time,
     double& gurobi_computation_time,
     double& cvx_decomp_time,
-    std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr,
+    std::shared_ptr<TrajectorySolver>& whole_traj_solver_ptr,
     double factor,
     double initial_dt,
     const vec_Vecf<3>& obst_pos,
@@ -1322,7 +1322,7 @@ bool SANDO::generateLocalTrajectory(
 
   // If a Gurobi error occurred, reset the solver and return.
   if (gurobi_error_detected) {
-    whole_traj_solver_ptr = std::make_shared<SolverGurobi>();
+    whole_traj_solver_ptr = makeTrajectorySolver(par_.trajectory_solver);
     whole_traj_solver_ptr->initializeSolver(par_);
     return false;
   }

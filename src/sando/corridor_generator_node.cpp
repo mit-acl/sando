@@ -25,7 +25,7 @@
 #include <decomp_util/seed_decomp.h>
 #include <decomp_rviz_plugins/data_ros_utils.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <sando/gurobi_solver.hpp>
+#include <sando/trajectory_solver.hpp>
 #include <sando/utils.hpp>
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"

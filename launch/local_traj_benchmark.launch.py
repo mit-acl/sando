@@ -32,6 +32,7 @@ def generate_launch_description():
             DeclareLaunchArgument("output_dir_override", default_value=""),
             DeclareLaunchArgument("per_case_timeout_sec", default_value="3.0"),
             DeclareLaunchArgument("max_gurobi_comp_time_sec", default_value="0.5"),
+            DeclareLaunchArgument("trajectory_solver", default_value="auto"),
             DeclareLaunchArgument("factor_constant_step_size", default_value="0.1"),
             DeclareLaunchArgument("use_dynamic_factor", default_value="false"),
             DeclareLaunchArgument(
@@ -71,6 +72,7 @@ def generate_launch_description():
                         "max_gurobi_comp_time_sec": LaunchConfiguration(
                             "max_gurobi_comp_time_sec"
                         ),
+                        "trajectory_solver": LaunchConfiguration("trajectory_solver"),
                         "factor_constant_step_size": LaunchConfiguration(
                             "factor_constant_step_size"
                         ),
