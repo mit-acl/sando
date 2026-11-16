@@ -378,6 +378,7 @@ void SANDO_NODE::declareParameters() {
   this->declare_parameter("obst_position_error", 0.0);
   this->declare_parameter("inflate_unknown_boundary", true);
   this->declare_parameter("max_gurobi_comp_time_sec", 0.05);
+  this->declare_parameter("trajectory_solver", "auto");
   this->declare_parameter("jerk_smooth_weight", 1.0e+1);
 
   // Dynamic obstacles parameters
@@ -579,6 +580,7 @@ void SANDO_NODE::setParameters() {
   par_.obst_position_error = this->get_parameter("obst_position_error").as_double();
   par_.inflate_unknown_boundary = this->get_parameter("inflate_unknown_boundary").as_bool();
   par_.max_gurobi_comp_time_sec = this->get_parameter("max_gurobi_comp_time_sec").as_double();
+  par_.trajectory_solver = this->get_parameter("trajectory_solver").as_string();
   par_.jerk_smooth_weight = this->get_parameter("jerk_smooth_weight").as_double();
 
   // Dynamic obstacles parameters
@@ -749,6 +751,7 @@ void SANDO_NODE::printParameters() {
   RCLCPP_INFO(this->get_logger(), "Obst Max Vel: %f", par_.obst_max_vel);
   RCLCPP_INFO(this->get_logger(), "Obst Position Error: %f", par_.obst_position_error);
   RCLCPP_INFO(this->get_logger(), "Max Gurobi Comp Time Sec: %f", par_.max_gurobi_comp_time_sec);
+  RCLCPP_INFO(this->get_logger(), "Trajectory Solver: %s", par_.trajectory_solver.c_str());
   RCLCPP_INFO(this->get_logger(), "Jerk Smooth Weight: %f", par_.jerk_smooth_weight);
 
   // Dynamic obstacles parameters

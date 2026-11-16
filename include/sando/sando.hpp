@@ -24,7 +24,7 @@
 #include <decomp_util/ellipsoid_decomp.h>
 #include <decomp_util/seed_decomp.h>
 #include <decomp_rviz_plugins/data_ros_utils.hpp>
-#include <sando/gurobi_solver.hpp>
+#include <sando/trajectory_solver.hpp>
 #include <sando/utils.hpp>
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"
@@ -320,7 +320,7 @@ class SANDO {
    *  @param A_time Timestamp of the starting state.
    *  @param gurobi_computation_time Output Gurobi solve time in milliseconds.
    *  @param cvx_decomp_time Output convex decomposition time in milliseconds.
-   *  @param whole_traj_solver_ptr Gurobi solver instance for this thread.
+   *  @param whole_traj_solver_ptr Trajectory solver instance for this thread.
    *  @param factor Time scaling factor for this optimization attempt.
    *  @param initial_dt Base time step.
    *  @param obst_pos Current positions of dynamic obstacles.
@@ -342,7 +342,7 @@ class SANDO {
       double A_time,
       double& gurobi_computation_time,
       double& cvx_decomp_time,
-      std::shared_ptr<SolverGurobi>& whole_traj_solver_ptr,
+      std::shared_ptr<TrajectorySolver>& whole_traj_solver_ptr,
       double factor,
       double initial_dt,
       const vec_Vecf<3>& obst_pos,
@@ -492,7 +492,7 @@ class SANDO {
   // Parameters
   Parameters par_;          // Parameters of the planner
   HGPManager hgp_manager_;  // HGP Manager
-  std::vector<std::shared_ptr<SolverGurobi>>
+  std::vector<std::shared_ptr<TrajectorySolver>>
       whole_traj_solver_ptrs_;                   // L-BFGS solver pointer for the whole trajectory
   std::vector<std::shared_ptr<DynTraj>> trajs_;  // Dynamic trajectory
   Eigen::Vector3d v_max_3d_;                     // Maximum velocity

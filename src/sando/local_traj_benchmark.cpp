@@ -26,7 +26,7 @@
 #include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-#include <sando/gurobi_solver.hpp>
+#include <sando/trajectory_solver.hpp>
 #include <sando/utils.hpp>
 #include "hgp/hgp_manager.hpp"
 #include "hgp/termcolor.hpp"
@@ -688,6 +688,7 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
     declare_parameter<double>("w_max", 0.5);
 
     declare_parameter<double>("max_gurobi_comp_time_sec", 0.5);
+    declare_parameter<std::string>("trajectory_solver", "auto");
     declare_parameter<double>("per_case_timeout_sec", 1.0);  // timeout per optimization case
     declare_parameter<double>("jerk_smooth_weight", 1.0e+1);
 
@@ -778,6 +779,7 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
     par_.w_max = get_parameter("w_max").as_double();
 
     par_.max_gurobi_comp_time_sec = get_parameter("max_gurobi_comp_time_sec").as_double();
+    par_.trajectory_solver = get_parameter("trajectory_solver").as_string();
     per_case_timeout_sec_ = get_parameter("per_case_timeout_sec").as_double();
     par_.jerk_smooth_weight = get_parameter("jerk_smooth_weight").as_double();
     par_.debug_verbose = get_parameter("debug_verbose").as_bool();
@@ -909,9 +911,9 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
             num_cores, max_num_factors, grb_threads_per_solver);
 
         for (size_t i = 0; i < max_num_factors; ++i) {
-          auto s = std::make_shared<SolverGurobi>();
+          auto s = makeTrajectorySolver(par_.trajectory_solver);
           s->setPlannerName(planner_name_);
-          if (!use_single_threaded_) s->setGurobiThreads(grb_threads_per_solver);
+          if (!use_single_threaded_) s->setNumThreads(grb_threads_per_solver);
           s->initializeSolver(par_);
           whole_traj_solver_ptrs_.push_back(s);
         }
@@ -1823,7 +1825,7 @@ class LocalTrajBenchmarkNode final : public rclcpp::Node {
   size_t play_idx_{0};
 
   std::vector<double> factors_;
-  std::vector<std::shared_ptr<SolverGurobi>> whole_traj_solver_ptrs_;
+  std::vector<std::shared_ptr<TrajectorySolver>> whole_traj_solver_ptrs_;
 
   bool use_dynamic_factor_{false};
   double dynamic_factor_k_radius_{0.4};

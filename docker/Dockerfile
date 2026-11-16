@@ -39,7 +39,10 @@ RUN wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
 ENV GUROBI_HOME="/opt/gurobi1103/linux64"
 ENV PATH="${PATH}:${GUROBI_HOME}/bin"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
-COPY gurobi.lic /opt/gurobi1103/
+# The license is optional: without it, SANDO uses the DAQP backend (sando.sh is listed since COPY
+# fails if no source file matches).
+COPY sando.sh gurobi.li[c] /tmp/sando_copy/
+RUN if [ -f /tmp/sando_copy/gurobi.lic ]; then cp /tmp/sando_copy/gurobi.lic /opt/gurobi1103/; fi && rm -rf /tmp/sando_copy
 
 # Clone SANDO from GitHub at a pinned tag (override with `make build SANDO_TAG=<tag>`).
 # The default tracks `main`; tag a release and update SANDO_TAG here when publishing.

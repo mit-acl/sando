@@ -14,22 +14,6 @@
 #include <type_traits>
 // using namespace std;
 
-/** @brief Find the smallest positive element in a vector.
- *  @param v Vector of doubles to search.
- *  @return The minimum positive value, or 0 if none exists.
- */
-inline double MinPositiveElement(std::vector<double> v) {
-  std::sort(v.begin(), v.end());  // sorted in ascending order
-  double min_value = 0;
-  for (int i = 0; i < v.size(); i++) {
-    if (v[i] > 0) {
-      min_value = v[i];
-      break;
-    }
-  }
-  return min_value;
-}
-
 /** @brief Compute the squared L2 norm of a vector as a Gurobi quadratic expression.
  *  @tparam T Element type (GRBVar or GRBLinExpr).
  *  @param x Input vector.

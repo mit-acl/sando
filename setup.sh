@@ -5,23 +5,29 @@
 #
 # Usage:
 #   git clone --branch v0.0.3 --recursive https://github.com/mit-acl/sando.git
-#   cd sando && ./setup.sh [-j N]
+#   cd sando && ./setup.sh [-j N] [--no-gurobi]
 #
-#   -j N  Number of parallel jobs for building (default: all CPUs)
+#   -j N         Number of parallel jobs for building (default: all CPUs)
+#   --no-gurobi  Do not install Gurobi (SANDO then uses the license-free DAQP backend)
 # --------------------------------------------------------------------------
 set -e
 
 # Parse arguments
 NUM_JOBS=$(nproc)
+INSTALL_GUROBI=true
 while [[ $# -gt 0 ]]; do
     case $1 in
         -j|--jobs)
             NUM_JOBS="$2"
             shift 2
             ;;
+        --no-gurobi)
+            INSTALL_GUROBI=false
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: ./setup.sh [-j N]"
+            echo "Usage: ./setup.sh [-j N] [--no-gurobi]"
             exit 1
             ;;
     esac
@@ -136,24 +142,28 @@ echo ""
 echo "============================================="
 echo "STEP 5: Installing Gurobi"
 echo "============================================="
-if [ ! -d "/opt/gurobi1103" ]; then
-    echo "Installing Gurobi 11.0.3..."
-    wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
-    sudo tar -xzf /tmp/gurobi11.0.3_linux64.tar.gz -C /opt
-    rm /tmp/gurobi11.0.3_linux64.tar.gz
-    cd /opt/gurobi1103/linux64/src/build
-    sudo make && sudo cp libgurobi_c++.a ../../lib/
-    echo ""
-    echo "  NOTE: Place your Gurobi license file at ~/gurobi.lic"
-    echo "  Free academic licenses: https://www.gurobi.com/academia/academic-program-and-licenses/"
-    echo ""
-else
-    echo "Gurobi already installed, skipping..."
-fi
+if [ "$INSTALL_GUROBI" = true ]; then
+    if [ ! -d "/opt/gurobi1103" ]; then
+        echo "Installing Gurobi 11.0.3..."
+        wget -q https://packages.gurobi.com/11.0/gurobi11.0.3_linux64.tar.gz -P /tmp
+        sudo tar -xzf /tmp/gurobi11.0.3_linux64.tar.gz -C /opt
+        rm /tmp/gurobi11.0.3_linux64.tar.gz
+        cd /opt/gurobi1103/linux64/src/build
+        sudo make && sudo cp libgurobi_c++.a ../../lib/
+        echo ""
+        echo "  NOTE: Place your Gurobi license file at ~/gurobi.lic"
+        echo "  Free academic licenses: https://www.gurobi.com/academia/academic-program-and-licenses/"
+        echo ""
+    else
+        echo "Gurobi already installed, skipping..."
+    fi
 
-export GUROBI_HOME="/opt/gurobi1103/linux64"
-export PATH="${PATH}:${GUROBI_HOME}/bin"
-export LD_LIBRARY_PATH="${GUROBI_HOME}/lib:${LD_LIBRARY_PATH}"
+    export GUROBI_HOME="/opt/gurobi1103/linux64"
+    export PATH="${PATH}:${GUROBI_HOME}/bin"
+    export LD_LIBRARY_PATH="${GUROBI_HOME}/lib:${LD_LIBRARY_PATH}"
+else
+    echo "Skipping Gurobi (--no-gurobi): SANDO will use the DAQP backend"
+fi
 
 # ============================================================
 # 6. Clone/Checkout SANDO and initialize submodules
@@ -297,6 +307,7 @@ echo "STEP 12: Setting Up Bash Configuration"
 echo "============================================="
 
 # Add Gurobi to bashrc (idempotent)
+if [ "$INSTALL_GUROBI" = true ]; then
 grep -qxF 'export GUROBI_HOME="/opt/gurobi1103/linux64"' ~/.bashrc || cat >> ~/.bashrc << 'BASHEOF'
 
 # Gurobi
@@ -305,6 +316,7 @@ export PATH="${PATH}:${GUROBI_HOME}/bin"
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
 export GRB_LICENSE_FILE="$HOME/gurobi.lic"
 BASHEOF
+fi
 
 # Add Livox library path
 grep -qxF "export LD_LIBRARY_PATH=$LIVOX_WS/install/livox_ros_driver2/lib:\$LD_LIBRARY_PATH" ~/.bashrc || \

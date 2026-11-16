@@ -159,7 +159,8 @@ sando_node:
         obst_max_vel: 0.25                         # [m/s] Lower than sim (0.5) — real obstacles (people) move slower
         obst_position_error: 0.0                  # [m] Bounded position estimation error for dynamic obstacles
         inflate_unknown_boundary: false           # [-] Disabled on HW (sim: true) — sensor-mapped space is trusted, no need to pad unknowns
-        max_gurobi_comp_time_sec: 1.0            # [s] Maximum Gurobi computation time per replanning
+        trajectory_solver: "auto"                # [-] Optimizer: "auto" (Gurobi if available and licensed, else DAQP), "gurobi", "daqp"
+        max_gurobi_comp_time_sec: 1.0            # [s] Maximum solver computation time per replanning (any backend)
         jerk_smooth_weight: 1.0e+1                # [-] Weight for the jerk smoothness
 
         # Dynamic obstacle parameters

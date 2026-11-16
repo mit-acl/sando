@@ -72,9 +72,37 @@ python3 src/sando/scripts/run_sim.py -m dynamic -d hard -s install/setup.bash
 python3 src/sando/scripts/run_sim.py -m unknown_dynamic -d medium -s install/setup.bash
 ```
 
+## Trajectory Solver Backends
+
+The local trajectory optimization is selected by the `trajectory_solver` parameter in `config/sando.yaml`:
+
+| Value | Solver | License |
+|-------|--------|---------|
+| `auto` (default) | Gurobi if it is installed and licensed, otherwise DAQP | |
+| `gurobi` | [Gurobi](https://www.gurobi.com), as a mixed-integer QP | Required |
+| `daqp` | [DAQP](https://github.com/darnstrom/daqp), as a mixed-integer QP | None (MIT) |
+
+Both backends minimize the same objective over the same constraints. Differences for `daqp`:
+
+- `dynamic_constraint_type: "L2"` is not supported, since it is not a linear constraint. Use `"Linf"` (default) or `"L1"`.
+- `max_gurobi_comp_time_sec` also sets its time limit, despite the name.
+- A running solve cannot be interrupted, so when one time allocation succeeds, replanning still waits for the other solves in the race to finish or reach the time limit.
+- The search stops within a relative suboptimality of about 1e-6.
+
+The DAQP backend has a unit test, `test_daqp_solver`, built with the package and registered with CTest. It checks the solutions against a brute force over all polytope assignments. To also compare with Gurobi (the size-limited license of `pip install gurobipy` suffices):
+
+```bash
+build/sando/test_daqp_solver problems.jsonl        # writes the random test problems
+python3 test/crosscheck_gurobipy.py problems.jsonl
+```
+
+DAQP is downloaded and built automatically by CMake, so building needs no extra steps. To build offline, pass `-DFETCHCONTENT_SOURCE_DIR_DAQP=/path/to/daqp`. To leave out Gurobi even if it is installed, pass `-DSANDO_WITH_GUROBI=OFF`.
+
 ## Installation
 
 SANDO has been tested on Ubuntu 22.04 with ROS 2 Humble. Three installation methods are available:
+
+> **No Gurobi license?** A license is optional. SANDO also includes a trajectory solver based on the open-source solver [DAQP](https://github.com/darnstrom/daqp), which is used automatically when Gurobi is unavailable. See [Trajectory Solver Backends](#trajectory-solver-backends). You can skip all Gurobi license steps below.
 
 | Method | Platform | Notes |
 |--------|----------|-------|
@@ -92,7 +120,7 @@ Install **Docker Engine** (not Docker Desktop) by following the [official instal
 
 > **Important:** You must use **Docker Engine**, not Docker Desktop. Docker Desktop for Linux runs containers inside a VM, which breaks X11 display passthrough and GPU access. If you have Docker Desktop installed, [uninstall it](https://docs.docker.com/desktop/uninstall/) first.
 
-**2. Obtain a Gurobi WLS License**
+**2. Obtain a Gurobi WLS License (optional)**
 
 Get a free [WLS Academic license](https://portal.gurobi.com/iam/licenses/request). Other license types (named-user, compute server) do not work inside Docker.
 
@@ -101,7 +129,7 @@ Get a free [WLS Academic license](https://portal.gurobi.com/iam/licenses/request
 ```bash
 git clone --recursive https://github.com/mit-acl/sando.git
 cd sando/docker
-cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
+cp /path/to/your/gurobi.lic ./gurobi.lic   # optional — without it, SANDO uses DAQP
 ```
 
 **4. Build the Docker Image**
@@ -185,7 +213,7 @@ SANDO runs on macOS via Docker with [Xpra](https://xpra.org/) for browser-based 
 
 Download and install [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/).
 
-**2. Obtain a Gurobi WLS License**
+**2. Obtain a Gurobi WLS License (optional)**
 
 Get a free [WLS Academic license](https://portal.gurobi.com/iam/licenses/request). Other license types (named-user, compute server) do not work inside Docker.
 
@@ -201,7 +229,7 @@ Open Docker Desktop and go to **Settings** (gear icon):
 ```bash
 git clone --recursive https://github.com/mit-acl/sando.git
 cd sando/docker
-cp /path/to/your/gurobi.lic ./gurobi.lic   # required — change the path to your WLS license file
+cp /path/to/your/gurobi.lic ./gurobi.lic   # optional — without it, SANDO uses DAQP
 make build BUILD_JOBS=2
 ```
 
@@ -260,16 +288,16 @@ This automated script will:
 - The script appends ROS 2 sourcing, workspace sourcing, Gurobi environment variables, and library paths to `~/.bashrc`
 - After completion, run `source ~/.bashrc` to use SANDO immediately
 
-**3. Obtain a Gurobi License**
+**3. Obtain a Gurobi License (optional)**
 
-Gurobi is installed by the setup script but requires a license to run. Get a free [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/), then activate it:
+Without a license, SANDO uses the DAQP backend. Use `./setup.sh --no-gurobi` to not install Gurobi at all. Gurobi is installed by the setup script but requires a license to run. Get a free [academic license](https://www.gurobi.com/academia/academic-program-and-licenses/), then activate it:
 
 ```bash
 source ~/.bashrc
 grbgetkey YOUR_LICENSE_KEY   # saves license to ~/gurobi.lic
 ```
 
-> **Note:** The license is only needed to **run** SANDO, not to build it.
+> **Note:** The license is only needed to **run** SANDO with Gurobi, not to build it.
 
 **4. Run Simulations**
 
@@ -386,7 +414,7 @@ Both modes support `--dry-run` to inspect the generated tmuxp YAML without launc
 1. **Sensor Input** — Point cloud subscriptions update the voxel grid
 2. **HGP Manager** (`include/hgp/`) — Heat map-based global planner: voxel map, A* with heat costs, convex decomposition into safety corridors
 3. **SANDO Core** (`include/sando/sando.hpp`) — Planning orchestrator with state machine (YAWING → TRAVELING → GOAL_SEEN → GOAL_REACHED)
-4. **Gurobi Solver** (`include/sando/gurobi_solver.hpp`) — Local trajectory optimization using Hermite spline parameterization with dynamic factor adaptation
+4. **Trajectory Solver** (`include/sando/trajectory_solver.hpp`) — Local trajectory optimization using Hermite spline parameterization with dynamic factor adaptation, with a [Gurobi or DAQP backend](#trajectory-solver-backends)
 5. **SANDO Node** (`src/sando/sando_node.cpp`) — ROS 2 node wrapper
 
 ### Key Innovations
